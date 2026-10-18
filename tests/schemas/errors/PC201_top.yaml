@@ -1,0 +1,7 @@
+# expect: PC201
+message: PC201_top
+version: 1
+namespace: errors
+package: x
+fields:
+  - {key: a, type: int}

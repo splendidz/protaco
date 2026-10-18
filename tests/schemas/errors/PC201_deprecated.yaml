@@ -1,0 +1,8 @@
+# expect: PC201
+message: PC201_deprecated
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int}
+deprecated_fields:
+  - {key: opt, removed_in: 2}

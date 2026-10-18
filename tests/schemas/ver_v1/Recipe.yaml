@@ -1,0 +1,8 @@
+# Version test. Pairs with ver_v2 (other version) and alt (same version, other fields).
+message: Recipe
+version: 1
+namespace: v1
+fields:
+  - {key: name, type: string(16), desc: recipe name}
+  - {key: step, type: int, default: 3}
+  - {key: path, type: string, required: true}

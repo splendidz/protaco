@@ -1,0 +1,14 @@
+# Version window test. Order at version 3: qty (fixed) and note (variable) removed, label and rush added.
+message: Order
+version: 3
+min_version: 1
+namespace: build3
+fields:
+  - {key: id, type: string(8)}
+  - {key: weight, type: double, default: 0.5, added: 2}
+  - {key: qty, type: int, default: 1, removed: 3}
+  - {key: note, type: string, removed: 3}
+  - {key: color, type: string, required: true}
+  - {key: tags, type: list<string>, added: 2}
+  - {key: label, type: string, added: 3}
+  - {key: rush, type: bool, added: 3}

@@ -1,0 +1,6 @@
+# expect: PC308
+message: PC308_bytes
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: bytes, default: "x"}

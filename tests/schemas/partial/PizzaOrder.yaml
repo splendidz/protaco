@@ -1,0 +1,14 @@
+# Error test. Same fixed fields as examples/schemas/PizzaOrder.yaml; the nested doorCode has another type
+# (error path "delivery.doorCode").
+message: PizzaOrder
+version: 1
+namespace: partial
+fields:
+  - {key: orderId, type: string(32)}
+  - {key: store, type: string(32)}
+  - {key: size, type: int}
+  - {key: slices, type: int}
+  - {key: woodFired, type: bool}
+  - {key: deepDishCm, type: int}
+  - {key: toppings, type: list<Topping>}
+  - {key: delivery, type: Delivery}

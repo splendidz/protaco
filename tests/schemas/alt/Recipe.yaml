@@ -1,0 +1,9 @@
+# Fingerprint test. Same name, version and fixed block size as ver_v1/Recipe.yaml, fixed fields in another order.
+# Without the fingerprint, name and step would be read from each other's bytes without an error.
+message: Recipe
+version: 1
+namespace: alt
+fields:
+  - {key: step, type: int, default: 3}
+  - {key: name, type: string(16), desc: recipe name}
+  - {key: path, type: string, required: true}

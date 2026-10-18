@@ -1,0 +1,6 @@
+# expect: PC303
+message: PC303_prefix
+version: 1
+namespace: errors
+fields:
+  - {key: get_a, type: int}

@@ -1,0 +1,6 @@
+# expect: PC312
+message: PC312_added
+version: 2
+namespace: errors
+fields:
+  - {key: a, type: int, added: 3}

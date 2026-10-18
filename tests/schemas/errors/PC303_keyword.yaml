@@ -1,0 +1,6 @@
+# expect: PC303
+message: PC303_keyword
+version: 1
+namespace: errors
+fields:
+  - {key: delete, type: int}

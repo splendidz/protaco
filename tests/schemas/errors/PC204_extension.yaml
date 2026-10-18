@@ -1,0 +1,7 @@
+# expect: PC204
+message: PC204_extension
+version: 1
+namespace: errors
+allow_extension: no
+fields:
+  - {key: a, type: int}

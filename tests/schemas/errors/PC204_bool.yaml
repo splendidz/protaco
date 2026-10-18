@@ -1,0 +1,6 @@
+# expect: PC204
+message: PC204_bool
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: string, required: yes}

@@ -1,0 +1,11 @@
+# Robot transfer request.
+message: TransferRequest
+version: 2
+namespace: demo
+owner: planner
+
+fields:
+  - {key: tm, type: string, required: true, desc: robot id}
+  # Moves, executed in order.
+  - {key: moves, type: list<MoveInfo>, required: true, desc: moves}
+  - {key: reason, type: string, default: "", desc: why the planner chose this}

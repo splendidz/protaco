@@ -1,0 +1,7 @@
+message: Delivery
+version: 1
+namespace: partial
+fields:
+  - {key: address, type: string(64)}
+  - {key: floor, type: int}
+  - {key: doorCode, type: list<string>}

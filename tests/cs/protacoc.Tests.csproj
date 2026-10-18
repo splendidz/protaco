@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tests for protacoc and the C# runtime. Compiles generated .g.cs files with Protaco.cs, like a user project would. -->
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{8C2A4E6B-1D3F-4A5B-8C7D-9E0F1A2B3C4D}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Protacoc.Tests</RootNamespace>
+    <AssemblyName>protacoc.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>..\..\build\bin\</OutputPath>
+    <IntermediateOutputPath>..\..\build\obj\protacoc.Tests\$(Configuration)\</IntermediateOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\..\examples\gen\cs\*.cs" />
+    <Compile Include="..\gen\cs\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\examples\schemas\*.yaml" />
+    <None Include="..\schemas\**\*.yaml" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

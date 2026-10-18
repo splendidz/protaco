@@ -1,0 +1,5 @@
+message: D7
+version: 1
+namespace: deep
+fields:
+  - {key: d, type: D6}

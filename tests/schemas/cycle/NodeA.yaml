@@ -1,0 +1,5 @@
+message: NodeA
+version: 1
+namespace: cycle
+fields:
+  - {key: b, type: NodeB}

@@ -1,0 +1,5 @@
+message: T1
+version: 1
+namespace: toodeep
+fields:
+  - {key: t, type: T0}

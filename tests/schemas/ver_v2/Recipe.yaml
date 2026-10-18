@@ -1,0 +1,10 @@
+# Version test. Version 2 of ver_v1/Recipe.yaml with two more fields.
+message: Recipe
+version: 2
+namespace: v2
+fields:
+  - {key: name, type: string(16), desc: recipe name}
+  - {key: temp, type: double, default: 25.5, desc: temperature}
+  - {key: step, type: int, default: 3}
+  - {key: path, type: string, required: true}
+  - {key: note, type: string, default: "none"}

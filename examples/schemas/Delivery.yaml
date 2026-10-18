@@ -1,0 +1,11 @@
+# Delivery details. Used by PizzaOrder.delivery.
+message: Delivery
+version: 1
+namespace: demo
+
+fields:
+  - {key: address, type: string(64), desc: street address}
+  - {key: floor, type: int, default: 1, desc: floor number}
+  # Building door code. One digit 0..9 per element.
+  - {key: doorCode, type: list<int>, desc: building door code}
+  - {key: contacts, type: list<string>, desc: phone numbers}

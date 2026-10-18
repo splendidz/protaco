@@ -1,0 +1,8 @@
+# One topping. Element of PizzaOrder.toppings.
+message: Topping
+version: 1
+namespace: partial
+
+fields:
+  - {key: name, type: string(24), desc: topping name}
+  - {key: grams, type: int, default: 30, desc: weight in grams}

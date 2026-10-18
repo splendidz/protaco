@@ -1,0 +1,6 @@
+# Error test PC407. Uses Inner as a field type.
+message: Outer
+version: 1
+namespace: nestedwin
+fields:
+  - {key: inner, type: Inner}

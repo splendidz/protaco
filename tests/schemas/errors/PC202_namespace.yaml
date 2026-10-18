@@ -1,0 +1,5 @@
+# expect: PC202
+message: PC202_namespace
+version: 1
+fields:
+  - {key: a, type: int}

@@ -1,0 +1,11 @@
+# Proof of delivery. Shows the bytes type: binary data carried as is, zeros and 0xFF included.
+message: DeliveryProof
+version: 1
+namespace: demo
+owner: courier
+
+fields:
+  - {key: orderId, type: string(32), desc: order number}
+  # JPEG bytes, untouched.
+  - {key: photo, type: bytes, required: true, desc: doorstep photo}
+  - {key: signatures, type: list<bytes>, desc: signature images}

@@ -1,0 +1,6 @@
+# expect: PC305
+message: PC305_reqfixed
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int, required: true}

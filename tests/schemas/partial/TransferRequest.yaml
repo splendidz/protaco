@@ -1,0 +1,6 @@
+# Error test. A sender that leaves out the required moves.
+message: TransferRequest
+version: 2
+namespace: partial
+fields:
+  - {key: tm, type: string}

@@ -1,0 +1,7 @@
+# expect: PC311
+message: PC311_clash
+version: 1
+namespace: errors
+fields:
+  - {key: name, type: int}
+  - {key: Name, type: int}

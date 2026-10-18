@@ -1,0 +1,22 @@
+# Pizza order. One union message for stores whose orders differ in shape.
+# Fields without eq are shared by all stores; fields with eq belong to those stores only.
+message: PizzaOrder
+version: 1
+namespace: demo
+owner: shop
+desc: pizza order
+
+fields:
+  # Order number. Fixed length to fit the receipt column.
+  - {key: orderId, type: string(32), desc: order number}
+  - {key: store, type: string(32), desc: store name}
+  - {key: customer, type: string, default: "anonymous", desc: customer name}
+  - {key: size, type: int, default: 12, desc: diameter in inches}
+  - {key: slices, type: int, default: 8, desc: number of slices}
+  # Wood-fired oven. NAPOLI store only.
+  - {key: woodFired, type: bool, default: true, eq: [NAPOLI], desc: baked in a wood-fired oven}
+  # Deep dish depth in cm. CHICAGO store only. 0 means regular crust.
+  - {key: deepDishCm, type: int, default: 0, eq: [CHICAGO], desc: deep dish depth}
+  - {key: toppings, type: list<Topping>, required: true, desc: toppings}
+  - {key: notes, type: list<string>, desc: "special requests (e.g. no onions)"}
+  - {key: delivery, type: Delivery, desc: delivery details}

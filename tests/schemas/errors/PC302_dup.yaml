@@ -1,0 +1,7 @@
+# expect: PC302
+message: PC302_dup
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int}
+  - {key: a, type: string}

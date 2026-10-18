@@ -1,0 +1,135 @@
+﻿// Ping.g.h. protacoc 0.4.0, source Ping.yaml (sha1 600f6283777d). Do not edit.
+#pragma once
+
+#include "Protaco.hpp"
+
+namespace build1
+{
+
+/// Version window test. Closed message at version 1.
+/// [version 1; schema 0xB81406B7; allow_extension false; source Ping.yaml]
+class Ping
+{
+public:
+    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    Ping()
+    {
+        protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
+        protaco::detail::Access::BindExt(ext_, &Ping::IsSchemaKey);
+    }
+
+    /// Message name. Stored in the frame header and checked by ToObject.
+    static const char* MsgName()
+    {
+        return "Ping";
+    }
+
+    /// Version of this type. ToObject reads frames of this version or newer as this version.
+    static uint16_t MsgVersion()
+    {
+        return 1;
+    }
+
+    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    static uint16_t MsgMinVersion()
+    {
+        return 1;
+    }
+
+    /// Schema fingerprint of this version. A frame whose fingerprint for this version differs is rejected by ToObject.
+    static uint32_t MsgSchemaHash()
+    {
+        return 0xB81406B7u;
+    }
+
+    /// [type int]
+    int32_t get_seq() const
+    {
+        return protaco::detail::Load<int32_t>(buf_.data() + kFixedOffset + 0);
+    }
+
+    void set_seq(int32_t value)
+    {
+        protaco::detail::Store<int32_t>(buf_.data() + kFixedOffset + 0, value);
+    }
+
+    /// [type string]
+    const std::string& get_who() const
+    {
+        return who_;
+    }
+
+    void set_who(const std::string& value)
+    {
+        who_ = value;
+    }
+
+    /// Writes the envelope (id, corr, ts) straight into the frame header.
+    void SetEnvelope(const protaco::Envelope& env)
+    {
+        protaco::detail::StoreEnvelope(buf_, env);
+    }
+
+    protaco::Envelope GetEnvelope() const
+    {
+        return protaco::detail::LoadEnvelope(buf_.data());
+    }
+
+    /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// The returned reference is valid until this object is modified.
+    const std::vector<uint8_t>& Serialize() const
+    {
+        return protaco::detail::Access::Serialize(*this);
+    }
+
+    /// Text for logs: field names and values. protaco::TextStyle::Pretty() for one field per line.
+    std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const
+    {
+        return protaco::detail::Access::ToText(*this, style);
+    }
+
+private:
+    friend struct protaco::detail::Access;
+
+    enum : uint32_t
+    {
+        kFixedOffset = 40,   // frame header (28 + name 4 + fingerprints 4 x 1) + FixedLen (4)
+        kFixedSize = 4,
+        kAllowExtension = 0,
+    };
+
+    // Schema fingerprints of versions MsgMinVersion()..MsgVersion(), carried in the frame header.
+    static const uint32_t* SchemaHashes()
+    {
+        static const uint32_t kHashes[] = { 0xB81406B7u };
+        return kHashes;
+    }
+
+    // Keys not allowed in ext: schema keys of every version
+    static bool IsSchemaKey(const char* key)
+    {
+        static const char* const kKeys[] = { "seq", "who" };
+        return protaco::detail::InList(key, kKeys, 2);
+    }
+
+    // The single list of variable fields. Shared by size, write and read.
+    template <class TSelf, class TVisitor>
+    static void VisitVar(TSelf& self, TVisitor& visitor)
+    {
+        visitor.Field("who", self.who_, false);
+    }
+
+    // All fields in yaml order, for ToString.
+    template <class TWriter>
+    static void VisitText(const Ping& self, TWriter& writer)
+    {
+        writer.Field("seq", self.get_seq());
+        writer.Field("who", self.who_);
+    }
+
+    mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
+    std::string who_;
+    protaco::CExt ext_;   // stays empty: allow_extension false
+};
+
+}  // namespace build1

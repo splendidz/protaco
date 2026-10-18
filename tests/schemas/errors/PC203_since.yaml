@@ -1,0 +1,6 @@
+# expect: PC203
+message: PC203_since
+version: 2
+namespace: errors
+fields:
+  - {key: a, type: int, since: 2}

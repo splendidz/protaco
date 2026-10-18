@@ -1,0 +1,6 @@
+# expect: PC206
+message: PC206_namespace
+version: 1
+namespace: app.1st
+fields:
+  - {key: a, type: int}

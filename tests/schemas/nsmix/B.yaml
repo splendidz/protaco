@@ -1,0 +1,5 @@
+message: B
+version: 1
+namespace: two
+fields:
+  - {key: v, type: int}

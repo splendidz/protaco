@@ -1,0 +1,6 @@
+# expect: PC402
+message: PC402_ref
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: NoSuchMessage}

@@ -1,0 +1,8 @@
+# Version window test. Closed message at version 1.
+message: Ping
+version: 1
+namespace: build1
+allow_extension: false
+fields:
+  - {key: seq, type: int}
+  - {key: who, type: string}

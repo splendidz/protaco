@@ -1,0 +1,6 @@
+# expect: PC310
+message: PC310_length
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: string(0)}

@@ -1,0 +1,6 @@
+# expect: PC101
+message: PC101_tab
+version: 1
+namespace: errors
+fields:
+	- {key: a, type: int}

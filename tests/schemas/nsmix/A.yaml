@@ -1,0 +1,6 @@
+# expect: PC405 (B.yaml declares another namespace)
+message: A
+version: 1
+namespace: one
+fields:
+  - {key: v, type: int}

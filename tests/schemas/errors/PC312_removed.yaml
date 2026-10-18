@@ -1,0 +1,7 @@
+# expect: PC312
+message: PC312_removed
+version: 3
+min_version: 1
+namespace: errors
+fields:
+  - {key: a, type: int, added: 2, removed: 2}

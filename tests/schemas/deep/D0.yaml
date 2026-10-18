@@ -1,0 +1,6 @@
+# Depth test. D<n> nests n levels; D8 is the deepest allowed (runtime kMaxDepth).
+message: D0
+version: 1
+namespace: deep
+fields:
+  - {key: v, type: int}

@@ -1,0 +1,15 @@
+# Device liveness signal. Every field is fixed-length and ext is off, so Serialize() returns the buffer as is (zero cost).
+# Recommended shape for messages sent very often.
+message: Heartbeat
+version: 1
+namespace: demo
+# Closed contract: no ext, a frame with an unknown key is rejected.
+allow_extension: false
+owner: device
+
+fields:
+  - {key: node, type: string(32), desc: device name}
+  - {key: seq, type: int64, desc: sequence number}
+  - {key: healthy, type: bool, default: true, desc: device is healthy}
+  - {key: cpuLoad, type: double, desc: "CPU load (0.0..1.0)"}
+  - {key: uptimeSec, type: int, desc: uptime in seconds}

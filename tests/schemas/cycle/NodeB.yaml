@@ -1,0 +1,5 @@
+message: NodeB
+version: 1
+namespace: cycle
+fields:
+  - {key: items, type: list<NodeA>}

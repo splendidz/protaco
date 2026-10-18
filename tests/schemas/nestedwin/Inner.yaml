@@ -1,0 +1,8 @@
+# Error test PC407. A message used as a field type cannot have a version window.
+message: Inner
+version: 2
+min_version: 1
+namespace: nestedwin
+fields:
+  - {key: a, type: int}
+  - {key: b, type: int, added: 2}
