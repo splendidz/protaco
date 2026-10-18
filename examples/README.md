@@ -367,21 +367,27 @@ Each block is a prefix of the next one. A reader of version 1 reads the first 12
 
 ### 6.4 Exchanges between builds
 
-Newer frame to an older reader (test `NewerFrameReadAsOwnVersion`). A build3 frame with `id="A1"`, `weight=2.5`, `color="red"`, `tags=["x"]`, `label="L"`, `rush=true`:
+#### Newer frame to an older reader
+
+Test `NewerFrameReadAsOwnVersion`. build3 sends a frame with `id="A1"`, `weight=2.5`, `color="red"`, `tags=["x"]`, `label="L"`, `rush=true`.
 
 - build1 reads it as version 1. `qty` is 1, the default the sender writes into the kept bytes. `note` is empty. `tags` and `label` are kept as extension entries.
 - build2 reads it as version 2. `weight` is 2.5 and `tags` is `["x"]`.
 
-Older frame to a newer reader (test `OlderFrameNeedsOldType`). A build1 frame decoded by build3:
+#### Older frame to a newer reader
+
+Test `OlderFrameNeedsOldType`. build3 decodes a frame sent by build1.
 
 ```
 build3::Order       message version too old: Order reads version 3 or newer, got 1. Use the v1 type
 build3::v1::Order   Order{id="B2", qty=4, note="n", color="blue"}
 ```
 
-The receiver reads `version` with `PeekHeader()` and selects the class.
+The receiver reads `version` with `PeekHeader()` and selects the matching class.
 
-Sender window above the reader (test `SenderWindowAboveReader`). A build4 frame (window 2..4):
+#### Sender window above the reader
+
+Test `SenderWindowAboveReader`. build4 sends a frame with window 2..4.
 
 ```
 build1::Order   message version too new: Order reads version 1, sender supports 2..4

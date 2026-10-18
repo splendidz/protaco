@@ -443,6 +443,8 @@ flowchart TD
 
 ### 8.5 Mixed deployment
 
+Three builds exchange the same message at different versions.
+
 ```mermaid
 sequenceDiagram
     participant A as Build A (Order v3, window 1..3)
@@ -721,4 +723,4 @@ C# tests (27):
 
 ## 17. License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Copyright (c) 2026 Soo-Hwan Cho (Splendidz).

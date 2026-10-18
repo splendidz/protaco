@@ -3,14 +3,14 @@
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
 ![C++ runtime: header-only](https://img.shields.io/badge/C%2B%2B-header--only-00599C)
 
-Protaco는 C++·C#용 IDL(Interface Definition Language)과 코드 생성기.
-메시지는 YAML로 선언. 생성기 `protacoc`가 메시지마다 C++ 클래스와 C# 클래스를 생성하고, 두 클래스의 직렬화 바이트는 동일.
+Protaco는 C++·C#용 IDL(Interface Definition Language)이자 코드 생성기입니다.
+메시지는 YAML로 선언합니다. 생성기 `protacoc`가 메시지마다 C++ 클래스와 C# 클래스를 만들고, 두 클래스는 같은 바이트로 직렬화됩니다.
 
-범용 IDL 도구보다 직렬화 구조가 가벼움. C++ 런타임은 헤더 1개, C# 런타임은 소스 파일 1개, 링크할 라이브러리 없음. 고정 길이 필드는 setter가 프레임 버퍼에 직접 기록하므로, 고정 필드만 있는 메시지는 인코딩 단계 불필요.
+범용 IDL 도구보다 직렬화 구조가 가볍습니다. C++ 런타임은 헤더 1개, C# 런타임은 소스 파일 1개이며 링크할 라이브러리가 없습니다. 고정 길이 필드는 setter가 프레임 버퍼에 직접 기록하므로, 고정 필드만 있는 메시지는 인코딩 단계가 필요 없습니다.
 
-스키마 파일이 곧 인터페이스 문서. YAML 주석은 docstring으로 변환되고, 사용 중인 모든 version을 필드 단위로 한 파일에 기록. 프레임마다 스키마 version의 지문이 실려 있어 수신 측은 모르는 배치를 읽지 않음.
+스키마 파일이 곧 인터페이스 문서입니다. YAML 주석은 docstring이 되고, 사용 중인 모든 version이 필드 단위로 한 파일에 기록됩니다. 프레임마다 스키마 version의 지문이 실려 있어서 수신 측은 자신이 모르는 배치를 읽지 않습니다.
 
-이 문서의 기준: protacoc 0.4.0, 직렬화 형식 v3.
+이 문서는 protacoc 0.4.0과 직렬화 형식 v3를 기준으로 합니다.
 
 [English README](README.md) · [예제 설명](examples/README.ko.md)
 
@@ -89,11 +89,11 @@ var back = Protaco.Codec.ToObject<demo.TransferRequest>(bytes);
 | 버전 이력 | 파일 하나에 배포 중인 모든 version, 옛 version별 클래스 | 필드 번호, 메시지당 클래스 1개 |
 | 스키마 문법 | docstring을 지원하는 엄격한 YAML 부분집합 | `.proto` 언어 |
 
-Protaco 프레임은 크기 면에서 가장 작은 선택지는 아님. [제약 사항](#16-제약-사항) 참고.
+Protaco 프레임이 크기 면에서 가장 작은 형식은 아닙니다. 자세한 내용은 [제약 사항](#16-제약-사항)에 있습니다.
 
 ## 2. 동작 구조
 
-protacoc가 YAML 스키마에서 두 종류의 파일 생성. C++ 프로젝트는 생성 헤더를 include, C# 프로젝트는 생성 소스를 컴파일. 양쪽은 전송 수단과 무관하게 같은 프레임 바이트로 통신.
+protacoc는 YAML 스키마를 읽어 두 종류의 파일을 생성합니다. C++ 프로젝트는 생성 헤더를 include하고, C# 프로젝트는 생성 소스를 컴파일합니다. 양쪽은 전송 수단과 관계없이 같은 프레임 바이트로 통신합니다.
 
 ```mermaid
 flowchart LR
@@ -147,7 +147,9 @@ flowchart LR
 build.cmd
 ```
 
-출력: `build\bin\protacoc.exe`. `build.cmd`는 예제 재생성, 시험 수행, 예제 실행까지 포함([15. 빌드와 시험](#15-빌드와-시험)). `protaco.sln`으로 같은 프로젝트를 Visual Studio에서 열기 가능.
+출력: `build\bin\protacoc.exe`.
+
+`build.cmd`는 예제 재생성, 시험, 예제 실행까지 함께 수행합니다([15. 빌드와 시험](#15-빌드와-시험)). `protaco.sln`을 열면 같은 프로젝트를 Visual Studio에서 다룰 수 있습니다.
 
 ### 3.3 스키마 작성
 
@@ -174,7 +176,7 @@ protacoc -I schemas --cpp_out gen\cpp --cs_out gen\cs
 
 ### 3.5 C++ 프로젝트에서 사용
 
-출력 폴더를 include 경로에 추가하고 빌드 전에 protacoc 실행:
+출력 폴더를 include 경로에 추가하고, 빌드 전에 protacoc를 실행합니다.
 
 ```xml
 <ClCompile>
@@ -185,11 +187,11 @@ protacoc -I schemas --cpp_out gen\cpp --cs_out gen\cs
 </PreBuildEvent>
 ```
 
-라이브러리와 전처리기 정의 불필요.
+라이브러리나 전처리기 정의는 필요 없습니다.
 
 ### 3.6 C# 프로젝트에서 사용
 
-생성 파일을 `Protaco.cs`와 함께 컴파일:
+생성 파일을 `Protaco.cs`와 함께 컴파일합니다.
 
 ```xml
 <ItemGroup>
@@ -197,7 +199,7 @@ protacoc -I schemas --cpp_out gen\cpp --cs_out gen\cs
 </ItemGroup>
 ```
 
-전체 프로젝트 구성은 [examples/README.ko.md](examples/README.ko.md) 참고.
+전체 프로젝트 구성은 [examples/README.ko.md](examples/README.ko.md)에서 설명합니다.
 
 ## 4. 스키마 언어
 
@@ -274,7 +276,7 @@ fields:
 
 ## 5. 버전 관리 문서로서의 스키마
 
-YAML 파일 하나가 계약과 그 문서의 원본.
+YAML 파일 하나가 계약이면서 그 계약의 문서입니다. 문서에 해당하는 정보는 아래와 같이 생성 코드와 프레임까지 이어집니다.
 
 - docstring. 주석과 `desc`를 생성 클래스에 기록. IDE가 생성 접근자에서 표시.
 - 주석 속성. `owner`, `desc`, `eq`로 담당과 변형을 기술. 바이트에는 영향 없음.
@@ -308,7 +310,7 @@ public:
 
 ### 6.1 C++ 클래스
 
-YAML의 namespace 안에 생성. 예: `PizzaOrder.g.h`.
+클래스는 YAML의 namespace 안에 생성됩니다. 아래는 `PizzaOrder.g.h`의 예입니다.
 
 - `PizzaOrder()`: 모든 필드 기본값. 고정 필드는 이미 프레임 버퍼 안에 존재.
 - `get_orderId()` / `bool set_orderId(const std::string&)`: 고정 문자열. 길이 초과 시 `set_`이 `false` 반환, 기존 값 유지.
@@ -322,7 +324,7 @@ YAML의 namespace 안에 생성. 예: `PizzaOrder.g.h`.
 - 정적 `MsgName()`, `MsgVersion()`, `MsgMinVersion()`, `MsgSchemaHash()`: 분기와 진단용.
 - `v1::PizzaOrder` 등: 버전 창의 옛 version마다 클래스 1개, 필드는 해당 version 기준.
 
-버퍼와 보조 함수는 `private`. 공개 멤버는 위 목록뿐.
+버퍼와 보조 함수는 `private`이며, 공개 멤버는 위 목록이 전부입니다.
 
 ### 6.2 C++ 런타임
 
@@ -334,7 +336,7 @@ YAML의 namespace 안에 생성. 예: `PizzaOrder.g.h`.
 - `CExt`: 확장 데이터(`SetInt`, `SetString`, `GetInt`, `GetString` 등 타입별).
 - `TextStyle`: `ToString()` 형식.
 
-`CParseError`는 예외를 던진 모듈 안에서 처리. DLL 경계 통과 금지.
+`CParseError`는 예외를 던진 모듈 안에서 처리해야 합니다. DLL 경계를 넘기지 않습니다.
 
 ### 6.3 C#
 
@@ -346,7 +348,7 @@ YAML의 namespace 안에 생성. 예: `PizzaOrder.g.h`.
 - 옛 version은 `v1.PizzaOrder`.
 - 런타임: `Protaco.Codec.ToObject<T>()`, `TryToObject<T>()`, `PeekHeader()`. 실패 시 `Protaco.ProtacoException`.
 
-런타임 내부 멤버는 명시적 인터페이스 구현으로 비공개.
+런타임 내부 멤버는 명시적 인터페이스 구현 뒤에 감춰져 있습니다.
 
 ## 7. 성능
 
@@ -358,11 +360,11 @@ YAML의 namespace 안에 생성. 예: `PizzaOrder.g.h`.
 | `Protaco.cs` (C# 런타임) | 1,221줄 | .NET Framework 4.6.1 |
 | `protacoc.exe` (생성기) | 150 KB, 단일 파일 | .NET Framework 4.6.1 |
 
-생성 클래스는 컴파일 시점의 필드 목록 사용. C++ 코드에 reflection, descriptor 표, 가상 함수 없음.
+생성 클래스는 컴파일 시점에 정해진 필드 목록을 사용합니다. C++ 코드에는 reflection, descriptor 표, 가상 함수가 없습니다.
 
 ### 7.2 고정 필드 직접 기록
 
-생성 객체마다 자기 프레임 버퍼 보유. 고정 길이 필드는 버퍼 안에 자리가 정해져 있어 setter가 최종 바이트에 바로 기록.
+생성 객체는 각자 프레임 버퍼를 가집니다. 고정 길이 필드는 버퍼 안에 자리가 정해져 있어서 setter가 최종 바이트에 바로 기록합니다.
 
 ```cpp
 demo::Heartbeat beat;                  // 모든 필드 고정, allow_extension: false
@@ -377,18 +379,18 @@ beat.set_uptimeSec(11);                // bytes에 11 반영
 
 ### 7.3 측정값
 
-Release x64, v141, Intel Core i9-13900H. 시험 `ContractCheckCostIsNegligible`의 출력, 5회 중 최솟값.
+측정 조건은 Release x64, v141, Intel Core i9-13900H입니다. 값은 시험 `ContractCheckCostIsNegligible`의 출력이며, 5회 중 최솟값입니다.
 
 | 메시지 | 디코드 | version·지문 검사 |
 |---|---|---|
 | `Heartbeat`, 98바이트, 전부 고정 | 94.6 ns | 1.19 ns (1.26%) |
 | `PizzaOrder`, 434바이트, 중첩 목록 | 1,090.9 ns | 1.11 ns (0.10%) |
 
-Release에서 검사 비용이 디코드의 10%를 넘으면 시험 실패. 수치는 장비마다 다름. `build.cmd`가 `[ PERF ]` 줄로 출력.
+Release에서 검사 비용이 디코드의 10%를 넘으면 시험이 실패합니다. 수치는 장비마다 다르며, `build.cmd`를 실행하면 `[ PERF ]` 줄로 출력됩니다.
 
 ## 8. 버전 창
 
-배포된 빌드는 동시에 갱신되지 않음. 새 빌드도 옛 빌드와 계속 통신해야 하므로, YAML 파일 하나에 사용 중인 모든 version 기술.
+배포된 빌드는 한꺼번에 갱신되지 않습니다. 새 빌드도 옛 빌드와 계속 통신해야 하므로, YAML 파일 하나에 사용 중인 모든 version을 기술합니다.
 
 ### 8.1 version 선언
 
@@ -408,7 +410,7 @@ fields:
   - {key: rush,   type: bool, added: 3}
 ```
 
-version k에 필드가 존재하는 조건: `added <= k < removed`.
+필드는 `added <= k < removed`를 만족하는 version k에 존재합니다.
 
 ### 8.2 생성 클래스
 
@@ -417,7 +419,7 @@ version k에 필드가 존재하는 조건: `added <= k < removed`.
 
 ### 8.3 수신
 
-version R 수신 측이 version S 프레임을 아래 순서로 검사:
+version R인 수신 측은 version S 프레임을 아래 순서로 검사합니다.
 
 ```mermaid
 flowchart TD
@@ -442,6 +444,8 @@ flowchart TD
 - 옛 배치가 필요한 상대에게는 옛 클래스(`v1::Order`)에 값을 채워 직렬화.
 
 ### 8.5 혼합 배포
+
+빌드 세 개가 서로 다른 version으로 같은 메시지를 주고받는 경우입니다.
 
 ```mermaid
 sequenceDiagram
@@ -473,7 +477,7 @@ sequenceDiagram
 
 ## 9. 확장 데이터
 
-스키마에 없는 키-값 항목:
+확장 데이터는 스키마에 없는 키-값 항목입니다.
 
 ```cpp
 order.get_mutable_ext().SetString("channel", "web");
@@ -502,7 +506,7 @@ request.ToString(protaco::TextStyle::Pretty());   // 한 줄에 필드 하나, �
 
 ## 11. 직렬화 형식 v3
 
-모든 정수는 little-endian. 문자열은 NUL 종료 없는 원본 바이트.
+모든 정수는 little-endian입니다. 문자열은 NUL 종료 없이 원본 바이트로 기록합니다.
 
 ```
 Frame
@@ -549,7 +553,7 @@ TacoType
 
 ## 12. 스키마 지문
 
-지문은 version 하나의 정규 텍스트(UTF-8 바이트)에 대한 32비트 FNV-1a 해시(offset basis 2166136261, prime 16777619):
+지문은 version 하나의 정규 텍스트(UTF-8 바이트)에 대한 32비트 FNV-1a 해시입니다(offset basis 2166136261, prime 16777619). 정규 텍스트의 형식은 다음과 같습니다.
 
 ```
 protaco-schema-1|<name>|<version>|<allow_extension 1 or 0>|<field>;<field>;...
@@ -590,7 +594,7 @@ protacoc -I <dir> [-I <dir>...] --cpp_out <dir> [--cs_out <dir>]
 
 ### 14.1 오류 코드
 
-protacoc 출력 형식은 `file(line,col): error CODE: message`. Visual Studio 출력 창에서 해당 YAML 줄로 이동 가능.
+protacoc는 오류를 `file(line,col): error CODE: message` 형식으로 출력합니다. Visual Studio 출력 창에서 해당 YAML 줄로 바로 이동할 수 있습니다.
 
 YAML 문법:
 
@@ -646,7 +650,7 @@ YAML 문법:
 
 ### 14.3 디코드 오류
 
-`protaco::Error::what`(C++)과 `ProtacoException.What`(C#)에 기대값과 받은 값 표시:
+`protaco::Error::what`(C++)과 `ProtacoException.What`(C#)에는 기대값과 받은 값이 함께 표시됩니다.
 
 - `message name mismatch`
 - `message version too old`, 사용할 타입 안내
@@ -660,7 +664,7 @@ YAML 문법:
 - `nesting too deep`
 - 잘림 오류
 
-새 version 프레임 안에서 실패하면 끝에 `(frame version N read as M)` 추가.
+새 version 프레임 안에서 실패하면 끝에 `(frame version N read as M)`이 붙습니다.
 
 ## 15. 빌드와 시험
 
@@ -678,7 +682,7 @@ build.cmd
 5. C++ 예제 빌드와 실행.
 6. C# 시험 빌드와 수행.
 
-`MSBUILD`로 MSBuild 경로 지정(기본값: Visual Studio 2017 Professional).
+`MSBUILD` 환경 변수로 MSBuild 경로를 바꿀 수 있습니다(기본값: Visual Studio 2017 Professional).
 
 저장소 구성:
 
@@ -721,4 +725,4 @@ C# 시험(27개):
 
 ## 17. 라이선스
 
-[MIT](LICENSE)
+[MIT](LICENSE). Copyright (c) 2026 Soo-Hwan Cho (Splendidz).

@@ -1,6 +1,6 @@
 # 🌮 Protaco 예제
 
-이 폴더의 구성: 예제 스키마, 그 스키마로 protacoc가 생성한 코드, 생성 코드를 사용하는 C++ 프로그램. 6절은 `tests/schemas`의 버전 창 시험 스키마로 메시지 하나의 스키마 개정 4회를 추적.
+이 폴더에는 예제 스키마, 그 스키마로 protacoc가 생성한 코드, 그리고 생성 코드를 사용하는 C++ 프로그램이 있습니다. 6절에서는 `tests/schemas`의 버전 창 시험 스키마로 메시지 하나가 네 번 개정되는 과정을 따라갑니다.
 
 [README](../README.ko.md) · [English](README.md)
 
@@ -40,13 +40,13 @@ flowchart LR
 
 ## 2. 빌드와 실행
 
-저장소 루트에서:
+저장소 루트에서 실행합니다.
 
 ```
 build.cmd
 ```
 
-`build.cmd`의 5단계가 예제 빌드와 실행. 수동 절차:
+`build.cmd`의 5단계가 예제를 빌드하고 실행합니다. 수동으로 하려면 다음 순서로 실행합니다.
 
 ```
 build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
@@ -54,7 +54,7 @@ msbuild examples\cpp\example.vcxproj /p:Configuration=Release /p:Platform=x64
 build\bin\Release\protaco_example.exe
 ```
 
-`example.vcxproj`에 필요한 설정은 include 경로의 출력 폴더 하나. `build\bin\protacoc.exe`가 있으면 Pre-Build Event가 protacoc 실행:
+`example.vcxproj`에 필요한 설정은 include 경로에 출력 폴더를 추가하는 것뿐입니다. `build\bin\protacoc.exe`가 있으면 Pre-Build Event가 protacoc를 실행합니다.
 
 ```xml
 <AdditionalIncludeDirectories>$(ProjectDir)..\..\examples\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -64,7 +64,7 @@ build\bin\Release\protaco_example.exe
 </PreBuildEvent>
 ```
 
-프로젝트 컴파일 옵션은 `/W4 /WX`, C++17. 생성 헤더는 C++14로도 컴파일(`tests/cpp/Cpp14Check.cpp`).
+프로젝트는 `/W4 /WX`, C++17로 컴파일합니다. 생성 헤더는 C++14로도 컴파일됩니다(`tests/cpp/Cpp14Check.cpp`).
 
 ## 3. 스키마
 
@@ -107,11 +107,11 @@ fields:
   - {key: uptimeSec, type: int, desc: uptime in seconds}
 ```
 
-`PizzaOrder.yaml`은 매장마다 주문 모양이 다른 경우의 단일 메시지. `eq`가 없는 필드는 공통. `woodFired`는 `NAPOLI`, `deepDishCm`은 `CHICAGO` 전용. `eq`는 문서용이며 바이트에 영향 없음.
+`PizzaOrder.yaml`은 매장마다 주문 모양이 다른 경우를 메시지 하나로 표현합니다. `eq`가 없는 필드는 모든 매장 공통이고, `woodFired`는 `NAPOLI`, `deepDishCm`은 `CHICAGO` 전용입니다. `eq`는 문서용이며 바이트에는 영향을 주지 않습니다.
 
 ## 4. 프로그램 설명
 
-`cpp/main.cpp`는 함수 5개를 순서대로 실행. 아래 출력은 Release x64 빌드 기준.
+`cpp/main.cpp`는 함수 5개를 순서대로 실행합니다. 아래 출력은 Release x64 빌드에서 얻은 것입니다.
 
 ### 4.1 송신과 수신
 
@@ -283,7 +283,7 @@ private:
 
 ### 5.2 C#
 
-`gen/cs`에 같은 메시지의 C# 코드. 4.1절과 같은 값으로 사용:
+`gen/cs`에는 같은 메시지의 C# 코드가 있습니다. 4.1절과 같은 값으로 사용하면 다음과 같습니다.
 
 ```csharp
 var request = new demo.TransferRequest { Tm = "TM1", Reason = "closest-first" };
@@ -298,7 +298,7 @@ demo.TransferRequest got = Protaco.Codec.ToObject<demo.TransferRequest>(bytes);
 
 ## 6. 버전 창 예제
 
-`tests/schemas/build1`~`build4`는 `Order.yaml` 하나의 개정판 4개. 연속된 빌드 4개가 배포한 상태를 표현. 네 개정판을 시험 바이너리 하나에 함께 컴파일하기 위해 개정판마다 namespace 분리(`build1`~`build4`). 사용자 프로젝트에서는 namespace 하나를 유지하고 파일 내용만 변경.
+`tests/schemas/build1`~`build4`는 `Order.yaml` 하나의 개정판 4개이며, 연속된 빌드 4개가 배포한 상태를 나타냅니다. 네 개정판을 시험 바이너리 하나에 함께 컴파일하려고 개정판마다 namespace를 나눴습니다(`build1`~`build4`). 사용자 프로젝트에서는 namespace 하나를 유지하고 파일 내용만 바꿉니다.
 
 ```mermaid
 flowchart LR
@@ -353,7 +353,7 @@ fields:
 | build3 | `build3::Order` (v3), `build3::v1::Order`, `build3::v2::Order` | 1..3 |
 | build4 | `build4::Order` (v4), `build4::v2::Order`, `build4::v3::Order` | 2..4 |
 
-옛 version 클래스의 지문은 그 version을 배포한 클래스의 지문과 동일(시험 `WindowKeepsOldFingerprints`). 예: `build3::v1::Order::MsgSchemaHash()`와 `build1::Order::MsgSchemaHash()` 일치.
+옛 version 클래스의 지문은 그 version을 배포한 클래스의 지문과 같습니다(시험 `WindowKeepsOldFingerprints`). 예를 들어 `build3::v1::Order::MsgSchemaHash()`와 `build1::Order::MsgSchemaHash()`는 같은 값입니다.
 
 ### 6.3 고정 영역 배치
 
@@ -363,25 +363,31 @@ fields:
 | 2 | `id`, `qty`, `weight`(8) | 20바이트 |
 | 3, 4 | `id`, `qty`(제거, 바이트 유지), `weight`, `rush`(1) | 21바이트 |
 
-각 영역은 다음 version 영역의 앞부분. version 1 수신 측은 version 3 프레임의 앞 12바이트를 해석.
+각 영역은 다음 version 영역의 앞부분입니다. 그래서 version 1 수신 측은 version 3 프레임의 앞 12바이트만 해석하면 됩니다.
 
 ### 6.4 빌드 간 교환
 
-새 프레임을 옛 수신 측이 수신(시험 `NewerFrameReadAsOwnVersion`). build3 프레임, 값은 `id="A1"`, `weight=2.5`, `color="red"`, `tags=["x"]`, `label="L"`, `rush=true`:
+#### 새 프레임을 옛 수신 측이 받는 경우
+
+시험 `NewerFrameReadAsOwnVersion`의 내용입니다. build3이 `id="A1"`, `weight=2.5`, `color="red"`, `tags=["x"]`, `label="L"`, `rush=true`로 프레임을 보냅니다.
 
 - build1은 version 1로 해석. `qty`는 1(송신 측이 유지 바이트에 기록한 기본값). `note`는 빈 문자열. `tags`, `label`은 확장 항목으로 보관.
 - build2는 version 2로 해석. `weight`는 2.5, `tags`는 `["x"]`.
 
-옛 프레임을 새 수신 측이 수신(시험 `OlderFrameNeedsOldType`). build1 프레임을 build3이 디코드:
+#### 옛 프레임을 새 수신 측이 받는 경우
+
+시험 `OlderFrameNeedsOldType`의 내용입니다. build1이 보낸 프레임을 build3이 디코드합니다.
 
 ```
 build3::Order       message version too old: Order reads version 3 or newer, got 1. Use the v1 type
 build3::v1::Order   Order{id="B2", qty=4, note="n", color="blue"}
 ```
 
-수신 측은 `PeekHeader()`로 `version`을 읽고 클래스 선택.
+수신 측은 `PeekHeader()`로 `version`을 읽고 그에 맞는 클래스를 고릅니다.
 
-송신 측 창이 수신 측보다 높은 경우(시험 `SenderWindowAboveReader`). build4 프레임(창 2..4):
+#### 송신 측 창이 수신 측보다 높은 경우
+
+시험 `SenderWindowAboveReader`의 내용입니다. build4가 창 2..4로 프레임을 보냅니다.
 
 ```
 build1::Order   message version too new: Order reads version 1, sender supports 2..4
