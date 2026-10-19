@@ -57,6 +57,7 @@
   <ItemGroup>
     <None Include="..\schemas\*.yaml" />
     <ClInclude Include="..\gen\cpp\*.g.h" />
+    <ClInclude Include="..\gen\cpp\*.enum.h" />
     <ClInclude Include="..\gen\cpp\Protaco.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

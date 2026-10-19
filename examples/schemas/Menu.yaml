@@ -1,0 +1,10 @@
+# A store menu: an enum field, a map and a tree of sections.
+message: Menu
+version: 1
+namespace: demo
+fields:
+  - {key: store, type: string(16), desc: store code}
+  - {key: defaultSize, type: PizzaSize, default: Large, desc: size when an order does not say}
+  # Map types contain ',', so they are quoted inside {...}.
+  - {key: prices, type: "map<string, double>", desc: price by dish name}
+  - {key: sections, type: list<Category>, desc: top-level sections}

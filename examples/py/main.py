@@ -7,9 +7,12 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "gen", "py"))
 
 import protaco  # noqa: E402
+from demo.Category_g import Category  # noqa: E402
 from demo.DeliveryRoute_g import DeliveryRoute  # noqa: E402
 from demo.Heartbeat_g import Heartbeat  # noqa: E402
+from demo.Menu_g import Menu  # noqa: E402
 from demo.PizzaOrder_g import PizzaOrder  # noqa: E402
+from demo.PizzaSize_enum import PizzaSizeNames  # noqa: E402
 from demo.RouteStop_g import RouteStop  # noqa: E402
 from demo.Topping_g import Topping  # noqa: E402
 
@@ -62,9 +65,34 @@ def logging():
     print(route.ToString(protaco.TextStyle.Pretty()))
 
 
+# 6. Enums, maps and a message that holds itself (a tree of menu sections).
+def enums_maps_and_trees():
+    menu = Menu(store="NAPOLI-1", prices={"margherita": 9.5, "marinara": 8.0})
+    pizza = Category(name="pizza", dishes=["margherita", "marinara"])
+    pizza.subsections.append(Category(name="white", dishes=["bianca"]))
+    menu.sections.append(pizza)
+
+    got = protaco.ToObject(Menu, menu.Serialize())
+    print("Menu: default size %s, margherita %.1f" % (PizzaSizeNames.Name(got.defaultSize), got.prices["margherita"]))
+    print(got)
+
+
+# 7. Envelope: a new message gets an id and the current time; a reply names the request in corr.
+def envelope():
+    request = DeliveryRoute()
+    reply = DeliveryRoute()
+    reply.SetCorr(request.GetId())
+    when = reply.TryGetTimeFromTimestamp()
+    if when:
+        date, time_text = when.value
+        print("Envelope: request id=%d, reply id=%d corr=%d at %s %s" % (request.GetId(), reply.GetId(), reply.GetCorr(), date, time_text))
+
+
 if __name__ == "__main__":
     send_and_receive()
     fixed_only()
     extra_data()
     error_handling()
     logging()
+    enums_maps_and_trees()
+    envelope()

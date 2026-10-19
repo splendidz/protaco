@@ -6,6 +6,7 @@
 
 #include "DeliveryRoute.g.h"
 #include "Heartbeat.g.h"
+#include "Menu.g.h"
 #include "PizzaOrder.g.h"
 
 namespace
@@ -86,6 +87,57 @@ void Logging()
     std::printf("%s\n", route.ToString(protaco::TextStyle::Pretty()).c_str());
 }
 
+// 6. Enums, maps and a message that holds itself (a tree of menu sections).
+void EnumsMapsAndTrees()
+{
+    demo::Menu menu;
+    menu.set_store("NAPOLI-1");
+    menu.mutable_prices()["margherita"] = 9.5;
+    menu.mutable_prices()["marinara"] = 8.0;
+    demo::Category pizza;
+    pizza.set_name("pizza");
+    pizza.mutable_dishes() = { "margherita", "marinara" };
+    demo::Category white;
+    white.set_name("white");
+    white.mutable_dishes().push_back("bianca");
+    pizza.mutable_subsections().push_back(white);
+    menu.mutable_sections().push_back(pizza);
+
+    const demo::Menu got = protaco::ToObject<demo::Menu>(menu.Serialize());
+    std::printf("Menu: default size %s, margherita %.1f\n", demo::EnumName(got.get_defaultSize()), got.get_prices().at("margherita"));
+    std::printf("%s\n", got.ToString().c_str());
+}
+
+// 7. Zero copy: TryView reads a fixed-only frame in place; ToObject with std::move takes the buffer.
+void ZeroCopy()
+{
+    demo::Heartbeat beat;
+    beat.set_node("oven-1");
+    beat.set_uptimeSec(42);
+    const std::vector<uint8_t> received = beat.Serialize();
+    demo::Heartbeat::View view;   // valid while received lives
+    if (protaco::TryView<demo::Heartbeat>(received, &view))
+        std::printf("Heartbeat view: node=%s uptime=%d\n", view.get_node().c_str(), view.get_uptimeSec());
+
+    std::vector<uint8_t> bytes = demo::DeliveryRoute().Serialize();
+    const uint8_t* data = bytes.data();
+    const demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(bytes));
+    std::printf("DeliveryRoute adopted the buffer: %s\n", route.Serialize().data() == data ? "yes" : "no");
+}
+
+// 8. Envelope: a new message gets an id and the current time; a reply names the request in corr.
+void Envelope()
+{
+    demo::DeliveryRoute request;
+    demo::DeliveryRoute reply;
+    reply.SetCorr(request.GetId());
+    std::string date;
+    std::string time;
+    if (reply.TryGetTimeFromTimestamp(&date, &time))
+        std::printf("Envelope: request id=%u, reply id=%u corr=%u at %s %s\n", request.GetId(), reply.GetId(), reply.GetCorr(),
+            date.c_str(), time.c_str());
+}
+
 }  // namespace
 
 int main()
@@ -95,5 +147,8 @@ int main()
     ExtraData();
     ErrorHandling();
     Logging();
+    EnumsMapsAndTrees();
+    ZeroCopy();
+    Envelope();
     return 0;
 }

@@ -1,0 +1,8 @@
+# A menu section. Sections nest: a section holds its subsections, so the message refers to itself.
+message: Category
+version: 1
+namespace: demo
+fields:
+  - {key: name, type: string, desc: section name}
+  - {key: dishes, type: list<string>, desc: dish names}
+  - {key: subsections, type: list<Category>, desc: sections inside this one}

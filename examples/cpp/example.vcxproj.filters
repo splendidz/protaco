@@ -21,6 +21,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\gen\cpp\Category.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
     <ClInclude Include="..\gen\cpp\Delivery.g.h">
       <Filter>gen\cpp</Filter>
     </ClInclude>
@@ -33,7 +36,13 @@
     <ClInclude Include="..\gen\cpp\Heartbeat.g.h">
       <Filter>gen\cpp</Filter>
     </ClInclude>
+    <ClInclude Include="..\gen\cpp\Menu.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
     <ClInclude Include="..\gen\cpp\PizzaOrder.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\PizzaSize.enum.h">
       <Filter>gen\cpp</Filter>
     </ClInclude>
     <ClInclude Include="..\gen\cpp\Protaco.hpp">
@@ -47,6 +56,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\schemas\Category.yaml">
+      <Filter>schemas</Filter>
+    </None>
     <None Include="..\schemas\Delivery.yaml">
       <Filter>schemas</Filter>
     </None>
@@ -59,7 +71,13 @@
     <None Include="..\schemas\Heartbeat.yaml">
       <Filter>schemas</Filter>
     </None>
+    <None Include="..\schemas\Menu.yaml">
+      <Filter>schemas</Filter>
+    </None>
     <None Include="..\schemas\PizzaOrder.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\PizzaSize.enum.yaml">
       <Filter>schemas</Filter>
     </None>
     <None Include="..\schemas\RouteStop.yaml">
