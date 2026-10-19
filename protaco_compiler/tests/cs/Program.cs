@@ -50,6 +50,7 @@ namespace Protacoc.Tests
             Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
             Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
             Run("C#: enum fields match C++", EnumFields);
+            Run("C#: map fields match C++", MapFields);
             Run("generator: enum default must be a value PC308", GeneratorEnumDefault);
             Run("C#: timestamp to local time, same text as C++", TimestampConvertsToLocalTime);
             Console.WriteLine();
@@ -318,6 +319,51 @@ namespace Protacoc.Tests
             Check(!enums.PizzaSizeNames.TryParse("Kids", out parsed), "removed name parsed");
             Equal("Kids", enums.PizzaSizeNames.Name((enums.PizzaSize)5), "removed name");
             Equal(null, enums.PizzaSizeNames.Name((enums.PizzaSize)9), "unknown name");
+        }
+
+        // Same values as the C++ test MakeMenu.
+        private static maps.Menu MakeMenu()
+        {
+            maps.Menu menu = new maps.Menu { Title = "lunch" };
+            menu.Prices["dupA"] = 9.5;
+            menu.Stock[-1] = 4294967295u;
+            menu.Specials[maps.Grade.Silver] = new maps.Dish { Name = "ragu", Price = 12.25 };
+            menu.Notes[18446744073709551615ul] = "\uB9E4\uC6B4\uB9DB";
+            menu.Vegan["ragu"] = false;
+            menu.Photos["ragu"] = new byte[] { 0xFF, 0x00 };
+            menu.Grades["ragu"] = (maps.Grade)9;
+            menu.Tags["ragu"] = new List<string> { "hot", "" };
+            menu.Daily[20261020] = new Dictionary<string, int> { { "ragu", 3 } };
+            menu.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
+            return menu;
+        }
+
+        private static void MapFields()
+        {
+            Check(MakeMenu().Serialize().SequenceEqual(Golden("Menu.bin")), "same bytes as C++");
+            maps.Menu golden = Protaco.Codec.ToObject<maps.Menu>(Golden("Menu.bin"));
+            Equal("Menu{prices={\"dupA\": 9.5}, stock={-1: 4294967295}, specials={Silver(2): Dish{name=\"ragu\", price=12.25}}, notes={18446744073709551615: \"\uB9E4\uC6B4\uB9DB\"}, vegan={\"ragu\": false}, photos={\"ragu\": <2 bytes: FF 00>}, grades={\"ragu\": ?(9)}, tags={\"ragu\": [\"hot\", \"\"]}, daily={20261020: {\"ragu\": 3}}, title=\"lunch\"}", golden.ToString(), "text");
+            Equal(9, (int)golden.Grades["ragu"], "unknown enum number kept");
+
+            maps.Menu sent = MakeMenu();
+            sent.Prices["dupB"] = 7.0;
+            sent.Prices["coffee"] = 3.5;
+            sent.Stock[2] = 0u;
+            maps.Menu got = Protaco.Codec.ToObject<maps.Menu>(sent.Serialize());
+            Equal(3, got.Prices.Count, "prices");
+            Equal(7.0, got.Prices["dupB"], "dupB");
+            Equal(2, got.Tags["ragu"].Count, "list value");
+            Equal(3, got.Daily[20261020]["ragu"], "map value");
+            string text = got.ToString();
+            Equal("Menu{prices={\"coffee\": 3.5, \"dupA\": 9.5, \"dupB\": 7}, stock={-1: 4294967295, 2: 0}, specials={Silver(2): Dish{name=\"ragu\", price=12.25}}, ", text.Substring(0, text.IndexOf("notes=")), "sorted text");
+
+            // Same key twice: "dupB" patched to "dupA". The entry index depends on the dictionary order.
+            byte[] bytes = sent.Serialize();
+            byte[] dupB = { 4, 0, 0, 0, (byte)'d', (byte)'u', (byte)'p', (byte)'B' };
+            int at = Enumerable.Range(0, bytes.Length - dupB.Length).First(i => bytes.Skip(i).Take(dupB.Length).SequenceEqual(dupB));
+            bytes[at + 7] = (byte)'A';
+            Protaco.ProtacoException e = Fails<maps.Menu>(bytes);
+            Check(e.Path.StartsWith("prices[") && e.What == "duplicate map key", "duplicate key: " + e.Message);
         }
 
         private static void GeneratorEnumDefault()

@@ -16,6 +16,7 @@ namespace Protacoc
         FixedString,
         Bytes,
         List,
+        Map,
         Message,
         Enum,
     }
@@ -24,7 +25,8 @@ namespace Protacoc
     {
         public TypeKind Kind;
         public int FixedLength;          // byte count of FixedString
-        public TypeRef Element;          // element of List
+        public TypeRef Element;          // element of List, value of Map
+        public TypeRef Key;              // key of Map
         public string TypeName;          // referenced message or enum name
         public MessageDef Resolved;      // referenced message, set by the linker
         public EnumDef ResolvedEnum;     // referenced enum, set by the linker
@@ -87,8 +89,27 @@ namespace Protacoc
                     return "bytes";
                 case TypeKind.List:
                     return "list<" + Element + ">";
+                case TypeKind.Map:
+                    return "map<" + Key + ", " + Element + ">";
                 default:
                     return TypeName;
+            }
+        }
+
+        // Message and enum types inside this type: itself, list elements, map keys and values.
+        public IEnumerable<TypeRef> Named()
+        {
+            if (Kind == TypeKind.Message || Kind == TypeKind.Enum)
+                yield return this;
+            if (Key != null)
+            {
+                foreach (TypeRef inner in Key.Named())
+                    yield return inner;
+            }
+            if (Element != null)
+            {
+                foreach (TypeRef inner in Element.Named())
+                    yield return inner;
             }
         }
     }

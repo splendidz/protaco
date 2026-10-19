@@ -17,8 +17,17 @@ namespace Protacoc
             "ext", "buf", "cache", "serialize", "msgname", "msgversion", "msgminversion", "msgschemahash", "schemahashes",
             "setenvelope", "getenvelope", "isschemakey", "visitvar", "visittext", "tostring", "kfixedoffset",
             "kfixedsize", "kallowextension", "equals", "gethashcode", "gettype", "getid", "setid", "getcorr", "setcorr",
-            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp",
+            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp", "protaco",
         };
+
+        // Where a type appears. Decides which kinds are allowed.
+        private enum Place
+        {
+            Field,
+            Element,
+            MapKey,
+            MapValue,
+        }
 
         private static readonly System.Text.RegularExpressions.Regex VersionNamespace =
             new System.Text.RegularExpressions.Regex("^v[0-9]+$");
@@ -173,12 +182,14 @@ namespace Protacoc
             {
                 foreach (FieldDef field in message.Fields)
                 {
-                    TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
-                    MessageDef target = type.Resolved;
-                    if (target == null || !target.UsesVersions || !reported.Add(target))
-                        continue;
-                    diag.Error(target.Pos, Codes.NestedVersion, "'" + target.Name + "' is used as a field type (" + message.Name + "." + field.Key
-                        + ") and cannot use min_version, added or removed. Nested bodies carry no version: add a new message instead");
+                    foreach (TypeRef type in field.Type.Named())
+                    {
+                        MessageDef target = type.Resolved;
+                        if (target == null || !target.UsesVersions || !reported.Add(target))
+                            continue;
+                        diag.Error(target.Pos, Codes.NestedVersion, "'" + target.Name + "' is used as a field type (" + message.Name + "." + field.Key
+                            + ") and cannot use min_version, added or removed. Nested bodies carry no version: add a new message instead");
+                    }
                 }
             }
         }
@@ -215,7 +226,7 @@ namespace Protacoc
                 if (!keys.Add(field.Key))
                     diag.Error(pos, Codes.DupKey, "duplicate field key '" + field.Key + "'");
                 CheckName(message, field, csNames, diag);
-                if (!ResolveType(field.Type, field, byName, diag, false))
+                if (!ResolveType(field.Type, field, byName, diag, Place.Field))
                     continue;
                 if (field.Required && field.Type.IsFixed)
                     diag.Error(pos, Codes.RequiredFixed, "'" + field.Key + "' is a fixed field and is always present. required is not allowed (validate the value in receiving code)");
@@ -243,13 +254,15 @@ namespace Protacoc
         }
 
         // Named types become Message or Enum here. False if the type cannot be used.
-        private static bool ResolveType(TypeRef type, FieldDef field, Dictionary<string, SchemaDef> byName, Diag diag, bool isElement)
+        // list elements: no bool, string(N), list or map. map keys: int, int64, uint, uint64, string, enum.
+        // map values: any type but string(N); a list or map value follows the same rules again.
+        private static bool ResolveType(TypeRef type, FieldDef field, Dictionary<string, SchemaDef> byName, Diag diag, Place place)
         {
             if (type.Kind == TypeKind.List)
             {
-                if (isElement)
+                if (place == Place.Element || place == Place.MapKey)
                 {
-                    diag.Error(field.Pos, Codes.BadElement, "list of lists is not supported. Wrap the element in a message");
+                    diag.Error(field.Pos, Codes.BadElement, (place == Place.Element ? "list of lists" : "list as a map key") + " is not supported. Wrap the list in a message");
                     return false;
                 }
                 TypeRef element = type.Element;
@@ -258,7 +271,29 @@ namespace Protacoc
                     diag.Error(field.Pos, Codes.BadElement, "list<" + element + "> is not supported. Allowed elements: int, int64, uint, uint64, double, string, bytes, enum, message");
                     return false;
                 }
-                return ResolveType(element, field, byName, diag, true);
+                return ResolveType(element, field, byName, diag, Place.Element);
+            }
+            if (type.Kind == TypeKind.Map)
+            {
+                if (place == Place.Element || place == Place.MapKey)
+                {
+                    diag.Error(field.Pos, Codes.BadElement, (place == Place.Element ? "list of maps" : "map as a map key") + " is not supported. Wrap the map in a message");
+                    return false;
+                }
+                if (!ResolveType(type.Key, field, byName, diag, Place.MapKey) || !ResolveType(type.Element, field, byName, diag, Place.MapValue))
+                    return false;
+                TypeKind key = type.Key.Kind;
+                if (key != TypeKind.Int && key != TypeKind.Int64 && key != TypeKind.UInt && key != TypeKind.UInt64 && key != TypeKind.String && key != TypeKind.Enum)
+                {
+                    diag.Error(field.Pos, Codes.BadElement, "map key " + type.Key + " is not supported. Allowed keys: int, int64, uint, uint64, string, enum");
+                    return false;
+                }
+                if (type.Element.Kind == TypeKind.FixedString)
+                {
+                    diag.Error(field.Pos, Codes.BadElement, "map value " + type.Element + " is not supported. Use string");
+                    return false;
+                }
+                return true;
             }
             if (type.Kind != TypeKind.Message)
                 return true;
@@ -339,7 +374,7 @@ namespace Protacoc
                     }
                     break;
                 default:
-                    diag.Error(field.Pos, Codes.BadDefault, "list, bytes and message fields cannot have a default (they start empty)");
+                    diag.Error(field.Pos, Codes.BadDefault, "list, map, bytes and message fields cannot have a default (they start empty)");
                     return;
             }
             if (!ok)
@@ -398,9 +433,11 @@ namespace Protacoc
             HashSet<MessageDef> seen = new HashSet<MessageDef>();
             foreach (FieldDef field in message.Fields)
             {
-                TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
-                if (type.Resolved != null && seen.Add(type.Resolved))
-                    yield return type.Resolved;
+                foreach (TypeRef type in field.Type.Named())
+                {
+                    if (type.Resolved != null && seen.Add(type.Resolved))
+                        yield return type.Resolved;
+                }
             }
         }
 
@@ -409,9 +446,11 @@ namespace Protacoc
             HashSet<EnumDef> seen = new HashSet<EnumDef>();
             foreach (FieldDef field in message.Fields)
             {
-                TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
-                if (type.ResolvedEnum != null && seen.Add(type.ResolvedEnum))
-                    yield return type.ResolvedEnum;
+                foreach (TypeRef type in field.Type.Named())
+                {
+                    if (type.ResolvedEnum != null && seen.Add(type.ResolvedEnum))
+                        yield return type.ResolvedEnum;
+                }
             }
         }
 

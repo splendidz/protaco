@@ -265,6 +265,12 @@ namespace Protacoc
                     YScalar value = ReadScalar(true);
                     if (failed_)
                         return null;
+                    // The ',' of map<K, V> ends a plain value inside {...}.
+                    if (!value.Quoted && value.Text.StartsWith("map<", System.StringComparison.Ordinal) && !value.Text.EndsWith(">", System.StringComparison.Ordinal))
+                    {
+                        Fail("map types contain ',': quote them inside {...}, for example type: \"map<string, int>\"");
+                        return null;
+                    }
                     map.Entries.Add(new KeyValuePair<YScalar, object>(key, value));
                     SkipSpaces();
                     char c = Peek();

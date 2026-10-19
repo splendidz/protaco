@@ -49,6 +49,8 @@ namespace Protacoc
             {
                 case TypeKind.List:
                     return "list<" + TypeText(type.Element) + ">";
+                case TypeKind.Map:
+                    return "map<" + TypeText(type.Key) + "," + TypeText(type.Element) + ">";
                 case TypeKind.Message:
                     return type.TypeName + "@" + type.Resolved.SchemaHash.ToString("x8");
                 case TypeKind.Enum:

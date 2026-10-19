@@ -1,0 +1,15 @@
+# Every map key kind and value kind. Map types contain ',', so they are quoted inside {...}.
+message: Menu
+version: 1
+namespace: maps
+fields:
+  - {key: prices, type: "map<string, double>"}
+  - {key: stock, type: "map<int, uint>", required: true}
+  - {key: specials, type: "map<Grade, Dish>"}
+  - {key: notes, type: "map<uint64, string>"}
+  - {key: vegan, type: "map<string, bool>"}
+  - {key: photos, type: "map<string, bytes>"}
+  - {key: grades, type: "map<string, Grade>"}
+  - {key: tags, type: "map<string, list<string>>"}
+  - {key: daily, type: "map<int64, map<string, int>>"}
+  - {key: title, type: string}

@@ -158,6 +158,8 @@ namespace Protacoc
                     return "std::vector<uint8_t>";
                 case TypeKind.List:
                     return "std::vector<" + CppType(type.Element) + ">";
+                case TypeKind.Map:
+                    return "std::unordered_map<" + CppType(type.Key) + ", " + CppType(type.Element) + ">";
                 default:
                     return type.TypeName;
             }

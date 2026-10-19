@@ -1,0 +1,6 @@
+# expect: PC102
+message: PC102_mapquote
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: map<string, int>}

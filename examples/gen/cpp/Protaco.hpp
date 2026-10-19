@@ -17,7 +17,9 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <algorithm>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -38,6 +40,7 @@ enum class TacoType : uint8_t
     Bytes = 8,
     UInt = 9,
     UInt64 = 10,
+    Map = 11,
 };
 
 enum : uint32_t
@@ -126,7 +129,7 @@ namespace detail
 // yaml type word of a TacoType, for error text.
 inline const char* TypeName(uint8_t type)
 {
-    static const char* const kNames[] = { "unknown", "bool", "int", "int64", "double", "string", "message", "list", "bytes", "uint", "uint64" };
+    static const char* const kNames[] = { "unknown", "bool", "int", "int64", "double", "string", "message", "list", "bytes", "uint", "uint64", "map" };
     return type < sizeof(kNames) / sizeof(kNames[0]) ? kNames[type] : "unknown";
 }
 
@@ -1068,6 +1071,11 @@ struct Codec<std::vector<E>>
         return TacoType::List;
     }
 
+    static std::vector<E> Make()
+    {
+        return std::vector<E>();
+    }
+
     static size_t Size(const std::vector<E>& list)
     {
         size_t size = 1 + 4;
@@ -1119,6 +1127,127 @@ struct Codec<std::vector<E>>
         }
         if (reader.Left() != 0)
             return Fail(error, "trailing bytes in list");
+        return true;
+    }
+};
+
+// bool as a map value: 1 byte, 0 or 1. Fixed bool fields do not go through codecs.
+template <>
+struct Codec<bool>
+{
+    static TacoType Type()
+    {
+        return TacoType::Bool;
+    }
+
+    static bool Make()
+    {
+        return false;
+    }
+
+    static size_t Size(bool)
+    {
+        return 1;
+    }
+
+    static void Write(CWriter& writer, bool value)
+    {
+        writer.Pod<uint8_t>(value ? 1 : 0);
+    }
+
+    static bool Read(const uint8_t* src, size_t size, bool* out, Error* error, int)
+    {
+        if (size != 1)
+            return Fail(error, "scalar size mismatch");
+        *out = src[0] != 0;
+        return true;
+    }
+};
+
+// map: KeyType u8 | ValueType u8 | Count u32 | (KeyLen u32 | Key | ValueLen u32 | Value) x Count.
+// Entries are written in the container's iteration order: two maps with the same entries may differ in bytes.
+template <class K, class V>
+struct Codec<std::unordered_map<K, V>>
+{
+    using Map = std::unordered_map<K, V>;
+
+    static TacoType Type()
+    {
+        return TacoType::Map;
+    }
+
+    static Map Make()
+    {
+        return Map();
+    }
+
+    static size_t Size(const Map& map)
+    {
+        size_t size = 1 + 1 + 4;
+        for (const auto& entry : map)
+            size += 4 + Codec<K>::Size(entry.first) + 4 + Codec<V>::Size(entry.second);
+        return size;
+    }
+
+    static void Write(CWriter& writer, const Map& map)
+    {
+        writer.Pod<uint8_t>(static_cast<uint8_t>(Codec<K>::Type()));
+        writer.Pod<uint8_t>(static_cast<uint8_t>(Codec<V>::Type()));
+        writer.Pod<uint32_t>(static_cast<uint32_t>(map.size()));
+        for (const auto& entry : map)
+        {
+            writer.Pod<uint32_t>(static_cast<uint32_t>(Codec<K>::Size(entry.first)));
+            Codec<K>::Write(writer, entry.first);
+            writer.Pod<uint32_t>(static_cast<uint32_t>(Codec<V>::Size(entry.second)));
+            Codec<V>::Write(writer, entry.second);
+        }
+    }
+
+    static bool Read(const uint8_t* src, size_t size, Map* out, Error* error, int depth)
+    {
+        CReader reader(src, size);
+        uint8_t keyType = 0;
+        uint8_t valueType = 0;
+        uint32_t count = 0;
+        if (!reader.Pod(&keyType) || !reader.Pod(&valueType) || !reader.Pod(&count))
+            return Fail(error, "map header truncated");
+        if (keyType != static_cast<uint8_t>(Codec<K>::Type()) || valueType != static_cast<uint8_t>(Codec<V>::Type()))
+            return Fail(error, "map key or value type mismatch");
+        // Each entry needs two 4-byte lengths. Rejects huge counts.
+        if (count > reader.Left() / 8)
+            return Fail(error, "map count too large");
+        out->clear();
+        out->reserve(count);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            const std::string at = "[" + std::to_string(i) + "]";
+            K key = Codec<K>::Make();
+            V value = Codec<V>::Make();
+            uint32_t itemSize = 0;
+            const uint8_t* item = nullptr;
+            if (!reader.Pod(&itemSize) || !reader.Take(itemSize, &item) || !Codec<K>::Read(item, itemSize, &key, error, depth))
+            {
+                PrependPath(error, at);
+                return Fail(error, "map key truncated or bad");
+            }
+            if (!reader.Pod(&itemSize) || !reader.Take(itemSize, &item))
+            {
+                PrependPath(error, at);
+                return Fail(error, "map value truncated");
+            }
+            if (!Codec<V>::Read(item, itemSize, &value, error, depth))
+            {
+                PrependPath(error, at);
+                return false;
+            }
+            if (!out->emplace(std::move(key), std::move(value)).second)
+            {
+                PrependPath(error, at);
+                return Fail(error, "duplicate map key");
+            }
+        }
+        if (reader.Left() != 0)
+            return Fail(error, "trailing bytes in map");
         return true;
     }
 };
@@ -1493,6 +1622,26 @@ private:
         ValueOf(value, std::is_enum<T>());
     }
 
+    // {key: value, ...} with keys sorted, so the text does not depend on the map's iteration order.
+    template <class K, class V>
+    void Value(const std::unordered_map<K, V>& map)
+    {
+        std::vector<const std::pair<const K, V>*> entries;
+        entries.reserve(map.size());
+        for (const auto& entry : map)
+            entries.push_back(&entry);
+        std::sort(entries.begin(), entries.end(), [](const std::pair<const K, V>* a, const std::pair<const K, V>* b) { return a->first < b->first; });
+        Open("{");
+        for (const std::pair<const K, V>* entry : entries)
+        {
+            Item();
+            Value(entry->first);
+            out_ += ": ";
+            Value(entry->second);
+        }
+        Close("}");
+    }
+
     template <class T>
     void ValueOf(const T& message, std::false_type)
     {
@@ -1546,6 +1695,9 @@ private:
             return;
         case TacoType::List:
             out_ += "<list " + std::to_string(value.size()) + " bytes>";
+            return;
+        case TacoType::Map:
+            out_ += "<map " + std::to_string(value.size()) + " bytes>";
             return;
         default:
             out_ += "<type " + std::to_string(static_cast<int>(type)) + ", " + std::to_string(value.size()) + " bytes>";

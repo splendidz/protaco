@@ -31,6 +31,7 @@
 #include "partial/PizzaOrder.g.h"
 #include "partial/DeliveryRoute.g.h"
 #include "enums/Pie.g.h"
+#include "maps/Menu.g.h"
 #include "types/Numbers.g.h"
 #include "ver_v1/Recipe.g.h"
 #include "ver_v2/Recipe.g.h"
@@ -124,6 +125,27 @@ enums::Pie MakePie()
     pie.mutable_sizes() = { enums::PizzaSize::Small, enums::PizzaSize::Family, static_cast<enums::PizzaSize>(5), static_cast<enums::PizzaSize>(9) };
     pie.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return pie;
+}
+
+// Golden values. Same as the C# test MakeMenu. One entry per map: map bytes follow the container's iteration order.
+maps::Menu MakeMenu()
+{
+    maps::Menu menu;
+    menu.mutable_prices()["dupA"] = 9.5;
+    menu.mutable_stock()[-1] = 4294967295u;
+    maps::Dish dish;
+    dish.set_name("ragu");
+    dish.set_price(12.25);
+    menu.mutable_specials().emplace(maps::Grade::Silver, dish);
+    menu.mutable_notes()[18446744073709551615ull] = u8"매운맛";
+    menu.mutable_vegan()["ragu"] = false;
+    menu.mutable_photos()["ragu"] = { 0xFF, 0x00 };
+    menu.mutable_grades()["ragu"] = static_cast<maps::Grade>(9);
+    menu.mutable_tags()["ragu"] = { "hot", "" };
+    menu.mutable_daily()[20261020] = { { "ragu", 3 } };
+    menu.set_title("lunch");
+    menu.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
+    return menu;
 }
 
 // Golden values. Same as the C# test MakeDeliveryProof. Zeros, 0xFF and an empty element included.
@@ -707,6 +729,42 @@ TEST(Protaco, EnumFields)
     EXPECT_EQ(PizzaSize::Medium, parsed);
     EXPECT_STREQ("Kids", enums::EnumName(static_cast<PizzaSize>(5)));
     EXPECT_EQ(nullptr, enums::EnumName(static_cast<PizzaSize>(9)));
+}
+
+// Maps: every key and value kind, nested list and map values, sorted ToString, duplicate keys. Same as the C# test.
+TEST(Protaco, MapFields)
+{
+    EXPECT_EQ(u8"Menu{prices={\"dupA\": 9.5}, stock={-1: 4294967295}, specials={Silver(2): Dish{name=\"ragu\", price=12.25}}, notes={18446744073709551615: \"매운맛\"}, vegan={\"ragu\": false}, photos={\"ragu\": <2 bytes: FF 00>}, grades={\"ragu\": ?(9)}, tags={\"ragu\": [\"hot\", \"\"]}, daily={20261020: {\"ragu\": 3}}, title=\"lunch\"}", MakeMenu().ToString());
+    ExpectGolden("Menu.bin", MakeMenu().Serialize());
+
+    maps::Menu sent = MakeMenu();
+    sent.mutable_prices()["dupB"] = 7.0;
+    sent.mutable_prices()["coffee"] = 3.5;
+    sent.mutable_stock()[2] = 0u;
+    const maps::Menu got = protaco::ToObject<maps::Menu>(sent.Serialize());
+    EXPECT_EQ(sent.get_prices(), got.get_prices());
+    EXPECT_EQ(sent.get_stock(), got.get_stock());
+    EXPECT_EQ(sent.get_notes(), got.get_notes());
+    EXPECT_EQ(sent.get_vegan(), got.get_vegan());
+    EXPECT_EQ(sent.get_photos(), got.get_photos());
+    EXPECT_EQ(sent.get_tags(), got.get_tags());
+    EXPECT_EQ(sent.get_daily(), got.get_daily());
+    EXPECT_EQ(9, static_cast<int32_t>(got.get_grades().at("ragu")));
+    EXPECT_EQ("Dish{name=\"ragu\", price=12.25}", got.get_specials().at(maps::Grade::Silver).ToString());
+    EXPECT_EQ(0u, got.GetExt().Count());
+    EXPECT_EQ(std::string(u8"Menu{prices={\"coffee\": 3.5, \"dupA\": 9.5, \"dupB\": 7}, stock={-1: 4294967295, 2: 0}, specials={Silver(2): Dish{name=\"ragu\", price=12.25}}, "), got.ToString().substr(0, got.ToString().find("notes=")));
+
+    // Same key twice: "dupB" patched to "dupA". The entry index depends on the iteration order.
+    std::vector<uint8_t> bytes = sent.Serialize();
+    const uint8_t dupB[] = { 4, 0, 0, 0, 'd', 'u', 'p', 'B' };
+    const auto at = std::search(bytes.begin(), bytes.end(), std::begin(dupB), std::end(dupB));
+    ASSERT_NE(bytes.end(), at);
+    at[7] = 'A';
+    maps::Menu bad;
+    std::string error;
+    EXPECT_FALSE(protaco::TryToObject(bytes, &bad, &error));
+    EXPECT_EQ(0u, error.find("prices["));
+    EXPECT_NE(std::string::npos, error.find("]: duplicate map key"));
 }
 
 // More TLVs than the decoder keeps on the stack (16): the rest goes to the heap, nothing is lost.

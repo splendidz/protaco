@@ -1,0 +1,7 @@
+# One dish.
+message: Dish
+version: 1
+namespace: maps
+fields:
+  - {key: name, type: string}
+  - {key: price, type: double}

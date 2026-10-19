@@ -18,6 +18,7 @@ namespace Protacoc
         private static readonly Regex IntText = new Regex("^-?(0|[1-9][0-9]*)$");
         private static readonly Regex FixedStringType = new Regex("^string\\(([0-9]+)\\)$");
         private static readonly Regex ListType = new Regex("^list<(.+)>$");
+        private static readonly Regex MapType = new Regex("^map<(.+)>$");
 
         private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "desc", "fields" };
         private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
@@ -299,7 +300,7 @@ namespace Protacoc
             return text;
         }
 
-        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | message or enum name
+        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | map<K, V> | message or enum name
         public static TypeRef ParseType(string text, SourcePos pos, Diag diag)
         {
             if (text == null)
@@ -342,10 +343,27 @@ namespace Protacoc
                     return null;
                 return new TypeRef { Kind = TypeKind.List, Element = element };
             }
+            Match mapMatch = MapType.Match(text);
+            if (mapMatch.Success)
+            {
+                // Keys are single words, so the first comma ends the key.
+                string inner = mapMatch.Groups[1].Value;
+                int comma = inner.IndexOf(',');
+                if (comma < 0)
+                {
+                    diag.Error(pos, Codes.BadType, "map needs a key and a value type: '" + text + "', for example map<string, int>");
+                    return null;
+                }
+                TypeRef key = ParseType(inner.Substring(0, comma).Trim(), pos, diag);
+                TypeRef value = ParseType(inner.Substring(comma + 1).Trim(), pos, diag);
+                if (key == null || value == null)
+                    return null;
+                return new TypeRef { Kind = TypeKind.Map, Key = key, Element = value };
+            }
             // A message or an enum: the linker decides which.
             if (Ident.IsMatch(text))
                 return new TypeRef { Kind = TypeKind.Message, TypeName = text };
-            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, message or enum name");
+            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, map<K, V>, message or enum name");
             return null;
         }
 

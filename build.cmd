@@ -14,7 +14,7 @@ echo === [1/5] build protacoc
 "%MSBUILD%" protaco_compiler\protacoc\protacoc.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
 
 echo === [2/5] generate test and example code
-for %%N in (demo types enums ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
+for %%N in (demo types enums maps ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
     %PROTACOC% -I %TESTS%\schemas\%%N --cpp_out %TESTS%\gen\cpp\%%N --cs_out %TESTS%\gen\cs\%%N --no_runtime || goto :fail
 )
 %PROTACOC% -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs || goto :fail

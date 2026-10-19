@@ -68,7 +68,7 @@ namespace Protacoc
         public const string DupMessage = "PC401";      // duplicate message name
         public const string UnknownRef = "PC402";      // unknown message reference
         public const string Cycle = "PC403";           // reference cycle
-        public const string BadElement = "PC404";      // type not allowed as list element
+        public const string BadElement = "PC404";      // type not allowed as list element, map key or map value
         public const string NamespaceMismatch = "PC405"; // files of one run declare different namespaces
         public const string TooDeep = "PC406";         // message nesting deeper than the runtime limit
         public const string NestedVersion = "PC407";   // message used as a field type has version attributes

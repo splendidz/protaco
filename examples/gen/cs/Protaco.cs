@@ -24,6 +24,7 @@ namespace Protaco
         Bytes = 8,
         UInt = 9,
         UInt64 = 10,
+        Map = 11,
     }
 
     /// <summary>
@@ -426,6 +427,8 @@ namespace Protaco
                     return "list";
                 case TacoType.Bytes:
                     return "bytes";
+                case TacoType.Map:
+                    return "map";
                 default:
                     return "unknown";
             }
@@ -722,9 +725,31 @@ namespace Protaco
             WriteList(key, TacoType.Message, list, item => Codec.WriteBody(item, writer_));
         }
 
+        /// <summary>A map field (or any value with an item descriptor).</summary>
+        public void Value<T>(string key, T value, Item<T> item)
+        {
+            Tlv(key, item.Type, () => item.Write(writer_, value));
+        }
+
         internal void Raw(string key, TacoType type, byte[] value)
         {
             Tlv(key, type, () => writer_.Write(value));
+        }
+
+        // Len u32 slot before a value: BeginSized writes 0 and returns the value start, EndSized fills the length.
+        internal static long BeginSized(BinaryWriter writer)
+        {
+            writer.Write(0u);
+            return writer.BaseStream.Position;
+        }
+
+        internal static void EndSized(BinaryWriter writer, long start)
+        {
+            Stream stream = writer.BaseStream;
+            long end = stream.Position;
+            stream.Position = start - 4;
+            writer.Write((uint)(end - start));
+            stream.Position = end;
         }
 
         // list: ElemType u8 | Count u32 | (Len u32 | Value) x Count
@@ -751,15 +776,9 @@ namespace Protaco
         // Reserves the length slot, writes the value, then the length.
         private void WithLength(Action writeValue)
         {
-            Stream stream = writer_.BaseStream;
-            long lengthAt = stream.Position;
-            writer_.Write(0u);
-            long start = stream.Position;
+            long start = BeginSized(writer_);
             writeValue();
-            long end = stream.Position;
-            stream.Position = lengthAt;
-            writer_.Write((uint)(end - start));
-            stream.Position = end;
+            EndSized(writer_, start);
         }
     }
 
@@ -868,6 +887,15 @@ namespace Protaco
             byte[] value = new byte[length];
             Buffer.BlockCopy(src_, offset, value, 0, length);
             return value;
+        }
+
+        /// <summary>A map field (or any value with an item descriptor).</summary>
+        public T Value<T>(string key, bool required, T fallback, Item<T> item)
+        {
+            Raw raw = Take(key, item.Type, required);
+            if (raw == null)
+                return fallback;
+            return Guard(key, () => item.Read(src_, raw.Offset, raw.Length, depth_));
         }
 
         public List<T> ListMessage<T>(string key, bool required, List<T> fallback) where T : IMessage, new()
@@ -981,6 +1009,260 @@ namespace Protaco
             if (raw.Type != type)
                 throw new ProtacoException(key, "type mismatch: expected " + Codec.TypeName(type) + ", got " + Codec.TypeName(raw.Type));
             return raw;
+        }
+    }
+
+    /// <summary>One kind of map key or value: how it is written, read and shown (generated code only, see Items).</summary>
+    public sealed class Item<T>
+    {
+        internal readonly TacoType Type;
+        internal readonly Action<BinaryWriter, T> Write;
+        internal readonly Func<byte[], int, int, int, T> Read;   // src, offset, length, depth of the enclosing body
+        internal readonly Action<TextBuilder, T> Text;
+        internal readonly Comparison<T> Order;                   // key order in ToString
+
+        internal Item(TacoType type, Action<BinaryWriter, T> write, Func<byte[], int, int, int, T> read, Action<TextBuilder, T> text,
+            Comparison<T> order = null)
+        {
+            Type = type;
+            Write = write;
+            Read = read;
+            Text = text;
+            Order = order ?? Comparer<T>.Default.Compare;
+        }
+    }
+
+    /// <summary>
+    /// Item descriptors of generated map fields. Same bytes as the C++ codecs:
+    /// list: ElemType u8 | Count u32 | (Len u32 | Value) x Count,
+    /// map: KeyType u8 | ValueType u8 | Count u32 | (KeyLen u32 | Key | ValueLen u32 | Value) x Count.
+    /// </summary>
+    public static class Items
+    {
+        public static readonly Item<bool> Bool = new Item<bool>(TacoType.Bool, (w, v) => w.Write((byte)(v ? 1 : 0)),
+            (s, o, l, d) => s[Scalar(o, l, 1)] != 0, (b, v) => b.Value(v));
+
+        public static readonly Item<int> Int = new Item<int>(TacoType.Int, (w, v) => w.Write(v),
+            (s, o, l, d) => BitConverter.ToInt32(s, Scalar(o, l, 4)), (b, v) => b.Value(v));
+
+        public static readonly Item<long> Int64 = new Item<long>(TacoType.Int64, (w, v) => w.Write(v),
+            (s, o, l, d) => BitConverter.ToInt64(s, Scalar(o, l, 8)), (b, v) => b.Value(v));
+
+        public static readonly Item<uint> UInt = new Item<uint>(TacoType.UInt, (w, v) => w.Write(v),
+            (s, o, l, d) => BitConverter.ToUInt32(s, Scalar(o, l, 4)), (b, v) => b.Value(v));
+
+        public static readonly Item<ulong> UInt64 = new Item<ulong>(TacoType.UInt64, (w, v) => w.Write(v),
+            (s, o, l, d) => BitConverter.ToUInt64(s, Scalar(o, l, 8)), (b, v) => b.Value(v));
+
+        public static readonly Item<double> Double = new Item<double>(TacoType.Double, (w, v) => w.Write(v),
+            (s, o, l, d) => BitConverter.ToDouble(s, Scalar(o, l, 8)), (b, v) => b.Value(v));
+
+        public static readonly Item<string> String = new Item<string>(TacoType.String, (w, v) => w.Write(Codec.Text.GetBytes(v ?? "")),
+            (s, o, l, d) => Codec.Text.GetString(s, o, l), (b, v) => b.Value(v), CodePointOrder);
+
+        public static readonly Item<byte[]> Bytes = new Item<byte[]>(TacoType.Bytes, (w, v) => w.Write(v ?? new byte[0]),
+            (s, o, l, d) => Copy(s, o, l), (b, v) => b.Value(v));
+
+        /// <summary>int32 in the serialized data. Numbers this build does not know are kept.</summary>
+        public static Item<T> Enum<T>(Func<T, int> toNumber, Func<int, T> fromNumber, Func<T, string> name) where T : struct, System.Enum
+        {
+            return new Item<T>(TacoType.Int, (w, v) => w.Write(toNumber(v)),
+                (s, o, l, d) => fromNumber(BitConverter.ToInt32(s, Scalar(o, l, 4))), (b, v) => b.EnumValue(v, name));
+        }
+
+        public static Item<T> Message<T>() where T : IMessage, new()
+        {
+            return MessageItem<T>.Value;
+        }
+
+        public static Item<List<T>> List<T>(Item<T> element)
+        {
+            return new Item<List<T>>(TacoType.List, (w, v) => WriteList(w, v, element), (s, o, l, d) => ReadList(s, o, l, d, element),
+                (b, v) => b.ListItems(v, item => element.Text(b, item)));
+        }
+
+        public static Item<Dictionary<K, V>> Map<K, V>(Item<K> key, Item<V> value)
+        {
+            return new Item<Dictionary<K, V>>(TacoType.Map, (w, v) => WriteMap(w, v, key, value), (s, o, l, d) => ReadMap(s, o, l, d, key, value),
+                (b, v) => b.MapItems(v, key, value));
+        }
+
+        private static class MessageItem<T> where T : IMessage, new()
+        {
+            public static readonly Item<T> Value = new Item<T>(TacoType.Message, (w, v) => Codec.WriteBody(v, w), ReadMessage, (b, v) => b.Message(v));
+
+            private static T ReadMessage(byte[] src, int offset, int length, int depth)
+            {
+                T message = new T();
+                Codec.ReadBody(message, src, offset, length, depth + 1, false);
+                return message;
+            }
+        }
+
+        private static int Scalar(int offset, int length, int expected)
+        {
+            if (length != expected)
+                throw new ProtacoException("", "scalar size mismatch");
+            return offset;
+        }
+
+        private static byte[] Copy(byte[] src, int offset, int length)
+        {
+            byte[] value = new byte[length];
+            Buffer.BlockCopy(src, offset, value, 0, length);
+            return value;
+        }
+
+        // Unicode code point order, which is UTF-8 byte order: the same key order as C++ std::string.
+        private static int CodePointOrder(string a, string b)
+        {
+            a = a ?? "";
+            b = b ?? "";
+            int shared = Math.Min(a.Length, b.Length);
+            for (int i = 0; i < shared; ++i)
+            {
+                char x = a[i];
+                char y = b[i];
+                if (x == y)
+                    continue;
+                // A surrogate stands for a code point above U+FFFF, so it sorts after every other char.
+                bool xs = char.IsSurrogate(x);
+                bool ys = char.IsSurrogate(y);
+                if (xs != ys)
+                    return xs ? 1 : -1;
+                return x < y ? -1 : 1;
+            }
+            return a.Length.CompareTo(b.Length);
+        }
+
+        // Len u32 of the next value. False if it runs past end.
+        private static bool TakeSize(byte[] src, ref int p, int end, out int length)
+        {
+            length = 0;
+            if (end - p < 4)
+                return false;
+            uint size = BitConverter.ToUInt32(src, p);
+            if (size > (uint)(end - p - 4))
+                return false;
+            p += 4;
+            length = (int)size;
+            return true;
+        }
+
+        private static void WriteList<T>(BinaryWriter writer, List<T> list, Item<T> element)
+        {
+            writer.Write((byte)element.Type);
+            writer.Write((uint)(list == null ? 0 : list.Count));
+            if (list == null)
+                return;
+            foreach (T item in list)
+            {
+                long start = VarWriter.BeginSized(writer);
+                element.Write(writer, item);
+                VarWriter.EndSized(writer, start);
+            }
+        }
+
+        private static List<T> ReadList<T>(byte[] src, int offset, int length, int depth, Item<T> element)
+        {
+            int p = offset;
+            int end = offset + length;
+            if (length < 5)
+                throw new ProtacoException("", "list header truncated");
+            if ((TacoType)src[p] != element.Type)
+                throw new ProtacoException("", "list element type mismatch");
+            uint count = BitConverter.ToUInt32(src, p + 1);
+            p += 5;
+            if (count > (uint)((end - p) / 4))
+                throw new ProtacoException("", "list count too large");
+            List<T> list = new List<T>((int)count);
+            for (int i = 0; i < (int)count; ++i)
+            {
+                int size;
+                if (!TakeSize(src, ref p, end, out size))
+                    throw new ProtacoException("[" + i + "]", "list element truncated");
+                try
+                {
+                    list.Add(element.Read(src, p, size, depth));
+                }
+                catch (ProtacoException e)
+                {
+                    throw e.Prepend("[" + i + "]");
+                }
+                p += size;
+            }
+            if (p != end)
+                throw new ProtacoException("", "trailing bytes in list");
+            return list;
+        }
+
+        // Entries in the dictionary's order: two maps with the same entries may differ in bytes.
+        private static void WriteMap<K, V>(BinaryWriter writer, Dictionary<K, V> map, Item<K> key, Item<V> value)
+        {
+            writer.Write((byte)key.Type);
+            writer.Write((byte)value.Type);
+            writer.Write((uint)(map == null ? 0 : map.Count));
+            if (map == null)
+                return;
+            foreach (KeyValuePair<K, V> entry in map)
+            {
+                long start = VarWriter.BeginSized(writer);
+                key.Write(writer, entry.Key);
+                VarWriter.EndSized(writer, start);
+                start = VarWriter.BeginSized(writer);
+                value.Write(writer, entry.Value);
+                VarWriter.EndSized(writer, start);
+            }
+        }
+
+        private static Dictionary<K, V> ReadMap<K, V>(byte[] src, int offset, int length, int depth, Item<K> key, Item<V> value)
+        {
+            int p = offset;
+            int end = offset + length;
+            if (length < 6)
+                throw new ProtacoException("", "map header truncated");
+            if ((TacoType)src[p] != key.Type || (TacoType)src[p + 1] != value.Type)
+                throw new ProtacoException("", "map key or value type mismatch");
+            uint count = BitConverter.ToUInt32(src, p + 2);
+            p += 6;
+            if (count > (uint)((end - p) / 8))
+                throw new ProtacoException("", "map count too large");
+            Dictionary<K, V> map = new Dictionary<K, V>((int)count);
+            for (int i = 0; i < (int)count; ++i)
+            {
+                string at = "[" + i + "]";
+                int size;
+                K k;
+                if (!TakeSize(src, ref p, end, out size))
+                    throw new ProtacoException(at, "map key truncated or bad");
+                try
+                {
+                    k = key.Read(src, p, size, depth);
+                }
+                catch (ProtacoException)
+                {
+                    throw new ProtacoException(at, "map key truncated or bad");
+                }
+                p += size;
+                if (!TakeSize(src, ref p, end, out size))
+                    throw new ProtacoException(at, "map value truncated");
+                V v;
+                try
+                {
+                    v = value.Read(src, p, size, depth);
+                }
+                catch (ProtacoException e)
+                {
+                    throw e.Prepend(at);
+                }
+                p += size;
+                if (map.ContainsKey(k))
+                    throw new ProtacoException(at, "duplicate map key");
+                map.Add(k, v);
+            }
+            if (p != end)
+                throw new ProtacoException("", "trailing bytes in map");
+            return map;
         }
     }
 
@@ -1350,43 +1632,43 @@ namespace Protaco
         public void Field(string key, List<int> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         public void Field(string key, List<long> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         public void Field(string key, List<uint> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         public void Field(string key, List<ulong> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         public void Field(string key, List<double> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         public void Field(string key, List<string> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         public void Field(string key, List<byte[]> value)
         {
             Key(key);
-            Items(value, Value);
+            ListItems(value, Value);
         }
 
         /// <summary>Enum field: Name(number), ?(number) for a number the build does not know.</summary>
@@ -1399,10 +1681,17 @@ namespace Protaco
         public void Field<T>(string key, List<T> value, Func<T, string> name) where T : struct, Enum
         {
             Key(key);
-            Items(value, item => EnumValue(item, name));
+            ListItems(value, item => EnumValue(item, name));
         }
 
-        private void EnumValue<T>(T value, Func<T, string> name) where T : struct, Enum
+        /// <summary>Map field: {key: value, ...} with keys sorted, so the text does not depend on the dictionary order.</summary>
+        public void Field<T>(string key, T value, Item<T> item)
+        {
+            Key(key);
+            item.Text(this, value);
+        }
+
+        internal void EnumValue<T>(T value, Func<T, string> name) where T : struct, Enum
         {
             out_.Append(name(value) ?? "?").Append('(').Append(Convert.ToInt32(value).ToString(CultureInfo.InvariantCulture)).Append(')');
         }
@@ -1410,7 +1699,7 @@ namespace Protaco
         public void Field<T>(string key, List<T> value) where T : IMessage
         {
             Key(key);
-            Items(value, item => Message(item));
+            ListItems(value, item => Message(item));
         }
 
         internal void BeginExt()
@@ -1432,7 +1721,7 @@ namespace Protaco
         }
 
         // Name{field=value, ...}. The top-level message shows its envelope first when TextStyle.Envelope is set.
-        private void Message(IMessage message, bool top = false)
+        internal void Message(IMessage message, bool top = false)
         {
             if (message == null)
             {
@@ -1469,7 +1758,7 @@ namespace Protaco
             out_.Append(key).Append('=');
         }
 
-        private void Items<T>(List<T> list, Action<T> write)
+        internal void ListItems<T>(List<T> list, Action<T> write)
         {
             Open("[");
             if (list != null)
@@ -1483,33 +1772,51 @@ namespace Protaco
             Close("]");
         }
 
-        private void Value(bool value)
+        internal void MapItems<K, V>(Dictionary<K, V> map, Item<K> key, Item<V> value)
+        {
+            Open("{");
+            if (map != null)
+            {
+                List<K> keys = new List<K>(map.Keys);
+                keys.Sort(key.Order);
+                foreach (K k in keys)
+                {
+                    Item();
+                    key.Text(this, k);
+                    out_.Append(": ");
+                    value.Text(this, map[k]);
+                }
+            }
+            Close("}");
+        }
+
+        internal void Value(bool value)
         {
             out_.Append(value ? "true" : "false");
         }
 
-        private void Value(int value)
+        internal void Value(int value)
         {
             out_.Append(value.ToString(CultureInfo.InvariantCulture));
         }
 
-        private void Value(long value)
+        internal void Value(long value)
         {
             out_.Append(value.ToString(CultureInfo.InvariantCulture));
         }
 
-        private void Value(uint value)
+        internal void Value(uint value)
         {
             out_.Append(value.ToString(CultureInfo.InvariantCulture));
         }
 
-        private void Value(ulong value)
+        internal void Value(ulong value)
         {
             out_.Append(value.ToString(CultureInfo.InvariantCulture));
         }
 
         // Same digits as C++ "%.15g".
-        private void Value(double value)
+        internal void Value(double value)
         {
             if (double.IsNaN(value))
                 out_.Append("nan");
@@ -1522,7 +1829,7 @@ namespace Protaco
         }
 
         // C# counts characters, C++ counts bytes.
-        private void Value(string value)
+        internal void Value(string value)
         {
             value = value ?? "";
             int shown = Math.Min(value.Length, style_.MaxText);
@@ -1534,7 +1841,7 @@ namespace Protaco
                 out_.Append("...(+").Append((value.Length - shown).ToString(CultureInfo.InvariantCulture)).Append(')');
         }
 
-        private void Value(byte[] value)
+        internal void Value(byte[] value)
         {
             value = value ?? new byte[0];
             out_.Append('<').Append(value.Length.ToString(CultureInfo.InvariantCulture)).Append(" bytes");
@@ -1589,6 +1896,9 @@ namespace Protaco
                     return;
                 case TacoType.List:
                     out_.Append("<list ").Append(size).Append(" bytes>");
+                    return;
+                case TacoType.Map:
+                    out_.Append("<map ").Append(size).Append(" bytes>");
                     return;
                 default:
                     out_.Append("<type ").Append(((int)type).ToString(CultureInfo.InvariantCulture)).Append(", ").Append(size).Append(" bytes>");

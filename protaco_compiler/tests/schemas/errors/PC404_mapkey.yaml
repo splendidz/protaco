@@ -1,0 +1,6 @@
+# expect: PC404
+message: PC404_mapkey
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: "map<double, int>"}

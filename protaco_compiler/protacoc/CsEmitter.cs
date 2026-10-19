@@ -106,6 +106,8 @@ namespace Protacoc
                     return "byte[]";
                 case TypeKind.List:
                     return "List<" + CsType(type.Element) + ">";
+                case TypeKind.Map:
+                    return "Dictionary<" + CsType(type.Key) + ", " + CsType(type.Element) + ">";
                 default:
                     return type.TypeName;
             }
@@ -176,6 +178,7 @@ namespace Protacoc
                 case TypeKind.Bytes:
                     return "new byte[0]";
                 case TypeKind.List:
+                case TypeKind.Map:
                     return "new " + CsType(field.Type) + "()";
                 case TypeKind.Message:
                     return "new " + CsType(field.Type) + "(Protaco.NoStamp.Value)";
@@ -248,11 +251,16 @@ namespace Protacoc
             w.Line();
             w.Line("Protaco.Ext Protaco.IMessage.Ext => ext_;");
             w.Line();
+            foreach (FieldDef field in view.Alive.Where(f => f.Type.Kind == TypeKind.Map))
+            {
+                w.Line("private static readonly Protaco.Item<" + CsType(field.Type) + "> " + ItemField(field) + " = " + ItemExpr(field.Type) + ";");
+                w.Line();
+            }
             w.Open("void Protaco.IMessage.WriteText(Protaco.TextBuilder builder)");
             foreach (FieldDef field in view.Alive)
             {
                 TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
-                string names = type.Kind == TypeKind.Enum ? ", " + type.TypeName + "Names.Name" : "";
+                string names = type.Kind == TypeKind.Map ? ", " + ItemField(field) : type.Kind == TypeKind.Enum ? ", " + type.TypeName + "Names.Name" : "";
                 w.Line("builder.Field(\"" + field.Key + "\", " + Naming.CsProperty(field.Key) + names + ");");
             }
             w.Close();
@@ -280,6 +288,8 @@ namespace Protacoc
                 string name = Naming.CsProperty(field.Key);
                 if (IsEnumList(field.Type))
                     w.Line("writer.ListInt(\"" + field.Key + "\", " + name + ".ConvertAll(item => (int)item));");
+                else if (field.Type.Kind == TypeKind.Map)
+                    w.Line("writer.Value(\"" + field.Key + "\", " + name + ", " + ItemField(field) + ");");
                 else
                     w.Line("writer." + VarMethod(field.Type) + "(\"" + field.Key + "\", " + name + ");");
             }
@@ -295,9 +305,52 @@ namespace Protacoc
                     w.Line(name + " = reader.ListInt(\"" + field.Key + "\", " + required + ", null)?.ConvertAll(item => (" + field.Type.Element.TypeName + ")item) ?? " + name + ";");
                     continue;
                 }
+                if (field.Type.Kind == TypeKind.Map)
+                {
+                    w.Line(name + " = reader.Value(\"" + field.Key + "\", " + required + ", " + name + ", " + ItemField(field) + ");");
+                    continue;
+                }
                 w.Line(name + " = reader." + VarMethod(field.Type) + "(\"" + field.Key + "\", " + required + ", " + name + ");");
             }
             w.Close();
+        }
+
+        // Keys never start with '_', so the name cannot clash with a property or a backing field.
+        private static string ItemField(FieldDef field)
+        {
+            return "_" + field.Key + "Item";
+        }
+
+        // Runtime descriptor (Protaco.Items) of a map key or value, nested lists and maps included.
+        private static string ItemExpr(TypeRef type)
+        {
+            switch (type.Kind)
+            {
+                case TypeKind.Bool:
+                    return "Protaco.Items.Bool";
+                case TypeKind.Int:
+                    return "Protaco.Items.Int";
+                case TypeKind.Int64:
+                    return "Protaco.Items.Int64";
+                case TypeKind.UInt:
+                    return "Protaco.Items.UInt";
+                case TypeKind.UInt64:
+                    return "Protaco.Items.UInt64";
+                case TypeKind.Double:
+                    return "Protaco.Items.Double";
+                case TypeKind.String:
+                    return "Protaco.Items.String";
+                case TypeKind.Bytes:
+                    return "Protaco.Items.Bytes";
+                case TypeKind.Enum:
+                    return "Protaco.Items.Enum<" + type.TypeName + ">(value => (int)value, number => (" + type.TypeName + ")number, " + type.TypeName + "Names.Name)";
+                case TypeKind.List:
+                    return "Protaco.Items.List(" + ItemExpr(type.Element) + ")";
+                case TypeKind.Map:
+                    return "Protaco.Items.Map(" + ItemExpr(type.Key) + ", " + ItemExpr(type.Element) + ")";
+                default:
+                    return "Protaco.Items.Message<" + type.TypeName + ">()";
+            }
         }
 
         private static bool IsEnumList(TypeRef type)

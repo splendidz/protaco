@@ -1,0 +1,8 @@
+# Dish grade.
+enum: Grade
+version: 1
+namespace: maps
+values:
+  - {key: Gold, value: 1}
+  - {key: Silver, value: 2}
+  - {key: Bronze, value: 3}
