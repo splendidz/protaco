@@ -1,4 +1,4 @@
-﻿// Ping.g.h. protacoc 0.4.0, source Ping.yaml (sha1 dd3741203727). Do not edit.
+﻿// Ping.g.h. protacoc 0.5.0, source Ping.yaml (sha1 dd3741203727). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -7,7 +7,7 @@ namespace build2
 {
 
 /// Version window test. Closed message at version 2: text added.
-/// [version 2; schema 0xBC1DCB81; window 1..2; allow_extension false; source Ping.yaml]
+/// [version 2; schema 0xBC1DCB81; supports 1..2; allow_extension false; source Ping.yaml]
 class Ping
 {
 public:
@@ -30,7 +30,7 @@ public:
         return 2;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -62,6 +62,7 @@ public:
     void set_who(const std::string& value)
     {
         who_ = value;
+        cache_.valid = false;
     }
 
     /// [type string; added in 2]
@@ -73,6 +74,7 @@ public:
     void set_text(const std::string& value)
     {
         text_ = value;
+        cache_.valid = false;
     }
 
     /// Writes the envelope (id, corr, ts) straight into the frame header.
@@ -87,6 +89,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -144,6 +147,7 @@ private:
     std::string who_;
     std::string text_;
     protaco::CExt ext_;   // stays empty: allow_extension false
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 namespace v1
@@ -151,7 +155,7 @@ namespace v1
 
 /// Version window test. Closed message at version 2: text added.
 /// Version 1 layout, for frames from peers on version 1.
-/// [version 1; schema 0xB81406B7; window 1..2; allow_extension false; source Ping.yaml]
+/// [version 1; schema 0xB81406B7; supports 1..2; allow_extension false; source Ping.yaml]
 class Ping
 {
 public:
@@ -174,7 +178,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -206,6 +210,7 @@ public:
     void set_who(const std::string& value)
     {
         who_ = value;
+        cache_.valid = false;
     }
 
     /// Writes the envelope (id, corr, ts) straight into the frame header.
@@ -220,6 +225,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -274,6 +280,7 @@ private:
     mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
     std::string who_;
     protaco::CExt ext_;   // stays empty: allow_extension false
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace v1

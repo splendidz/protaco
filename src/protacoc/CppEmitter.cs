@@ -1,6 +1,7 @@
 ﻿// CppEmitter.cs. One message -> <Name>.g.h (C++14 compatible, header-only).
-// The latest version is <ns>::<Name>. Older versions of the window are <ns>::v<N>::<Name>.
-// Public: user API only (constructor, get_/set_/get_mutable_ accessors, ext when allowed, envelope, Serialize, ToString).
+// The latest version is <ns>::<Name>. Older supported versions are <ns>::v<N>::<Name>.
+// Public: user API only (constructor, get_/set_/get_mutable_ field accessors, GetExt/GetMutableExt when allowed, envelope,
+// Serialize, ToString). Field accessors are snake_case get_<key>; everything else is PascalCase.
 // Buffer, visitors and constants are private; the runtime gets in as a friend.
 using System.Collections.Generic;
 using System.Linq;
@@ -155,7 +156,7 @@ namespace Protacoc
             Method(w, "static const char* MsgName()", "return \"" + message.Name + "\";");
             w.Line("/// Version of this type. ToObject reads frames of this version or newer as this version.");
             Method(w, "static uint16_t MsgVersion()", "return " + view.Version + ";");
-            w.Line("/// Lowest version of the window. Frames carry one schema fingerprint per version from here up.");
+            w.Line("/// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.");
             Method(w, "static uint16_t MsgMinVersion()", "return " + message.MinVersion + ";");
             w.Line("/// Schema fingerprint of this version. A frame whose fingerprint for this version differs is rejected by ToObject.");
             Method(w, "static uint32_t MsgSchemaHash()", "return " + SchemaFingerprint.Hex(view.SchemaHash) + "u;");
@@ -190,15 +191,16 @@ namespace Protacoc
             }
             Method(w, "const " + type + "& get_" + key + "() const", "return " + key + "_;");
             if (field.Type.Kind != TypeKind.String)
-                Method(w, type + "& get_mutable_" + key + "()", "return " + key + "_;");
-            Method(w, "void set_" + key + "(const " + type + "& value)", key + "_ = value;");
+                Method(w, type + "& get_mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_;");
+            Method(w, "void set_" + key + "(const " + type + "& value)", key + "_ = value;", "cache_.valid = false;");
         }
 
-        private static void Method(CodeWriter w, string signature, string body)
+        private static void Method(CodeWriter w, string signature, params string[] body)
         {
             w.Line(signature);
             w.Line("{");
-            w.Line("    " + body);
+            foreach (string line in body)
+                w.Line("    " + line);
             w.Line("}");
             w.Line();
         }
@@ -208,8 +210,8 @@ namespace Protacoc
             if (message.AllowExtension)
             {
                 w.Line("/// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.");
-                Method(w, "const protaco::CExt& get_ext() const", "return ext_;");
-                Method(w, "protaco::CExt& get_mutable_ext()", "return ext_;");
+                Method(w, "const protaco::CExt& GetExt() const", "return ext_;");
+                Method(w, "protaco::CExt& GetMutableExt()", "return ext_;");
             }
             w.Line("/// Writes the envelope (id, corr, ts) straight into the frame header.");
             Method(w, "void SetEnvelope(const protaco::Envelope& env)", "protaco::detail::StoreEnvelope(buf_, env);");
@@ -217,6 +219,7 @@ namespace Protacoc
             w.Line("/// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.");
             if (view.AliveVar.Count == 0)
                 w.Line("/// Fixed fields only. " + (message.AllowExtension ? "With an empty ext, serializing" : "Serializing") + " costs nothing.");
+            w.Line("/// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.");
             w.Line("/// The returned reference is valid until this object is modified.");
             Method(w, "const std::vector<uint8_t>& Serialize() const", "return protaco::detail::Access::Serialize(*this);");
             w.Line("/// Text for logs: field names and values" + (message.AllowExtension ? ", ext entries under ext{...}" : "") + ". protaco::TextStyle::Pretty() for one field per line.");
@@ -304,6 +307,7 @@ namespace Protacoc
                 w.Line(CppType(field.Type) + " " + field.Key + "_" + init + ";");
             }
             w.Line("protaco::CExt ext_;" + (message.AllowExtension ? "" : "   // stays empty: allow_extension false"));
+            w.Line("mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block");
         }
     }
 }

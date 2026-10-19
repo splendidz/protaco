@@ -1,5 +1,5 @@
 ﻿// CsEmitter.cs. One message -> <Name>.g.cs (.NET Framework 4.6.1, C# 7.3).
-// The latest version is <ns>.<Name>. Older versions of the window are <ns>.v<N>.<Name>.
+// The latest version is <ns>.<Name>. Older supported versions are <ns>.v<N>.<Name>.
 // Produces the same bytes as C++. Runtime-facing members are hidden behind explicit IMessage implementation.
 using System.Collections.Generic;
 using System.Linq;

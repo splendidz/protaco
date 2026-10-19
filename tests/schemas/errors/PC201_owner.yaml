@@ -1,0 +1,7 @@
+# expect: PC201
+message: PC201_owner
+version: 1
+namespace: errors
+owner: shop
+fields:
+  - {key: a, type: int}

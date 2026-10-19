@@ -1,0 +1,6 @@
+# expect: PC308
+message: PC308_octal
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int, default: 010}

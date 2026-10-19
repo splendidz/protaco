@@ -16,8 +16,14 @@ namespace Protacoc
         private static readonly Regex FixedStringType = new Regex("^string\\(([0-9]+)\\)$");
         private static readonly Regex ListType = new Regex("^list<(.+)>$");
 
-        private static readonly HashSet<string> TopKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "owner", "desc", "eq", "fields" };
-        private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc", "eq" };
+        private static readonly HashSet<string> TopKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "desc", "fields" };
+        private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc" };
+
+        // Integer text the same in C++ and C#: no sign '+', no leading zero (C++ reads 010 as octal 8).
+        public static bool IsIntText(string text)
+        {
+            return IntText.IsMatch(text);
+        }
 
         public const int MaxFixedLength = 4096;
 
@@ -96,14 +102,8 @@ namespace Protacoc
                     case "allow_extension":
                         message.AllowExtension = ReadBool(top.Value, top.Key.Pos, diag);
                         break;
-                    case "owner":
-                        message.Owner = ReadText(top.Value, top.Key.Pos, diag);
-                        break;
                     case "desc":
                         message.Desc = ReadText(top.Value, top.Key.Pos, diag);
-                        break;
-                    case "eq":
-                        message.Eq = ReadEq(top.Value, top.Key.Pos, diag);
                         break;
                     case "fields":
                         ReadFields(top, message, diag);
@@ -183,9 +183,6 @@ namespace Protacoc
                             break;
                         case "desc":
                             field.Desc = ReadText(entry.Value, pos, diag);
-                            break;
-                        case "eq":
-                            field.Eq = ReadEq(entry.Value, pos, diag);
                             break;
                     }
                 }
@@ -302,27 +299,6 @@ namespace Protacoc
                 return number;
             diag.Error(pos, Codes.BadValue, "expected an integer " + min + ".." + max);
             return min;
-        }
-
-        private static List<string> ReadEq(object value, SourcePos pos, Diag diag)
-        {
-            List<string> result = new List<string>();
-            YSeq seq = value as YSeq;
-            if (seq == null)
-            {
-                diag.Error(pos, Codes.BadValue, "eq must be a list like [A, B]");
-                return result;
-            }
-            foreach (YScalar item in seq.Items)
-            {
-                if (!Ident.IsMatch(item.Text) || item.Text.ToUpperInvariant() != item.Text)
-                {
-                    diag.Error(item.Pos, Codes.BadValue, "eq items must be upper case: '" + item.Text + "'");
-                    continue;
-                }
-                result.Add(item.Text);
-            }
-            return result;
         }
     }
 }

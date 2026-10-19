@@ -1,4 +1,4 @@
-﻿// Order.g.h. protacoc 0.4.0, source Order.yaml (sha1 a04fe3b9b3e2). Do not edit.
+﻿// Order.g.h. protacoc 0.5.0, source Order.yaml (sha1 a04fe3b9b3e2). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -7,7 +7,7 @@ namespace build4
 {
 
 /// Version window test. Order at version 4: required color removed, version 1 peers no longer served.
-/// [version 4; schema 0xCCB8A2F4; window 2..4; source Order.yaml]
+/// [version 4; schema 0xCCB8A2F4; supports 2..4; source Order.yaml]
 class Order
 {
 public:
@@ -32,7 +32,7 @@ public:
         return 4;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 2;
@@ -75,12 +75,14 @@ public:
 
     std::vector<std::string>& get_mutable_tags()
     {
+        cache_.exposed = true;
         return tags_;
     }
 
     void set_tags(const std::vector<std::string>& value)
     {
         tags_ = value;
+        cache_.valid = false;
     }
 
     /// [type string; added in 3]
@@ -92,6 +94,7 @@ public:
     void set_label(const std::string& value)
     {
         label_ = value;
+        cache_.valid = false;
     }
 
     /// [type bool; added in 3]
@@ -106,12 +109,12 @@ public:
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -128,6 +131,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -187,6 +191,7 @@ private:
     std::vector<std::string> tags_;
     std::string label_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 namespace v2
@@ -194,7 +199,7 @@ namespace v2
 
 /// Version window test. Order at version 4: required color removed, version 1 peers no longer served.
 /// Version 2 layout, for frames from peers on version 2.
-/// [version 2; schema 0x0E7D8E49; window 2..4; source Order.yaml]
+/// [version 2; schema 0x0E7D8E49; supports 2..4; source Order.yaml]
 class Order
 {
 public:
@@ -219,7 +224,7 @@ public:
         return 2;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 2;
@@ -274,6 +279,7 @@ public:
     void set_note(const std::string& value)
     {
         note_ = value;
+        cache_.valid = false;
     }
 
     /// [type string; required, decoding fails if missing; removed in 4]
@@ -285,6 +291,7 @@ public:
     void set_color(const std::string& value)
     {
         color_ = value;
+        cache_.valid = false;
     }
 
     /// [type list<string>; added in 2]
@@ -295,21 +302,23 @@ public:
 
     std::vector<std::string>& get_mutable_tags()
     {
+        cache_.exposed = true;
         return tags_;
     }
 
     void set_tags(const std::vector<std::string>& value)
     {
         tags_ = value;
+        cache_.valid = false;
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -326,6 +335,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -388,6 +398,7 @@ private:
     std::string color_;
     std::vector<std::string> tags_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace v2
@@ -397,7 +408,7 @@ namespace v3
 
 /// Version window test. Order at version 4: required color removed, version 1 peers no longer served.
 /// Version 3 layout, for frames from peers on version 3.
-/// [version 3; schema 0x7073B2E7; window 2..4; source Order.yaml]
+/// [version 3; schema 0x7073B2E7; supports 2..4; source Order.yaml]
 class Order
 {
 public:
@@ -422,7 +433,7 @@ public:
         return 3;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 2;
@@ -466,6 +477,7 @@ public:
     void set_color(const std::string& value)
     {
         color_ = value;
+        cache_.valid = false;
     }
 
     /// [type list<string>; added in 2]
@@ -476,12 +488,14 @@ public:
 
     std::vector<std::string>& get_mutable_tags()
     {
+        cache_.exposed = true;
         return tags_;
     }
 
     void set_tags(const std::vector<std::string>& value)
     {
         tags_ = value;
+        cache_.valid = false;
     }
 
     /// [type string; added in 3]
@@ -493,6 +507,7 @@ public:
     void set_label(const std::string& value)
     {
         label_ = value;
+        cache_.valid = false;
     }
 
     /// [type bool; added in 3]
@@ -507,12 +522,12 @@ public:
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -529,6 +544,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -591,6 +607,7 @@ private:
     std::vector<std::string> tags_;
     std::string label_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace v3

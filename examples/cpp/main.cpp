@@ -4,32 +4,32 @@
 #include <string>
 #include <vector>
 
+#include "DeliveryRoute.g.h"
 #include "Heartbeat.g.h"
 #include "PizzaOrder.g.h"
-#include "TransferRequest.g.h"
 
 namespace
 {
 
-// 1. Basics: send and receive a message with lists and nested messages.
+// 1. Basics: send and receive a message with a list of nested messages.
 void SendAndReceive()
 {
-    demo::TransferRequest request;
-    request.set_tm("TM1");
-    demo::MoveInfo move;
-    move.set_from("SHELF1");
-    move.set_to("TABLE3");
-    move.set_slot(2);
-    request.get_mutable_moves().push_back(move);
-    request.set_reason("closest-first");
+    demo::DeliveryRoute route;
+    route.set_rider("rider-7");
+    demo::RouteStop stop;
+    stop.set_orderId("A-100");
+    stop.set_address("1 Pizza St");
+    stop.set_etaMin(10);
+    route.get_mutable_stops().push_back(stop);
+    route.set_note("closest-first");
 
-    const std::vector<uint8_t>& bytes = request.Serialize();   // send bytes.data(), bytes.size()
-    std::printf("TransferRequest: %zu bytes\n", bytes.size());
+    const std::vector<uint8_t>& bytes = route.Serialize();   // send bytes.data(), bytes.size()
+    std::printf("DeliveryRoute: %zu bytes\n", bytes.size());
 
-    const demo::TransferRequest got = protaco::ToObject<demo::TransferRequest>(bytes);
-    std::printf("  tm=%s first=%s->%s slot=%d reason=%s\n",
-        got.get_tm().c_str(), got.get_moves()[0].get_from().c_str(), got.get_moves()[0].get_to().c_str(),
-        got.get_moves()[0].get_slot(), got.get_reason().c_str());
+    const demo::DeliveryRoute got = protaco::ToObject<demo::DeliveryRoute>(bytes);
+    std::printf("  rider=%s first=%s at %s in %d min, note=%s\n",
+        got.get_rider().c_str(), got.get_stops()[0].get_orderId().c_str(), got.get_stops()[0].get_address().c_str(),
+        got.get_stops()[0].get_etaMin(), got.get_note().c_str());
 }
 
 // 2. Fixed fields only: setters already serialize, Serialize() returns the buffer as is.
@@ -52,21 +52,21 @@ void ExtraData()
     demo::Topping basil;
     basil.set_name("basil");
     order.get_mutable_toppings().push_back(basil);
-    order.get_mutable_ext().SetString("secretSauce", "yes please");   // key not in the yaml
-    order.get_mutable_ext().SetInt("pineapple", 0);
+    order.GetMutableExt().SetString("secretSauce", "yes please");   // key not in the yaml
+    order.GetMutableExt().SetInt("pineapple", 0);
 
     const demo::PizzaOrder got = protaco::ToObject<demo::PizzaOrder>(order.Serialize());
     std::string sauce;
-    got.get_ext().GetString("secretSauce", &sauce);
+    got.GetExt().GetString("secretSauce", &sauce);
     std::printf("PizzaOrder ext: secretSauce=%s, schema key in ext=%s\n",
-        sauce.c_str(), order.get_mutable_ext().SetInt("orderId", 9) ? "accepted (bug)" : "rejected");
+        sauce.c_str(), order.GetMutableExt().SetInt("orderId", 9) ? "accepted (bug)" : "rejected");
 }
 
 // 4. Errors: TryToObject never throws.
 void ErrorHandling()
 {
     const std::vector<uint8_t> bytes = demo::Heartbeat().Serialize();
-    demo::TransferRequest wrong;
+    demo::DeliveryRoute wrong;
     protaco::Error error;
     if (!protaco::TryToObject(bytes.data(), bytes.size(), &wrong, &error))
         std::printf("decode failed: path='%s' what='%s'\n", error.path.c_str(), error.what.c_str());
@@ -75,15 +75,15 @@ void ErrorHandling()
 // 5. Logs: ToString shows every field, ext entries under ext{...}.
 void Logging()
 {
-    demo::TransferRequest request;
-    request.set_tm("TM1");
-    demo::MoveInfo move;
-    move.set_from("SHELF1");
-    move.set_to("TABLE3");
-    request.get_mutable_moves().push_back(move);
-    request.get_mutable_ext().SetInt("priority", 5);
-    std::printf("%s\n", request.ToString().c_str());
-    std::printf("%s\n", request.ToString(protaco::TextStyle::Pretty()).c_str());
+    demo::DeliveryRoute route;
+    route.set_rider("rider-7");
+    demo::RouteStop stop;
+    stop.set_orderId("A-100");
+    stop.set_address("1 Pizza St");
+    route.get_mutable_stops().push_back(stop);
+    route.GetMutableExt().SetInt("priority", 5);
+    std::printf("%s\n", route.ToString().c_str());
+    std::printf("%s\n", route.ToString(protaco::TextStyle::Pretty()).c_str());
 }
 
 }  // namespace

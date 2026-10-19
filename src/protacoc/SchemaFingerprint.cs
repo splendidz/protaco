@@ -1,7 +1,7 @@
-// SchemaFingerprint.cs. 32-bit fingerprint of one version of a message schema. Every frame header carries the
-// fingerprints of the versions in its window; a receiver compares the one for its own version.
+﻿// SchemaFingerprint.cs. 32-bit fingerprint of one version of a message schema. Every frame header carries the
+// fingerprints of the versions the sender supports; a receiver compares the one for its own version.
 // Inserted, removed, reordered or retyped fields are caught even when the byte count stays the same.
-// Canonical text: README.md "Schema fingerprint".
+// Canonical text: docs/reference.md "Schema fingerprint".
 using System.Linq;
 using System.Text;
 
@@ -19,7 +19,7 @@ namespace Protacoc
         // Fields in serialization order. A removed fixed field keeps its bytes and is written ~<key>:<type>;
         // a removed variable field is left out. added and removed themselves are not part of the text,
         // so adding a version leaves the fingerprints of older versions unchanged.
-        // Namespace, comments, desc, owner and eq are not part of the contract on the wire.
+        // Namespace, comments and desc are not part of the serialized contract.
         public static string CanonicalText(MessageDef message, int version)
         {
             StringBuilder sb = new StringBuilder();

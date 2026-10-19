@@ -9,7 +9,7 @@ namespace Protacoc
 {
     internal static class Naming
     {
-        public const string Version = "0.4.0";
+        public const string Version = "0.5.0";
 
         // C# property name: first letter upper-cased (prevState -> PrevState).
         public static string CsProperty(string key)
@@ -79,8 +79,6 @@ namespace Protacoc
                 tags.Add("required, decoding fails if missing");
             if (field.DefaultText != null)
                 tags.Add("default " + (field.DefaultQuoted || field.Type.Kind == TypeKind.String || field.Type.Kind == TypeKind.FixedString ? "\"" + field.DefaultText + "\"" : field.DefaultText));
-            if (field.Eq.Count > 0)
-                tags.Add("eq " + string.Join(", ", field.Eq));
             if (field.Added != 1)
                 tags.Add("added in " + field.Added);
             if (field.Removed != 0)
@@ -98,13 +96,9 @@ namespace Protacoc
                 lines.Add("Version " + view.Version + " layout, for frames from peers on version " + view.Version + ".");
             List<string> tags = new List<string> { "version " + view.Version, "schema " + SchemaFingerprint.Hex(view.SchemaHash) };
             if (message.MinVersion < message.Version)
-                tags.Add("window " + message.MinVersion + ".." + message.Version);
+                tags.Add("supports " + message.MinVersion + ".." + message.Version);
             if (!message.AllowExtension)
                 tags.Add("allow_extension false");
-            if (!string.IsNullOrEmpty(message.Owner))
-                tags.Add("owner " + message.Owner);
-            if (message.Eq.Count > 0)
-                tags.Add("eq " + string.Join(", ", message.Eq));
             tags.Add("source " + message.FileName);
             lines.Add("[" + string.Join("; ", tags) + "]");
             return lines;

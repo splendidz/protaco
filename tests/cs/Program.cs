@@ -23,7 +23,7 @@ namespace Protacoc.Tests
             Run("generator: reference cycle PC403", GeneratorCycle);
             Run("generator: two namespaces in one run PC405", GeneratorNamespaceMix);
             Run("generator: nesting deeper than 8 PC406", GeneratorTooDeep);
-            Run("generator: version window on a nested message PC407", GeneratorNestedVersion);
+            Run("generator: versions on a nested message PC407", GeneratorNestedVersion);
             Run("generator: --namespace option removed", GeneratorNamespaceOption);
             Run("generator: committed example output is up to date (--check)", GeneratorCheckUpToDate);
             Run("generator: hand edits detected (--check)", GeneratorCheckDetectsEdit);
@@ -34,10 +34,10 @@ namespace Protacoc.Tests
             Run("C#: reads the C++ golden files", ReadsCppGolden);
             Run("C#: other version is rejected", VersionMismatch);
             Run("C#: same version, other schema is rejected", SchemaMismatch);
-            Run("C#: window keeps old fingerprints", WindowKeepsOldFingerprints);
+            Run("C#: new version keeps old fingerprints", NewVersionKeepsOldFingerprints);
             Run("C#: newer frame read as own version", NewerFrameReadAsOwnVersion);
             Run("C#: older frame needs the old type", OlderFrameNeedsOldType);
-            Run("C#: sender window above the reader", SenderWindowAboveReader);
+            Run("C#: sender min_version above the reader", SenderMinVersionAboveReader);
             Run("C#: closed message drops newer fields", ClosedMessageDropsNewerFields);
             Run("C#: closed message rejects an unknown key", ClosedMessage);
             Run("C#: missing required field and nested error path", Errors);
@@ -186,10 +186,10 @@ namespace Protacoc.Tests
         {
             string dir = TempDir();
             Equal(0, Protacoc("-I", Examples(), "--cpp_out", dir).Exit, "generate");
-            File.AppendAllText(Path.Combine(dir, "MoveInfo.g.h"), "// hand edit\r\n");
+            File.AppendAllText(Path.Combine(dir, "RouteStop.g.h"), "// hand edit\r\n");
             GenResult result = Protacoc("-I", Examples(), "--cpp_out", dir, "--check");
             Equal(3, result.Exit, "exit code");
-            Check(result.Output.Contains("MoveInfo.g.h"), "edited file not reported: " + result.Output);
+            Check(result.Output.Contains("RouteStop.g.h"), "edited file not reported: " + result.Output);
         }
 
         // Splitting the same yaml into two folders and swapping their order gives identical output.
@@ -199,7 +199,7 @@ namespace Protacoc.Tests
             string b = TempDir();
             foreach (string file in Directory.GetFiles(Examples(), "*.yaml"))
             {
-                bool first = Path.GetFileName(file).StartsWith("P") || Path.GetFileName(file).StartsWith("Move");
+                bool first = Path.GetFileName(file).StartsWith("P") || Path.GetFileName(file).StartsWith("Route");
                 File.Copy(file, Path.Combine(first ? a : b, Path.GetFileName(file)));
             }
             string out1 = TempDir();
@@ -237,17 +237,17 @@ namespace Protacoc.Tests
 
         // ---- C# runtime ----
 
-        // Same values as the C++ test (ProtacoTest.cpp MakeTransferRequest).
-        private static TransferRequest MakeTransferRequest()
+        // Same values as the C++ test (ProtacoTest.cpp MakeDeliveryRoute).
+        private static DeliveryRoute MakeDeliveryRoute()
         {
-            TransferRequest request = new TransferRequest { Tm = "TM1", Reason = "rule-1" };
-            request.Moves.Add(new MoveInfo { From = "LP1", To = "PM1", Slot = 3 });
-            request.Moves.Add(new MoveInfo { From = "PM1", To = "LP1", Slot = 3 });
-            request.Ext.SetInt("priority", 5);
-            return request;
+            DeliveryRoute route = new DeliveryRoute { Rider = "rider-7", Note = "closest-first" };
+            route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St", EtaMin = 10 });
+            route.Stops.Add(new RouteStop { OrderId = "A-101", Address = "2 Pasta Ave", EtaMin = 25 });
+            route.Ext.SetInt("priority", 5);
+            return route;
         }
 
-        private static Protaco.Envelope TransferEnvelope()
+        private static Protaco.Envelope RouteEnvelope()
         {
             return new Protaco.Envelope { Id = 7, Corr = 0, Ts = 1000 };
         }
@@ -328,20 +328,20 @@ namespace Protacoc.Tests
 
         private static void RoundTrip()
         {
-            byte[] bytes = MakeTransferRequest().Serialize(TransferEnvelope());
-            TransferRequest got = Protaco.Codec.ToObject<TransferRequest>(bytes);
-            Equal("TM1", got.Tm, "tm");
-            Equal(2, got.Moves.Count, "moves");
-            Equal("PM1", got.Moves[0].To, "moves[0].to");
-            Equal("rule-1", got.Reason, "reason");
+            byte[] bytes = MakeDeliveryRoute().Serialize(RouteEnvelope());
+            DeliveryRoute got = Protaco.Codec.ToObject<DeliveryRoute>(bytes);
+            Equal("rider-7", got.Rider, "rider");
+            Equal(2, got.Stops.Count, "stops");
+            Equal("1 Pizza St", got.Stops[0].Address, "stops[0].address");
+            Equal("closest-first", got.Note, "note");
             int priority;
             Check(got.Ext.TryGetInt("priority", out priority) && priority == 5, "ext priority");
-            Check(bytes.SequenceEqual(got.Serialize(TransferEnvelope())), "re-serialized bytes differ");
+            Check(bytes.SequenceEqual(got.Serialize(RouteEnvelope())), "re-serialized bytes differ");
         }
 
         private static void GoldenEqualsCpp()
         {
-            Check(MakeTransferRequest().Serialize(TransferEnvelope()).SequenceEqual(Golden("TransferRequest.bin")), "TransferRequest");
+            Check(MakeDeliveryRoute().Serialize(RouteEnvelope()).SequenceEqual(Golden("DeliveryRoute.bin")), "DeliveryRoute");
             Check(MakePizzaOrder().Serialize().SequenceEqual(Golden("PizzaOrder.bin")), "PizzaOrder");
             Check(MakeHeartbeat().Serialize().SequenceEqual(Golden("Heartbeat.bin")), "Heartbeat");
             Check(MakeDeliveryProof().Serialize().SequenceEqual(Golden("DeliveryProof.bin")), "DeliveryProof");
@@ -350,9 +350,9 @@ namespace Protacoc.Tests
         private static void ReadsCppGolden()
         {
             Protaco.Envelope env;
-            TransferRequest request = Protaco.Codec.ToObject<TransferRequest>(Golden("TransferRequest.bin"), out env);
+            DeliveryRoute route = Protaco.Codec.ToObject<DeliveryRoute>(Golden("DeliveryRoute.bin"), out env);
             Equal(7u, env.Id, "env.id");
-            Equal("LP1", request.Moves[1].To, "moves[1].to");
+            Equal("2 Pasta Ave", route.Stops[1].Address, "stops[1].address");
             PizzaOrder order = Protaco.Codec.ToObject<PizzaOrder>(Golden("PizzaOrder.bin"));
             Equal(5, order.Toppings[0].Grams, "toppings[0].grams");
             Equal(2, order.Delivery.DoorCode[3], "delivery.doorCode[3]");
@@ -381,8 +381,8 @@ namespace Protacoc.Tests
             Equal(partial.Topping.MsgSchemaHash, Topping.MsgSchemaHash, "namespace changes the fingerprint");
         }
 
-        // Same checks as ProtacoTest.cpp (version window tests).
-        private static void WindowKeepsOldFingerprints()
+        // Same checks as ProtacoTest.cpp (supported version tests).
+        private static void NewVersionKeepsOldFingerprints()
         {
             Equal(build1.Order.MsgSchemaHash, build3.v1.Order.MsgSchemaHash, "v1");
             Equal(build2.Order.MsgSchemaHash, build3.v2.Order.MsgSchemaHash, "v2");
@@ -421,7 +421,7 @@ namespace Protacoc.Tests
             Equal("Order{id=\"B2\", qty=4, note=\"n\", color=\"blue\"}", got.ToString(), "text");
         }
 
-        private static void SenderWindowAboveReader()
+        private static void SenderMinVersionAboveReader()
         {
             byte[] bytes = new build4.Order { Id = "C3" }.Serialize();
             Equal("message version too new: Order reads version 1, sender supports 2..4", Fails<build1.Order>(bytes).What, "v1");
@@ -442,15 +442,15 @@ namespace Protacoc.Tests
             Protaco.ProtacoException error = Fails<Heartbeat>(WithExtraTlv(MakeHeartbeat().Serialize(), "abc", 7));
             Equal("abc", error.Path, "path");
             Equal("unknown key (allow_extension false)", error.What, "what");
-            TransferRequest open = Protaco.Codec.ToObject<TransferRequest>(WithExtraTlv(MakeTransferRequest().Serialize(), "abc", 7));
+            DeliveryRoute open = Protaco.Codec.ToObject<DeliveryRoute>(WithExtraTlv(MakeDeliveryRoute().Serialize(), "abc", 7));
             int value;
             Check(open.Ext.TryGetInt("abc", out value) && value == 7, "open message lost the key");
         }
 
         private static void Errors()
         {
-            Protaco.ProtacoException error = Fails<TransferRequest>(WithSchemaHash(new partial.TransferRequest { Tm = "TM1" }.Serialize(), TransferRequest.MsgSchemaHash));
-            Equal("moves", error.Path, "path");
+            Protaco.ProtacoException error = Fails<DeliveryRoute>(WithSchemaHash(new partial.DeliveryRoute { Rider = "rider-7" }.Serialize(), DeliveryRoute.MsgSchemaHash));
+            Equal("stops", error.Path, "path");
             Equal("missing required", error.What, "what");
             partial.PizzaOrder sender = new partial.PizzaOrder();
             sender.Toppings.Add(new partial.Topping());
@@ -460,7 +460,7 @@ namespace Protacoc.Tests
             Equal("list element type mismatch", error.What, "nested what");
             byte[] bytes = new v1.Recipe { Path = "/p" }.Serialize();
             bytes[4 + bytes[3]] = 2;   // version 1 -> 2
-            bytes[6 + bytes[3]] = 2;   // window 2..2, still one fingerprint
+            bytes[6 + bytes[3]] = 2;   // min version 2, still one fingerprint
             bytes = WithSchemaHash(bytes, v2.Recipe.MsgSchemaHash);
             Equal("fixed block size mismatch: expected 28, got 20", Fails<v2.Recipe>(bytes).What, "fixed size");
         }
@@ -487,66 +487,66 @@ namespace Protacoc.Tests
 
         private static void FixedStringOverflow()
         {
-            MoveInfo move = new MoveInfo { From = new string('y', 32) };
+            RouteStop stop = new RouteStop { OrderId = new string('y', 16) };
             try
             {
-                move.From = new string('x', 33);
+                stop.OrderId = new string('x', 17);
             }
             catch (ArgumentException)
             {
-                Equal(new string('y', 32), move.From, "value changed");
+                Equal(new string('y', 16), stop.OrderId, "value changed");
                 return;
             }
-            throw new Exception("33 bytes accepted");
+            throw new Exception("17 bytes accepted");
         }
 
         private static void ExtRules()
         {
-            TransferRequest request = new TransferRequest();
-            Check(!request.Ext.SetInt("tm", 1), "schema key accepted");
-            Check(!request.Ext.SetInt("_x", 1), "reserved key accepted");
-            Check(request.Ext.SetString("lotType", "A"), "plain key rejected");
+            DeliveryRoute route = new DeliveryRoute();
+            Check(!route.Ext.SetInt("rider", 1), "schema key accepted");
+            Check(!route.Ext.SetInt("_x", 1), "reserved key accepted");
+            Check(route.Ext.SetString("channel", "web"), "plain key rejected");
         }
 
         // Same strings as ProtacoTest.cpp ToString* tests.
         private static void ToStringMatchesCpp()
         {
-            Equal("TransferRequest{tm=\"TM1\", moves=[MoveInfo{from=\"LP1\", to=\"PM1\", slot=3}, MoveInfo{from=\"PM1\", to=\"LP1\", slot=3}], "
-                + "reason=\"rule-1\", ext{priority=5}}", MakeTransferRequest().ToString(), "TransferRequest");
+            Equal("DeliveryRoute{rider=\"rider-7\", stops=[RouteStop{orderId=\"A-100\", address=\"1 Pizza St\", etaMin=10}, "
+                + "RouteStop{orderId=\"A-101\", address=\"2 Pasta Ave\", etaMin=25}], note=\"closest-first\", ext{priority=5}}", MakeDeliveryRoute().ToString(), "DeliveryRoute");
             Equal("Heartbeat{node=\"oven-1\", seq=123456789, healthy=true, cpuLoad=0.25, uptimeSec=3600}", MakeHeartbeat().ToString(), "Heartbeat");
             Equal("DeliveryProof{orderId=\"A-1001\", photo=<11 bytes: FF D8 00 10 4A 46 49 46 ...>, "
                 + "signatures=[<1 bytes: 00>, <0 bytes>, <2 bytes: 01 02>]}", MakeDeliveryProof().ToString(), "DeliveryProof");
             Equal("Recipe{name=\"\", temp=25.5, step=3, path=\"\", note=\"none\"}", new v2.Recipe().ToString(), "defaults");
-            Equal("TransferRequest{\n"
-                + "  tm=\"TM1\",\n"
-                + "  moves=[\n"
-                + "    MoveInfo{\n"
-                + "      from=\"LP1\",\n"
-                + "      to=\"PM1\",\n"
-                + "      slot=3\n"
+            Equal("DeliveryRoute{\n"
+                + "  rider=\"rider-7\",\n"
+                + "  stops=[\n"
+                + "    RouteStop{\n"
+                + "      orderId=\"A-100\",\n"
+                + "      address=\"1 Pizza St\",\n"
+                + "      etaMin=10\n"
                 + "    },\n"
-                + "    MoveInfo{\n"
-                + "      from=\"PM1\",\n"
-                + "      to=\"LP1\",\n"
-                + "      slot=3\n"
+                + "    RouteStop{\n"
+                + "      orderId=\"A-101\",\n"
+                + "      address=\"2 Pasta Ave\",\n"
+                + "      etaMin=25\n"
                 + "    }\n"
                 + "  ],\n"
-                + "  reason=\"rule-1\",\n"
+                + "  note=\"closest-first\",\n"
                 + "  ext{\n"
                 + "    priority=5\n"
                 + "  }\n"
-                + "}", MakeTransferRequest().ToString(Protaco.TextStyle.Pretty()), "pretty");
+                + "}", MakeDeliveryRoute().ToString(Protaco.TextStyle.Pretty()), "pretty");
             Protaco.TextStyle style = new Protaco.TextStyle { Separator = "; ", Open = "(", Close = ")", MaxText = 4 };
-            Equal("MoveInfo(from=\"a\\\"b\\\\\"...(+2); to=\"PM1\"; slot=3)", new MoveInfo { From = "a\"b\\c\n", To = "PM1", Slot = 3 }.ToString(style), "style");
-            TransferRequest request = new TransferRequest { Tm = "TM1" };
-            request.Ext.SetInt("priority", 5);
-            request.Ext.SetString("lot", "A");
-            request.Ext.SetBool("hot", true);
-            request.Ext.SetDouble("ratio", 0.5);
-            request.Ext.SetInt64("big", 1234567890123);
-            request.Ext.SetBytes("blob", new byte[] { 0x00, 0xFF });
-            Equal("TransferRequest{tm=\"TM1\", moves=[], reason=\"\", "
-                + "ext{priority=5, lot=\"A\", hot=true, ratio=0.5, big=1234567890123, blob=<2 bytes: 00 FF>}}", request.ToString(), "ext kinds");
+            Equal("RouteStop(orderId=\"a\\\"b\\\\\"...(+2); address=\"Main\"; etaMin=3)", new RouteStop { OrderId = "a\"b\\c\n", Address = "Main", EtaMin = 3 }.ToString(style), "style");
+            DeliveryRoute route = new DeliveryRoute { Rider = "rider-7" };
+            route.Ext.SetInt("priority", 5);
+            route.Ext.SetString("channel", "web");
+            route.Ext.SetBool("hot", true);
+            route.Ext.SetDouble("ratio", 0.5);
+            route.Ext.SetInt64("big", 1234567890123);
+            route.Ext.SetBytes("blob", new byte[] { 0x00, 0xFF });
+            Equal("DeliveryRoute{rider=\"rider-7\", stops=[], note=\"\", "
+                + "ext{priority=5, channel=\"web\", hot=true, ratio=0.5, big=1234567890123, blob=<2 bytes: 00 FF>}}", route.ToString(), "ext kinds");
         }
     }
 }

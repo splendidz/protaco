@@ -1,4 +1,4 @@
-﻿// Heartbeat.g.h. protacoc 0.4.0, source Heartbeat.yaml (sha1 d4c546aae778). Do not edit.
+﻿// Heartbeat.g.h. protacoc 0.5.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -8,7 +8,7 @@ namespace demo
 
 /// Device liveness signal. Every field is fixed-length and ext is off, so Serialize() returns the buffer as is (zero cost).
 /// Recommended shape for messages sent very often.
-/// [version 1; schema 0x2BB85C55; allow_extension false; owner device; source Heartbeat.yaml]
+/// [version 1; schema 0x2BB85C55; allow_extension false; source Heartbeat.yaml]
 class Heartbeat
 {
 public:
@@ -32,7 +32,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -118,6 +118,7 @@ public:
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Fixed fields only. Serializing costs nothing.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -173,6 +174,7 @@ private:
 
     mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
     protaco::CExt ext_;   // stays empty: allow_extension false
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace demo

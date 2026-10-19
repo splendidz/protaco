@@ -1,31 +1,28 @@
-﻿// MoveInfo.g.h. protacoc 0.4.0, source MoveInfo.yaml (sha1 35bb174c6ba8). Do not edit.
+﻿// DeliveryRoute.g.h. protacoc 0.5.0, source DeliveryRoute.yaml (sha1 c54af80e4be8). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
+#include "RouteStop.g.h"
 
 namespace demo
 {
 
-/// One robot move. Element of TransferRequest.moves.
-/// A pick followed by a place.
-/// Every field is fixed-length, so sending it alone costs nothing to serialize.
-/// one robot move
-/// [version 1; schema 0x99EC76D7; owner robot; source MoveInfo.yaml]
-class MoveInfo
+/// Delivery route of one rider.
+/// [version 1; schema 0x7A0526C6; source DeliveryRoute.yaml]
+class DeliveryRoute
 {
 public:
     /// Initialized to defaults. Fixed fields live in the frame buffer.
-    MoveInfo()
+    DeliveryRoute()
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
-        protaco::detail::Access::BindExt(ext_, &MoveInfo::IsSchemaKey);
-        protaco::detail::Store<int32_t>(buf_.data() + kFixedOffset + 64, 1);
+        protaco::detail::Access::BindExt(ext_, &DeliveryRoute::IsSchemaKey);
     }
 
     /// Message name. Stored in the frame header and checked by ToObject.
     static const char* MsgName()
     {
-        return "MoveInfo";
+        return "DeliveryRoute";
     }
 
     /// Version of this type. ToObject reads frames of this version or newer as this version.
@@ -34,7 +31,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -43,55 +40,62 @@ public:
     /// Schema fingerprint of this version. A frame whose fingerprint for this version differs is rejected by ToObject.
     static uint32_t MsgSchemaHash()
     {
-        return 0x99EC76D7u;
+        return 0x7A0526C6u;
     }
 
-    /// Source location name. Examples: SHELF1, TABLE3
-    /// source location
-    /// [type string(32); fixed 32 bytes, set rejects longer values]
-    std::string get_from() const
+    /// rider id
+    /// [type string; required, decoding fails if missing]
+    const std::string& get_rider() const
     {
-        return protaco::detail::LoadChars(buf_.data() + kFixedOffset + 0, 32);
+        return rider_;
     }
 
-    /// Returns false and keeps the old value if longer than 32 bytes.
-    bool set_from(const std::string& value)
+    void set_rider(const std::string& value)
     {
-        return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 32, value);
+        rider_ = value;
+        cache_.valid = false;
     }
 
-    /// target location
-    /// [type string(32); fixed 32 bytes, set rejects longer values]
-    std::string get_to() const
+    /// Stops, visited in order.
+    /// stops
+    /// [type list<RouteStop>; required, decoding fails if missing]
+    const std::vector<RouteStop>& get_stops() const
     {
-        return protaco::detail::LoadChars(buf_.data() + kFixedOffset + 32, 32);
+        return stops_;
     }
 
-    /// Returns false and keeps the old value if longer than 32 bytes.
-    bool set_to(const std::string& value)
+    std::vector<RouteStop>& get_mutable_stops()
     {
-        return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 32, 32, value);
+        cache_.exposed = true;
+        return stops_;
     }
 
-    /// source slot number (1-based)
-    /// [type int; default 1]
-    int32_t get_slot() const
+    void set_stops(const std::vector<RouteStop>& value)
     {
-        return protaco::detail::Load<int32_t>(buf_.data() + kFixedOffset + 64);
+        stops_ = value;
+        cache_.valid = false;
     }
 
-    void set_slot(int32_t value)
+    /// why this route
+    /// [type string; default ""]
+    const std::string& get_note() const
     {
-        protaco::detail::Store<int32_t>(buf_.data() + kFixedOffset + 64, value);
+        return note_;
+    }
+
+    void set_note(const std::string& value)
+    {
+        note_ = value;
+        cache_.valid = false;
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -108,7 +112,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
-    /// Fixed fields only. With an empty ext, serializing costs nothing.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -126,42 +130,49 @@ private:
 
     enum : uint32_t
     {
-        kFixedOffset = 44,   // frame header (28 + name 8 + fingerprints 4 x 1) + FixedLen (4)
-        kFixedSize = 68,
+        kFixedOffset = 49,   // frame header (28 + name 13 + fingerprints 4 x 1) + FixedLen (4)
+        kFixedSize = 0,
         kAllowExtension = 1,
     };
 
     // Schema fingerprints of versions MsgMinVersion()..MsgVersion(), carried in the frame header.
     static const uint32_t* SchemaHashes()
     {
-        static const uint32_t kHashes[] = { 0x99EC76D7u };
+        static const uint32_t kHashes[] = { 0x7A0526C6u };
         return kHashes;
     }
 
     // Keys not allowed in ext: schema keys of every version
     static bool IsSchemaKey(const char* key)
     {
-        static const char* const kKeys[] = { "from", "to", "slot" };
+        static const char* const kKeys[] = { "rider", "stops", "note" };
         return protaco::detail::InList(key, kKeys, 3);
     }
 
     // The single list of variable fields. Shared by size, write and read.
     template <class TSelf, class TVisitor>
-    static void VisitVar(TSelf&, TVisitor&)
+    static void VisitVar(TSelf& self, TVisitor& visitor)
     {
+        visitor.Field("rider", self.rider_, true);
+        visitor.Field("stops", self.stops_, true);
+        visitor.Field("note", self.note_, false);
     }
 
     // All fields in yaml order, for ToString.
     template <class TWriter>
-    static void VisitText(const MoveInfo& self, TWriter& writer)
+    static void VisitText(const DeliveryRoute& self, TWriter& writer)
     {
-        writer.Field("from", self.get_from());
-        writer.Field("to", self.get_to());
-        writer.Field("slot", self.get_slot());
+        writer.Field("rider", self.rider_);
+        writer.Field("stops", self.stops_);
+        writer.Field("note", self.note_);
     }
 
     mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
+    std::string rider_;
+    std::vector<RouteStop> stops_;
+    std::string note_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace demo

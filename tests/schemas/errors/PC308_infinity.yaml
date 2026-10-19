@@ -1,0 +1,6 @@
+# expect: PC308
+message: PC308_infinity
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: double, default: 1e999}

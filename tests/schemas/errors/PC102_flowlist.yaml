@@ -1,0 +1,6 @@
+# expect: PC102
+message: PC102_flowlist
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int, eq: [NAPOLI]}

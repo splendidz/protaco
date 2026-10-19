@@ -5,7 +5,6 @@ version: 1
 namespace: demo
 # Closed contract: no ext, a frame with an unknown key is rejected.
 allow_extension: false
-owner: device
 
 fields:
   - {key: node, type: string(32), desc: device name}

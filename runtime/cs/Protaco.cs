@@ -35,7 +35,7 @@ namespace Protaco
     {
         public string Name;
         public ushort Version;      // sender's version of the message
-        public ushort MinVersion;   // lowest version of the sender's window; the frame has a fingerprint per version
+        public ushort MinVersion;   // oldest version the sender supports; the frame has a fingerprint per version
         public uint SchemaHash;     // fingerprint of Version (the sender's MsgSchemaHash)
         public Envelope Env;
         public uint BodySize;       // whole frame = header (28 + name + 4 per fingerprint) + BodySize

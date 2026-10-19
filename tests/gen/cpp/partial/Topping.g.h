@@ -1,4 +1,4 @@
-﻿// Topping.g.h. protacoc 0.4.0, source Topping.yaml (sha1 73a1aea489ba). Do not edit.
+﻿// Topping.g.h. protacoc 0.5.0, source Topping.yaml (sha1 73a1aea489ba). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -31,7 +31,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -69,12 +69,12 @@ public:
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -92,6 +92,7 @@ public:
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Fixed fields only. With an empty ext, serializing costs nothing.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -144,6 +145,7 @@ private:
 
     mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace partial

@@ -1,0 +1,6 @@
+# Error test. A sender that leaves out the required stops.
+message: DeliveryRoute
+version: 1
+namespace: partial
+fields:
+  - {key: rider, type: string}

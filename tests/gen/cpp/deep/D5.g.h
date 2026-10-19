@@ -1,4 +1,4 @@
-﻿// D5.g.h. protacoc 0.4.0, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
+﻿// D5.g.h. protacoc 0.5.0, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -30,7 +30,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -50,21 +50,23 @@ public:
 
     D4& get_mutable_d()
     {
+        cache_.exposed = true;
         return d_;
     }
 
     void set_d(const D4& value)
     {
         d_ = value;
+        cache_.valid = false;
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -81,6 +83,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -134,6 +137,7 @@ private:
     mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
     D4 d_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace deep

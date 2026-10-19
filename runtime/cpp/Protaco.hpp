@@ -3,8 +3,8 @@
 // protacoc.exe writes this file next to the generated code, so generator and runtime versions always match.
 #pragma once
 // Each output folder has its own copy. The same version is included once; mixing versions is a redefinition error.
-#ifndef PROTACO_RUNTIME_0_4_0
-#define PROTACO_RUNTIME_0_4_0
+#ifndef PROTACO_RUNTIME_0_5_0
+#define PROTACO_RUNTIME_0_5_0
 
 #include <cmath>
 #include <cstdint>
@@ -37,7 +37,7 @@ enum : uint32_t
 {
     kFrameVersion = 3,
     kMaxDepth = 8,                 // max nested message depth
-    kMaxSchemaVersions = 255,      // max versions in a frame's window
+    kMaxSchemaVersions = 255,      // max supported versions per frame (min version..version)
     kMaxFields = 1024,             // max variable fields per body
     kMaxFrameBytes = 1048575,      // max frame size
     kMaxKeyLength = 255,
@@ -56,7 +56,7 @@ struct Header
 {
     std::string name;
     uint16_t version = 0;      // sender's version of the message
-    uint16_t minVersion = 0;   // lowest version of the sender's window; the frame has a fingerprint per version
+    uint16_t minVersion = 0;   // oldest version the sender supports; the frame has a fingerprint per version
     uint32_t schemaHash = 0;   // fingerprint of version (the sender's MsgSchemaHash)
     Envelope env;
     uint32_t bodySize = 0;     // whole frame = header (28 + name + 4 per fingerprint) + bodySize
@@ -115,6 +115,25 @@ struct Access;
 class CExt
 {
 public:
+    CExt() = default;
+    CExt(const CExt&) = default;
+    CExt(CExt&&) = default;
+
+    // Keeps this object's schema key check. Counts as a change for the Serialize() reuse.
+    CExt& operator=(const CExt& other)
+    {
+        entries_ = other.entries_;
+        ++revision_;
+        return *this;
+    }
+
+    CExt& operator=(CExt&& other) noexcept
+    {
+        entries_ = std::move(other.entries_);
+        ++revision_;
+        return *this;
+    }
+
     bool SetBool(const std::string& key, bool value)
     {
         const uint8_t raw = value ? 1 : 0;
@@ -200,6 +219,7 @@ public:
         if (index == SIZE_MAX)
             return false;
         entries_.erase(entries_.begin() + static_cast<std::ptrdiff_t>(index));
+        ++revision_;
         return true;
     }
 
@@ -273,6 +293,7 @@ private:
             return false;
         const uint8_t* bytes = static_cast<const uint8_t*>(data);
         const size_t index = IndexOf(key);
+        ++revision_;
         if (index != SIZE_MAX)
         {
             entries_[index].type = type;
@@ -289,6 +310,7 @@ private:
 
     std::vector<Entry> entries_;
     bool (*isSchemaKey_)(const char*) = nullptr;
+    uint32_t revision_ = 0;   // changes on every Set, Remove and assignment
 };
 
 namespace detail
@@ -389,6 +411,30 @@ inline Envelope LoadEnvelope(const uint8_t* frame)
     env.ts = Load<int64_t>(p + 8);
     return env;
 }
+
+// Serialize() reuse of the variable block. set_ of a variable field clears valid. get_mutable_ sets exposed for
+// the object's lifetime: writes through the returned reference cannot be seen, so the block is rebuilt every time.
+// ext changes are seen through CExt::revision_. Fixed fields and the envelope live in the buffer and need no tracking.
+struct VarCache
+{
+    bool valid = false;
+    bool exposed = false;
+    uint32_t extRevision = 0;
+
+    VarCache() = default;
+
+    // A copy rebuilds once. Assignment keeps exposed: references into the assigned object stay alive.
+    // noexcept keeps generated messages nothrow-movable, so std::vector growth moves them instead of copying.
+    VarCache(const VarCache&) noexcept
+    {
+    }
+
+    VarCache& operator=(const VarCache&) noexcept
+    {
+        valid = false;
+        return *this;
+    }
+};
 
 // Per-type flag as a runtime value. A constant condition is warning C4127, and C++14 has no if constexpr.
 inline bool IsOn(uint32_t flag)
@@ -523,7 +569,52 @@ struct RawField
     bool used;
 };
 
-inline RawField* FindRaw(std::vector<RawField>& fields, const char* key, size_t keyLength)
+// Parsed TLVs of one body. The first kLocal live on the stack, so a typical decode allocates nothing here.
+class CRawFields
+{
+public:
+    size_t Size() const
+    {
+        return count_;
+    }
+
+    RawField* begin()
+    {
+        return count_ <= kLocal ? local_ : heap_.data();
+    }
+
+    RawField* end()
+    {
+        return begin() + count_;
+    }
+
+    void Add(const RawField& raw)
+    {
+        if (count_ < kLocal)
+        {
+            local_[count_] = raw;
+        }
+        else
+        {
+            if (count_ == kLocal)
+                heap_.assign(local_, local_ + kLocal);
+            heap_.push_back(raw);
+        }
+        ++count_;
+    }
+
+private:
+    enum : size_t
+    {
+        kLocal = 16,
+    };
+
+    RawField local_[kLocal];
+    std::vector<RawField> heap_;
+    size_t count_ = 0;
+};
+
+inline RawField* FindRaw(CRawFields& fields, const char* key, size_t keyLength)
 {
     for (RawField& raw : fields)
     {
@@ -533,7 +624,7 @@ inline RawField* FindRaw(std::vector<RawField>& fields, const char* key, size_t 
     return nullptr;
 }
 
-inline bool ParseVar(CReader& reader, std::vector<RawField>* fields, Error* error)
+inline bool ParseVar(CReader& reader, CRawFields* fields, Error* error)
 {
     while (reader.Left() != 0)
     {
@@ -544,20 +635,19 @@ inline bool ParseVar(CReader& reader, std::vector<RawField>* fields, Error* erro
             return Fail(error, "field key truncated");
         raw.key = reinterpret_cast<const char*>(key);
         raw.keyLength = keyLength;
-        const std::string keyText(raw.key, raw.keyLength);
         if (!reader.Pod(&raw.type) || !reader.Pod(&raw.size) || !reader.Take(raw.size, &raw.value))
         {
-            PrependPath(error, keyText);
+            PrependPath(error, std::string(raw.key, raw.keyLength));
             return Fail(error, "field value truncated");
         }
         if (FindRaw(*fields, raw.key, raw.keyLength) != nullptr)
         {
-            PrependPath(error, keyText);
+            PrependPath(error, std::string(raw.key, raw.keyLength));
             return Fail(error, "duplicate key");
         }
-        if (fields->size() >= kMaxFields)
+        if (fields->Size() >= kMaxFields)
             return Fail(error, "too many fields");
-        fields->push_back(raw);
+        fields->Add(raw);
     }
     return true;
 }
@@ -828,7 +918,7 @@ private:
 class CReadVisitor
 {
 public:
-    CReadVisitor(std::vector<RawField>& fields, Error* error, int depth)
+    CReadVisitor(CRawFields& fields, Error* error, int depth)
         : fields_(fields)
         , error_(error)
         , depth_(depth)
@@ -874,7 +964,7 @@ private:
         failed_ = true;
     }
 
-    std::vector<RawField>& fields_;
+    CRawFields& fields_;
     Error* error_;
     int depth_;
     bool failed_ = false;
@@ -938,7 +1028,7 @@ bool Access::ReadBody(T& message, const uint8_t* src, size_t size, Error* error,
         return Fail(error, "fixed block size mismatch: expected " + std::to_string(expected) + ", got " + std::to_string(fixedLength));
     if (IsOn(expected))
         std::memcpy(message.buf_.data() + T::kFixedOffset, fixed, expected);
-    std::vector<RawField> fields;
+    CRawFields fields;
     if (!ParseVar(reader, &fields, error))
         return false;
     CReadVisitor visitor(fields, error, depth);
@@ -968,10 +1058,14 @@ bool Access::ReadBody(T& message, const uint8_t* src, size_t size, Error* error,
     return true;
 }
 
-// The fixed block is already in the buffer. With no variable fields and an empty ext, only BodyLen is updated (zero-cost serialize).
+// The fixed block is already in the buffer. The variable block is rebuilt only after a variable field or ext changed
+// (VarCache). With no variable fields and an empty ext, there is nothing to append (zero-cost serialize).
 template <class T>
 const std::vector<uint8_t>& Access::Serialize(const T& message)
 {
+    VarCache& cache = message.cache_;
+    if (cache.valid && !cache.exposed && cache.extRevision == message.ext_.revision_)
+        return message.buf_;
     const size_t fixedEnd = static_cast<size_t>(T::kFixedOffset) + static_cast<size_t>(T::kFixedSize);
     const size_t varSize = VarSize(message);
     message.buf_.resize(fixedEnd + varSize);
@@ -981,6 +1075,8 @@ const std::vector<uint8_t>& Access::Serialize(const T& message)
         CWriter writer(message.buf_.data() + fixedEnd);
         WriteVar(message, writer);
     }
+    cache.valid = true;
+    cache.extRevision = message.ext_.revision_;
     return message.buf_;
 }
 
@@ -1284,7 +1380,7 @@ inline bool PeekHeader(const uint8_t* src, size_t size, Header* out, Error* erro
 }
 
 /// Bytes to object without exceptions. On failure returns false with the error path; out is unchanged.
-/// Accepts frames of T's version and newer: a newer frame is read as T's version (README.md "Version window").
+/// Accepts frames of T's version and newer: a newer frame is read as T's version (README.md "Versioning").
 /// Decodes into a temporary and then moves it, so src may point into out's own buffer.
 template <class T>
 bool TryToObject(const uint8_t* src, size_t size, T* out, Error* error = nullptr)
@@ -1357,4 +1453,4 @@ T ToObject(const std::vector<uint8_t>& bytes)
 
 }  // namespace protaco
 
-#endif  // PROTACO_RUNTIME_0_4_0
+#endif  // PROTACO_RUNTIME_0_5_0

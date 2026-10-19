@@ -1,4 +1,4 @@
-﻿// PizzaOrder.g.h. protacoc 0.4.0, source PizzaOrder.yaml (sha1 5e1080fdb4f1). Do not edit.
+﻿// PizzaOrder.g.h. protacoc 0.5.0, source PizzaOrder.yaml (sha1 a1af26cb1afe). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -8,10 +8,9 @@
 namespace demo
 {
 
-/// Pizza order. One union message for stores whose orders differ in shape.
-/// Fields without eq are shared by all stores; fields with eq belong to those stores only.
+/// Pizza order. One message for every store; fields used by one store only say so in their comment.
 /// pizza order
-/// [version 1; schema 0x9D0CF242; owner shop; source PizzaOrder.yaml]
+/// [version 1; schema 0x9D0CF242; source PizzaOrder.yaml]
 class PizzaOrder
 {
 public:
@@ -37,7 +36,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -86,6 +85,7 @@ public:
     void set_customer(const std::string& value)
     {
         customer_ = value;
+        cache_.valid = false;
     }
 
     /// diameter in inches
@@ -114,7 +114,7 @@ public:
 
     /// Wood-fired oven. NAPOLI store only.
     /// baked in a wood-fired oven
-    /// [type bool; default true; eq NAPOLI]
+    /// [type bool; default true]
     bool get_woodFired() const
     {
         return protaco::detail::LoadBool(buf_.data() + kFixedOffset + 72);
@@ -127,7 +127,7 @@ public:
 
     /// Deep dish depth in cm. CHICAGO store only. 0 means regular crust.
     /// deep dish depth
-    /// [type int; default 0; eq CHICAGO]
+    /// [type int; default 0]
     int32_t get_deepDishCm() const
     {
         return protaco::detail::Load<int32_t>(buf_.data() + kFixedOffset + 73);
@@ -147,12 +147,14 @@ public:
 
     std::vector<Topping>& get_mutable_toppings()
     {
+        cache_.exposed = true;
         return toppings_;
     }
 
     void set_toppings(const std::vector<Topping>& value)
     {
         toppings_ = value;
+        cache_.valid = false;
     }
 
     /// special requests (e.g. no onions)
@@ -164,12 +166,14 @@ public:
 
     std::vector<std::string>& get_mutable_notes()
     {
+        cache_.exposed = true;
         return notes_;
     }
 
     void set_notes(const std::vector<std::string>& value)
     {
         notes_ = value;
+        cache_.valid = false;
     }
 
     /// delivery details
@@ -181,21 +185,23 @@ public:
 
     Delivery& get_mutable_delivery()
     {
+        cache_.exposed = true;
         return delivery_;
     }
 
     void set_delivery(const Delivery& value)
     {
         delivery_ = value;
+        cache_.valid = false;
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -212,6 +218,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -280,6 +287,7 @@ private:
     std::vector<std::string> notes_;
     Delivery delivery_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace demo

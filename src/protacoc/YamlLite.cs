@@ -3,7 +3,6 @@
 // Accepted forms (anything else is PC101):
 //   # comment                    -> before the first top-level key: message docstring; right above an item: item docstring
 //   key: value                   -> top-level scalar (quotes allowed, trailing # comment allowed)
-//   key: [a, b]                  -> top-level flow list
 //   key:                         -> followed by "  - {k: v, ...}" items, one item per line
 // All values are read as text. Loader interprets bool, int and types (no implicit YAML typing).
 using System.Collections.Generic;
@@ -18,15 +17,9 @@ namespace Protacoc
         public SourcePos Pos;
     }
 
-    internal sealed class YSeq
-    {
-        public List<YScalar> Items = new List<YScalar>();
-        public SourcePos Pos;
-    }
-
     internal sealed class YMap
     {
-        public List<KeyValuePair<YScalar, object>> Entries = new List<KeyValuePair<YScalar, object>>();   // value: YScalar | YSeq
+        public List<KeyValuePair<YScalar, object>> Entries = new List<KeyValuePair<YScalar, object>>();   // value: YScalar
     }
 
     internal sealed class YItem
@@ -39,7 +32,7 @@ namespace Protacoc
     internal sealed class YTop
     {
         public YScalar Key;
-        public object Value;                       // YScalar | YSeq | List<YItem>
+        public object Value;                       // YScalar | List<YItem>
     }
 
     internal sealed class YDoc
@@ -155,7 +148,7 @@ namespace Protacoc
                 doc.Entries.Add(top);
                 return top;
             }
-            object value = cursor.Peek() == '[' ? (object)cursor.ReadSeq() : cursor.ReadScalar(false);
+            YScalar value = cursor.ReadScalar(false);
             cursor.ExpectEnd();
             top.Value = value;
             doc.Entries.Add(top);
@@ -269,7 +262,7 @@ namespace Protacoc
                     YScalar key = new YScalar { Text = line_.Substring(pos_, colon - pos_).Trim(), Pos = keyPos };
                     pos_ = colon + 1;
                     SkipSpaces();
-                    object value = Peek() == '[' ? (object)ReadSeq() : ReadScalar(true);
+                    YScalar value = ReadScalar(true);
                     if (failed_)
                         return null;
                     map.Entries.Add(new KeyValuePair<YScalar, object>(key, value));
@@ -287,39 +280,16 @@ namespace Protacoc
                 return null;
             }
 
-            public YSeq ReadSeq()
-            {
-                YSeq seq = new YSeq { Pos = Pos() };
-                ++pos_;   // '['
-                SkipSpaces();
-                if (Peek() == ']')
-                {
-                    ++pos_;
-                    return seq;
-                }
-                while (!failed_)
-                {
-                    SkipSpaces();
-                    seq.Items.Add(ReadScalar(true));
-                    SkipSpaces();
-                    char c = Peek();
-                    ++pos_;
-                    if (c == ']')
-                        return seq;
-                    if (c != ',')
-                    {
-                        Fail("expected ',' or ']'");
-                        return seq;
-                    }
-                }
-                return seq;
-            }
-
-            // Inside flow, a value ends at , } or ]. " #" starts a comment.
+            // Inside flow, a value ends at , or }. " #" starts a comment.
             public YScalar ReadScalar(bool inFlow)
             {
                 YScalar scalar = new YScalar { Pos = Pos() };
                 char c = Peek();
+                if (c == '[')
+                {
+                    Fail("flow lists '[...]' are not supported. Quote the value with \"...\"");
+                    return scalar;
+                }
                 if (c == '"' || c == '\'')
                 {
                     scalar.Quoted = true;
@@ -330,7 +300,7 @@ namespace Protacoc
                 while (pos_ < line_.Length)
                 {
                     char ch = line_[pos_];
-                    if (inFlow && (ch == ',' || ch == '}' || ch == ']'))
+                    if (inFlow && (ch == ',' || ch == '}'))
                         break;
                     if (ch == '#' && pos_ > start && line_[pos_ - 1] == ' ')
                         break;

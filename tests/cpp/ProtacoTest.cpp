@@ -1,6 +1,6 @@
 ﻿// ProtacoTest.cpp. Unit tests (gtest) for the Protaco.hpp runtime and protacoc generated code.
-// Covers: round trip, in-place fixed fields, defaults, version and schema checks, version window, closed messages,
-// nesting depth, error paths, ext, ToString, corrupt input, golden bytes, cost of the contract checks.
+// Covers: round trip, in-place fixed fields, Serialize() reuse, defaults, version and schema checks, supported versions,
+// closed messages, nesting depth, error paths, ext, ToString, corrupt input, golden bytes, cost of the contract checks.
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -12,12 +12,13 @@
 #include <iterator>
 #include <random>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "DeliveryProof.g.h"
 #include "Heartbeat.g.h"
 #include "PizzaOrder.g.h"
-#include "TransferRequest.g.h"
+#include "DeliveryRoute.g.h"
 #include "alt/Recipe.g.h"
 #include "build1/Order.g.h"
 #include "build1/Ping.g.h"
@@ -27,7 +28,7 @@
 #include "build4/Order.g.h"
 #include "deep/D8.g.h"
 #include "partial/PizzaOrder.g.h"
-#include "partial/TransferRequest.g.h"
+#include "partial/DeliveryRoute.g.h"
 #include "ver_v1/Recipe.g.h"
 #include "ver_v2/Recipe.g.h"
 
@@ -36,30 +37,30 @@ using namespace demo;
 namespace
 {
 
-MoveInfo MakeMove(const std::string& from, const std::string& to, int32_t slot)
+RouteStop MakeStop(const std::string& orderId, const std::string& address, int32_t etaMin)
 {
-    MoveInfo move;
-    move.set_from(from);
-    move.set_to(to);
-    move.set_slot(slot);
-    return move;
+    RouteStop stop;
+    stop.set_orderId(orderId);
+    stop.set_address(address);
+    stop.set_etaMin(etaMin);
+    return stop;
 }
 
-// Golden values. Same as the C# test (tests/cs/Program.cs MakeTransferRequest).
-TransferRequest MakeTransferRequest()
+// Golden values. Same as the C# test (tests/cs/Program.cs MakeDeliveryRoute).
+DeliveryRoute MakeDeliveryRoute()
 {
-    TransferRequest request;
-    request.set_tm("TM1");
-    request.get_mutable_moves().push_back(MakeMove("LP1", "PM1", 3));
-    request.get_mutable_moves().push_back(MakeMove("PM1", "LP1", 3));
-    request.set_reason("rule-1");
-    request.get_mutable_ext().SetInt("priority", 5);
+    DeliveryRoute route;
+    route.set_rider("rider-7");
+    route.get_mutable_stops().push_back(MakeStop("A-100", "1 Pizza St", 10));
+    route.get_mutable_stops().push_back(MakeStop("A-101", "2 Pasta Ave", 25));
+    route.set_note("closest-first");
+    route.GetMutableExt().SetInt("priority", 5);
     protaco::Envelope env;
     env.id = 7;
     env.corr = 0;
     env.ts = 1000;
-    request.SetEnvelope(env);
-    return request;
+    route.SetEnvelope(env);
+    return route;
 }
 
 // Golden values. Same as the C# test MakePizzaOrder.
@@ -250,21 +251,21 @@ void ExpectGolden(const std::string& name, const std::vector<uint8_t>& bytes)
 
 }  // namespace
 
-TEST(Protaco, RoundTripTransferRequest)
+TEST(Protaco, RoundTripDeliveryRoute)
 {
-    const TransferRequest sent = MakeTransferRequest();
+    const DeliveryRoute sent = MakeDeliveryRoute();
     const std::vector<uint8_t> bytes = sent.Serialize();
 
-    const TransferRequest got = protaco::ToObject<TransferRequest>(bytes);
+    const DeliveryRoute got = protaco::ToObject<DeliveryRoute>(bytes);
 
-    EXPECT_EQ("TM1", got.get_tm());
-    ASSERT_EQ(2u, got.get_moves().size());
-    EXPECT_EQ("LP1", got.get_moves()[0].get_from());
-    EXPECT_EQ("PM1", got.get_moves()[0].get_to());
-    EXPECT_EQ(3, got.get_moves()[0].get_slot());
-    EXPECT_EQ("rule-1", got.get_reason());
+    EXPECT_EQ("rider-7", got.get_rider());
+    ASSERT_EQ(2u, got.get_stops().size());
+    EXPECT_EQ("A-100", got.get_stops()[0].get_orderId());
+    EXPECT_EQ("1 Pizza St", got.get_stops()[0].get_address());
+    EXPECT_EQ(10, got.get_stops()[0].get_etaMin());
+    EXPECT_EQ("closest-first", got.get_note());
     int32_t priority = 0;
-    EXPECT_TRUE(got.get_ext().GetInt("priority", &priority));
+    EXPECT_TRUE(got.GetExt().GetInt("priority", &priority));
     EXPECT_EQ(5, priority);
     EXPECT_EQ(7u, got.GetEnvelope().id);
     EXPECT_EQ(1000, got.GetEnvelope().ts);
@@ -302,9 +303,61 @@ TEST(Protaco, FixedOnlyMessageSerializesInPlace)
     EXPECT_EQ(before, beat.Serialize().data());
 }
 
+// Generated messages stay nothrow-movable, so a growing std::vector moves them instead of copying.
+static_assert(std::is_nothrow_move_constructible<DeliveryRoute>::value, "DeliveryRoute move must be noexcept");
+static_assert(std::is_nothrow_move_constructible<RouteStop>::value, "RouteStop move must be noexcept");
+
+// Serialize() reuses the variable block until a variable field or ext changes. Every change below must show up.
+TEST(Protaco, SerializeReusesUntilChange)
+{
+    DeliveryRoute route;
+    route.set_rider("rider-7");
+    route.set_stops({ MakeStop("A-100", "1 Pizza St", 10) });
+    const std::vector<uint8_t> first = route.Serialize();
+    EXPECT_EQ(first, route.Serialize());
+
+    route.set_note("rain");
+    EXPECT_EQ("rain", protaco::ToObject<DeliveryRoute>(route.Serialize()).get_note());
+
+    route.GetMutableExt().SetInt("priority", 1);
+    int32_t priority = 0;
+    EXPECT_TRUE(protaco::ToObject<DeliveryRoute>(route.Serialize()).GetExt().GetInt("priority", &priority));
+    DeliveryRoute other;
+    other.GetMutableExt().SetString("channel", "web");
+    route.GetMutableExt() = other.GetExt();   // ext replaced as a whole
+    EXPECT_FALSE(protaco::ToObject<DeliveryRoute>(route.Serialize()).GetExt().Has("priority"));
+
+    // Decoding into a used object replaces its bytes too.
+    ASSERT_TRUE(Decode(MakeDeliveryRoute().Serialize(), &route, nullptr));
+    EXPECT_EQ(MakeDeliveryRoute().Serialize(), route.Serialize());
+
+    // A reference from get_mutable_ held across Serialize(): later writes through it still show up.
+    std::vector<RouteStop>& stops = route.get_mutable_stops();
+    route.Serialize();
+    stops.push_back(MakeStop("A-102", "3 Olive Rd", 30));
+    EXPECT_EQ(3u, protaco::ToObject<DeliveryRoute>(route.Serialize()).get_stops().size());
+    stops.pop_back();
+    EXPECT_EQ(2u, protaco::ToObject<DeliveryRoute>(route.Serialize()).get_stops().size());
+
+    // A copy starts from the same bytes and changes on its own.
+    DeliveryRoute copy = route;
+    EXPECT_EQ(route.Serialize(), copy.Serialize());
+    copy.set_rider("rider-8");
+    EXPECT_EQ("rider-8", protaco::ToObject<DeliveryRoute>(copy.Serialize()).get_rider());
+    EXPECT_EQ("rider-7", protaco::ToObject<DeliveryRoute>(route.Serialize()).get_rider());
+
+    // Fixed fields are written into the buffer, next to a reused variable block.
+    PizzaOrder order;
+    order.set_customer("mario");
+    order.Serialize();
+    order.set_size(16);
+    EXPECT_EQ(16, protaco::ToObject<PizzaOrder>(order.Serialize()).get_size());
+    EXPECT_EQ("mario", protaco::ToObject<PizzaOrder>(order.Serialize()).get_customer());
+}
+
 TEST(Protaco, DefaultsApplied)
 {
-    EXPECT_EQ(1, MoveInfo().get_slot());
+    EXPECT_EQ(15, RouteStop().get_etaMin());
     EXPECT_TRUE(Heartbeat().get_healthy());
     EXPECT_DOUBLE_EQ(25.5, v2::Recipe().get_temp());
     EXPECT_EQ("none", v2::Recipe().get_note());
@@ -314,33 +367,33 @@ TEST(Protaco, DefaultsApplied)
 
 TEST(Protaco, FixedStringOverflowIsRejected)
 {
-    MoveInfo move;
-    EXPECT_TRUE(move.set_from("LP1"));
-    EXPECT_FALSE(move.set_from(std::string(33, 'x')));
-    EXPECT_EQ("LP1", move.get_from());
-    EXPECT_TRUE(move.set_from(std::string(32, 'y')));
-    EXPECT_EQ(std::string(32, 'y'), move.get_from());
+    RouteStop stop;
+    EXPECT_TRUE(stop.set_orderId("A-100"));
+    EXPECT_FALSE(stop.set_orderId(std::string(17, 'x')));
+    EXPECT_EQ("A-100", stop.get_orderId());
+    EXPECT_TRUE(stop.set_orderId(std::string(16, 'y')));
+    EXPECT_EQ(std::string(16, 'y'), stop.get_orderId());
 }
 
 TEST(Protaco, NameMismatchFails)
 {
-    TransferRequest got;
+    DeliveryRoute got;
     protaco::Error error;
     EXPECT_FALSE(Decode(Heartbeat().Serialize(), &got, &error));
-    EXPECT_EQ("message name mismatch: expected TransferRequest, got Heartbeat", error.what);
+    EXPECT_EQ("message name mismatch: expected DeliveryRoute, got Heartbeat", error.what);
 }
 
-// Same name, other version without a window: an older frame is too old, a newer one has no fingerprint for the reader.
+// Same name, other version, one supported version each: an older frame is too old, a newer one has no fingerprint for the reader.
 TEST(Protaco, VersionMismatchFails)
 {
     v2::Recipe newer;
-    newer.set_path("/rcp/a");
+    newer.set_path("/menu/a");
     v1::Recipe older;
     protaco::Error error;
     EXPECT_FALSE(Decode(newer.Serialize(), &older, &error));
     EXPECT_EQ("message version too new: Recipe reads version 1, sender supports 2..2", error.what);
 
-    older.set_path("/rcp/b");
+    older.set_path("/menu/b");
     EXPECT_FALSE(Decode(older.Serialize(), &newer, &error));
     EXPECT_EQ("message version too old: Recipe reads version 2 or newer, got 1", error.what);
     EXPECT_THROW(protaco::ToObject<v2::Recipe>(older.Serialize()), protaco::CParseError);
@@ -352,7 +405,7 @@ TEST(Protaco, SameVersionDifferentSchemaFails)
     alt::Recipe sent;
     sent.set_step(5);
     sent.set_name("R1");
-    sent.set_path("/rcp/a");
+    sent.set_path("/menu/a");
     ASSERT_NE(alt::Recipe::MsgSchemaHash(), v1::Recipe::MsgSchemaHash());
 
     v1::Recipe got;
@@ -363,7 +416,7 @@ TEST(Protaco, SameVersionDifferentSchemaFails)
 }
 
 // Adding versions leaves the fingerprints of older versions unchanged: a frame from an old build passes.
-TEST(Protaco, WindowKeepsOldFingerprints)
+TEST(Protaco, NewVersionKeepsOldFingerprints)
 {
     EXPECT_EQ(build1::Order::MsgSchemaHash(), build3::v1::Order::MsgSchemaHash());
     EXPECT_EQ(build2::Order::MsgSchemaHash(), build3::v2::Order::MsgSchemaHash());
@@ -395,7 +448,7 @@ TEST(Protaco, NewerFrameReadAsOwnVersion)
     EXPECT_EQ(1, reader1.get_qty());     // removed in 3: the sender keeps the bytes with the default
     EXPECT_EQ("", reader1.get_note());   // removed in 3: absent, optional
     EXPECT_EQ("red", reader1.get_color());
-    std::vector<std::string> extKeys = reader1.get_ext().Keys();   // open message: newer variable fields kept in ext
+    std::vector<std::string> extKeys = reader1.GetExt().Keys();   // open message: newer variable fields kept in ext
     std::sort(extKeys.begin(), extKeys.end());
     EXPECT_EQ((std::vector<std::string>{"label", "tags"}), extKeys);
 
@@ -432,8 +485,8 @@ TEST(Protaco, OlderFrameNeedsOldType)
     EXPECT_DOUBLE_EQ(9.0, protaco::ToObject<build3::v2::Order>(sent2.Serialize()).get_weight());
 }
 
-// A sender whose window no longer starts at the reader's version: rejected with both ranges.
-TEST(Protaco, SenderWindowAboveReader)
+// A sender whose min_version is above the reader's version: rejected with both ranges.
+TEST(Protaco, SenderMinVersionAboveReader)
 {
     build4::Order sent;
     sent.set_id("C3");
@@ -491,26 +544,26 @@ TEST(Protaco, ClosedMessageRejectsUnknownKey)
     EXPECT_EQ("unknown key (allow_extension false)", error.what);
 
     // An open message keeps the same key in ext.
-    TransferRequest open;
-    ASSERT_TRUE(Decode(WithExtraTlv(MakeTransferRequest().Serialize(), "abc", 7), &open, &error));
+    DeliveryRoute open;
+    ASSERT_TRUE(Decode(WithExtraTlv(MakeDeliveryRoute().Serialize(), "abc", 7), &open, &error));
     int32_t value = 0;
-    EXPECT_TRUE(open.get_ext().GetInt("abc", &value));
+    EXPECT_TRUE(open.GetExt().GetInt("abc", &value));
     EXPECT_EQ(7, value);
 }
 
 // The following tests patch the schema hash to exercise the body decoder on a foreign body.
 TEST(Protaco, MissingRequiredFails)
 {
-    partial::TransferRequest sender;
-    sender.set_tm("TM1");
-    const std::vector<uint8_t> bytes = WithSchemaHash(sender.Serialize(), TransferRequest::MsgSchemaHash());
+    partial::DeliveryRoute sender;
+    sender.set_rider("rider-7");
+    const std::vector<uint8_t> bytes = WithSchemaHash(sender.Serialize(), DeliveryRoute::MsgSchemaHash());
 
-    TransferRequest got;
+    DeliveryRoute got;
     protaco::Error error;
     EXPECT_FALSE(Decode(bytes, &got, &error));
-    EXPECT_EQ("moves", error.path);
+    EXPECT_EQ("stops", error.path);
     EXPECT_EQ("missing required", error.what);
-    EXPECT_THROW(protaco::ToObject<TransferRequest>(bytes), protaco::CParseError);
+    EXPECT_THROW(protaco::ToObject<DeliveryRoute>(bytes), protaco::CParseError);
 }
 
 TEST(Protaco, NestedErrorHasPath)
@@ -532,7 +585,7 @@ TEST(Protaco, FixedBlockSizeMismatchFails)
     sender.set_path("/p");
     std::vector<uint8_t> bytes = sender.Serialize();
     bytes[VersionAt(bytes)] = 2;       // version 1 -> 2
-    bytes[VersionAt(bytes) + 2] = 2;   // window 2..2, still one fingerprint
+    bytes[VersionAt(bytes) + 2] = 2;   // min version 2, still one fingerprint
     bytes = WithSchemaHash(bytes, v2::Recipe::MsgSchemaHash());
 
     v2::Recipe got;
@@ -553,30 +606,45 @@ TEST(Protaco, EightNestedLevelsRoundTrip)
 
 TEST(Protaco, ExtRejectsSchemaAndReservedKeys)
 {
-    TransferRequest request;
-    EXPECT_FALSE(request.get_mutable_ext().SetInt("tm", 1));   // schema key
-    EXPECT_FALSE(request.get_mutable_ext().SetInt("_x", 1));   // reserved
-    EXPECT_TRUE(request.get_mutable_ext().SetString("lotType", "A"));
+    DeliveryRoute route;
+    EXPECT_FALSE(route.GetMutableExt().SetInt("rider", 1));   // schema key
+    EXPECT_FALSE(route.GetMutableExt().SetInt("_x", 1));      // reserved
+    EXPECT_TRUE(route.GetMutableExt().SetString("channel", "web"));
     std::string value;
-    EXPECT_TRUE(request.get_ext().GetString("lotType", &value));
-    EXPECT_EQ("A", value);
+    EXPECT_TRUE(route.GetExt().GetString("channel", &value));
+    EXPECT_EQ("web", value);
     int32_t wrongType = 0;
-    EXPECT_FALSE(request.get_ext().GetInt("lotType", &wrongType));
+    EXPECT_FALSE(route.GetExt().GetInt("channel", &wrongType));
+}
+
+// More TLVs than the decoder keeps on the stack (16): the rest goes to the heap, nothing is lost.
+TEST(Protaco, ManyExtEntriesRoundTrip)
+{
+    DeliveryRoute sent = MakeDeliveryRoute();
+    for (int i = 0; i < 40; ++i)
+        ASSERT_TRUE(sent.GetMutableExt().SetInt("k" + std::to_string(i), i));
+    const DeliveryRoute got = protaco::ToObject<DeliveryRoute>(sent.Serialize());
+    EXPECT_EQ(41u, got.GetExt().Count());
+    int32_t value = 0;
+    EXPECT_TRUE(got.GetExt().GetInt("k39", &value));
+    EXPECT_EQ(39, value);
+    EXPECT_EQ(2u, got.get_stops().size());
+    EXPECT_EQ(sent.Serialize(), got.Serialize());
 }
 
 TEST(Protaco, PeekHeaderReadsEnvelopeWithoutBody)
 {
-    const TransferRequest request = MakeTransferRequest();
+    const DeliveryRoute route = MakeDeliveryRoute();
     protaco::Header header;
-    ASSERT_TRUE(protaco::PeekHeader(request.Serialize().data(), request.Serialize().size(), &header));
-    EXPECT_EQ("TransferRequest", header.name);
-    EXPECT_EQ(2, header.version);
-    EXPECT_EQ(2, header.minVersion);
-    EXPECT_EQ(TransferRequest::MsgSchemaHash(), header.schemaHash);
+    ASSERT_TRUE(protaco::PeekHeader(route.Serialize().data(), route.Serialize().size(), &header));
+    EXPECT_EQ("DeliveryRoute", header.name);
+    EXPECT_EQ(1, header.version);
+    EXPECT_EQ(1, header.minVersion);
+    EXPECT_EQ(DeliveryRoute::MsgSchemaHash(), header.schemaHash);
     EXPECT_EQ(7u, header.env.id);
 
-    const std::vector<uint8_t> window = MakeOrderV3().Serialize();
-    ASSERT_TRUE(protaco::PeekHeader(window.data(), window.size(), &header));
+    const std::vector<uint8_t> versions = MakeOrderV3().Serialize();
+    ASSERT_TRUE(protaco::PeekHeader(versions.data(), versions.size(), &header));
     EXPECT_EQ(3, header.version);
     EXPECT_EQ(1, header.minVersion);
     EXPECT_EQ(build3::Order::MsgSchemaHash(), header.schemaHash);
@@ -585,9 +653,9 @@ TEST(Protaco, PeekHeaderReadsEnvelopeWithoutBody)
 // ToString: same text as C# (tests/cs/Program.cs ToStringMatchesCpp).
 TEST(Protaco, ToStringCompact)
 {
-    EXPECT_EQ("TransferRequest{tm=\"TM1\", moves=[MoveInfo{from=\"LP1\", to=\"PM1\", slot=3}, MoveInfo{from=\"PM1\", to=\"LP1\", slot=3}], "
-              "reason=\"rule-1\", ext{priority=5}}",
-        MakeTransferRequest().ToString());
+    EXPECT_EQ("DeliveryRoute{rider=\"rider-7\", stops=[RouteStop{orderId=\"A-100\", address=\"1 Pizza St\", etaMin=10}, "
+              "RouteStop{orderId=\"A-101\", address=\"2 Pasta Ave\", etaMin=25}], note=\"closest-first\", ext{priority=5}}",
+        MakeDeliveryRoute().ToString());
     EXPECT_EQ("Heartbeat{node=\"oven-1\", seq=123456789, healthy=true, cpuLoad=0.25, uptimeSec=3600}", MakeHeartbeat().ToString());
     EXPECT_EQ("DeliveryProof{orderId=\"A-1001\", photo=<11 bytes: FF D8 00 10 4A 46 49 46 ...>, "
               "signatures=[<1 bytes: 00>, <0 bytes>, <2 bytes: 01 02>]}",
@@ -597,51 +665,51 @@ TEST(Protaco, ToStringCompact)
 
 TEST(Protaco, ToStringPretty)
 {
-    EXPECT_EQ("TransferRequest{\n"
-              "  tm=\"TM1\",\n"
-              "  moves=[\n"
-              "    MoveInfo{\n"
-              "      from=\"LP1\",\n"
-              "      to=\"PM1\",\n"
-              "      slot=3\n"
+    EXPECT_EQ("DeliveryRoute{\n"
+              "  rider=\"rider-7\",\n"
+              "  stops=[\n"
+              "    RouteStop{\n"
+              "      orderId=\"A-100\",\n"
+              "      address=\"1 Pizza St\",\n"
+              "      etaMin=10\n"
               "    },\n"
-              "    MoveInfo{\n"
-              "      from=\"PM1\",\n"
-              "      to=\"LP1\",\n"
-              "      slot=3\n"
+              "    RouteStop{\n"
+              "      orderId=\"A-101\",\n"
+              "      address=\"2 Pasta Ave\",\n"
+              "      etaMin=25\n"
               "    }\n"
               "  ],\n"
-              "  reason=\"rule-1\",\n"
+              "  note=\"closest-first\",\n"
               "  ext{\n"
               "    priority=5\n"
               "  }\n"
               "}",
-        MakeTransferRequest().ToString(protaco::TextStyle::Pretty()));
+        MakeDeliveryRoute().ToString(protaco::TextStyle::Pretty()));
 }
 
 // ext entries of every kind, custom brackets and separator, escaping and cut.
 TEST(Protaco, ToStringExtStyleAndEscape)
 {
-    MoveInfo move = MakeMove("a\"b\\c\n", "PM1", 3);
+    RouteStop stop = MakeStop("a\"b\\c\n", "Main", 3);
     protaco::TextStyle style;
     style.separator = "; ";
     style.open = "(";
     style.close = ")";
     style.maxText = 4;
-    EXPECT_EQ("MoveInfo(from=\"a\\\"b\\\\\"...(+2); to=\"PM1\"; slot=3)", move.ToString(style));
+    EXPECT_EQ("RouteStop(orderId=\"a\\\"b\\\\\"...(+2); address=\"Main\"; etaMin=3)", stop.ToString(style));
 
-    TransferRequest request;
-    request.set_tm("TM1");
-    protaco::CExt& ext = request.get_mutable_ext();
+    DeliveryRoute route;
+    route.set_rider("rider-7");
+    protaco::CExt& ext = route.GetMutableExt();
     ext.SetInt("priority", 5);
-    ext.SetString("lot", "A");
+    ext.SetString("channel", "web");
     ext.SetBool("hot", true);
     ext.SetDouble("ratio", 0.5);
     ext.SetInt64("big", 1234567890123);
     ext.SetBytes("blob", {0x00, 0xFF});
-    EXPECT_EQ("TransferRequest{tm=\"TM1\", moves=[], reason=\"\", "
-              "ext{priority=5, lot=\"A\", hot=true, ratio=0.5, big=1234567890123, blob=<2 bytes: 00 FF>}}",
-        request.ToString());
+    EXPECT_EQ("DeliveryRoute{rider=\"rider-7\", stops=[], note=\"\", "
+              "ext{priority=5, channel=\"web\", hot=true, ratio=0.5, big=1234567890123, blob=<2 bytes: 00 FF>}}",
+        route.ToString());
 }
 
 // Truncated input fails at every length without crashing.
@@ -677,16 +745,16 @@ TEST(Protaco, RoundTripBytes)
 {
     DeliveryProof sent = MakeDeliveryProof();
     const std::vector<uint8_t> blob = {0x00, 0x00, 0xFF};
-    ASSERT_TRUE(sent.get_mutable_ext().SetBytes("thumbnail", blob));
+    ASSERT_TRUE(sent.GetMutableExt().SetBytes("thumbnail", blob));
     const DeliveryProof got = protaco::ToObject<DeliveryProof>(sent.Serialize());
     EXPECT_EQ(sent.get_photo(), got.get_photo());
     EXPECT_EQ(sent.get_signatures(), got.get_signatures());
     EXPECT_TRUE(got.get_signatures()[1].empty());
     std::vector<uint8_t> thumbnail;
-    ASSERT_TRUE(got.get_ext().GetBytes("thumbnail", &thumbnail));
+    ASSERT_TRUE(got.GetExt().GetBytes("thumbnail", &thumbnail));
     EXPECT_EQ(blob, thumbnail);
     std::string asString;
-    EXPECT_FALSE(got.get_ext().GetString("thumbnail", &asString));
+    EXPECT_FALSE(got.GetExt().GetString("thumbnail", &asString));
 }
 
 // The contract checks on receive cost under 10% of a decode, smallest message (fixed only) included.
@@ -699,7 +767,7 @@ TEST(Protaco, ContractCheckCostIsNegligible)
 // Golden bytes: the format must not change, and C# must produce the same bytes.
 TEST(Protaco, GoldenBytes)
 {
-    ExpectGolden("TransferRequest.bin", MakeTransferRequest().Serialize());
+    ExpectGolden("DeliveryRoute.bin", MakeDeliveryRoute().Serialize());
     ExpectGolden("PizzaOrder.bin", MakePizzaOrder().Serialize());
     ExpectGolden("Heartbeat.bin", MakeHeartbeat().Serialize());
     ExpectGolden("DeliveryProof.bin", MakeDeliveryProof().Serialize());

@@ -1,4 +1,4 @@
-﻿// DeliveryProof.g.h. protacoc 0.4.0, source DeliveryProof.yaml (sha1 fd0c2b150ffc). Do not edit.
+﻿// DeliveryProof.g.h. protacoc 0.5.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -7,7 +7,7 @@ namespace demo
 {
 
 /// Proof of delivery. Shows the bytes type: binary data carried as is, zeros and 0xFF included.
-/// [version 1; schema 0xF769024A; owner courier; source DeliveryProof.yaml]
+/// [version 1; schema 0xF769024A; source DeliveryProof.yaml]
 class DeliveryProof
 {
 public:
@@ -30,7 +30,7 @@ public:
         return 1;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 1;
@@ -65,12 +65,14 @@ public:
 
     std::vector<uint8_t>& get_mutable_photo()
     {
+        cache_.exposed = true;
         return photo_;
     }
 
     void set_photo(const std::vector<uint8_t>& value)
     {
         photo_ = value;
+        cache_.valid = false;
     }
 
     /// signature images
@@ -82,21 +84,23 @@ public:
 
     std::vector<std::vector<uint8_t>>& get_mutable_signatures()
     {
+        cache_.exposed = true;
         return signatures_;
     }
 
     void set_signatures(const std::vector<std::vector<uint8_t>>& value)
     {
         signatures_ = value;
+        cache_.valid = false;
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -113,6 +117,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -170,6 +175,7 @@ private:
     std::vector<uint8_t> photo_;
     std::vector<std::vector<uint8_t>> signatures_;
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace demo

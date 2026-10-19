@@ -2,7 +2,6 @@
 message: DeliveryProof
 version: 1
 namespace: demo
-owner: courier
 
 fields:
   - {key: orderId, type: string(32), desc: order number}

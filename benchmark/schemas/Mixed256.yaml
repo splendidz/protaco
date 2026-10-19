@@ -1,0 +1,44 @@
+# Benchmark. Fixed block 196 bytes + two strings 60 bytes (with keys) = 256 bytes.
+message: Mixed256
+version: 1
+namespace: bench
+allow_extension: false
+
+fields:
+  - {key: id, type: int64}
+  - {key: ts, type: int64}
+  - {key: i0, type: int}
+  - {key: i1, type: int}
+  - {key: i2, type: int}
+  - {key: i3, type: int}
+  - {key: i4, type: int}
+  - {key: i5, type: int}
+  - {key: i6, type: int}
+  - {key: i7, type: int}
+  - {key: i8, type: int}
+  - {key: i9, type: int}
+  - {key: i10, type: int}
+  - {key: i11, type: int}
+  - {key: i12, type: int}
+  - {key: i13, type: int}
+  - {key: i14, type: int}
+  - {key: i15, type: int}
+  - {key: name, type: string}
+  - {key: d0, type: double}
+  - {key: d1, type: double}
+  - {key: d2, type: double}
+  - {key: d3, type: double}
+  - {key: d4, type: double}
+  - {key: d5, type: double}
+  - {key: d6, type: double}
+  - {key: d7, type: double}
+  - {key: d8, type: double}
+  - {key: d9, type: double}
+  - {key: d10, type: double}
+  - {key: d11, type: double}
+  - {key: note, type: string}
+  - {key: b0, type: bool}
+  - {key: b1, type: bool}
+  - {key: b2, type: bool}
+  - {key: b3, type: bool}
+  - {key: code, type: string(16)}

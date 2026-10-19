@@ -89,7 +89,6 @@ namespace Protacoc
         public string DefaultText;       // null means no default
         public bool DefaultQuoted;
         public string Desc;
-        public List<string> Eq = new List<string>();
         public List<string> Doc = new List<string>();   // yaml comments -> docstring
         public SourcePos Pos;
         public int Added = 1;            // first version with this field
@@ -112,19 +111,17 @@ namespace Protacoc
         public List<FieldDef> FixedSlots = new List<FieldDef>();  // fixed block of this version, removed fields included
         public List<FieldDef> AliveVar = new List<FieldDef>();    // variable fields of this version, serialization order
         public int FixedSize;
-        public uint SchemaHash;           // FNV-1a 32 of the canonical schema text (README "Schema fingerprint")
+        public uint SchemaHash;           // FNV-1a 32 of the canonical schema text (docs/reference.md "Schema fingerprint")
     }
 
     internal sealed class MessageDef
     {
         public string Name;
         public int Version;
-        public int MinVersion;            // lowest version in the window; equals Version without min_version
-        public string Namespace;          // dotted, e.g. "sched.proto"
+        public int MinVersion;            // oldest supported version; equals Version without min_version
+        public string Namespace;          // "shop" or dotted "shop.orders"
         public bool AllowExtension = true;
-        public string Owner;
         public string Desc;
-        public List<string> Eq = new List<string>();
         public List<string> Doc = new List<string>();
         public List<FieldDef> Fields = new List<FieldDef>();
         public string FilePath;
@@ -154,7 +151,7 @@ namespace Protacoc
             }
         }
 
-        // A version window or version attributes on fields.
+        // More than one supported version, or version attributes on fields.
         public bool UsesVersions
         {
             get

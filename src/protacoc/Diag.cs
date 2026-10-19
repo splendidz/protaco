@@ -41,7 +41,7 @@ namespace Protacoc
         }
     }
 
-    // Error codes. List: README.md "Error codes".
+    // Error codes. List: docs/reference.md "Error codes".
     internal static class Codes
     {
         public const string Syntax = "PC101";          // unsupported YAML construct

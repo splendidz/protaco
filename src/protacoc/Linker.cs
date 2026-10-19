@@ -14,7 +14,7 @@ namespace Protacoc
         // Keys that clash with generated names (C++ accessors and members, C# properties). Case-insensitive.
         private static readonly HashSet<string> GeneratedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "ext", "buf", "serialize", "msgname", "msgversion", "msgminversion", "msgschemahash", "schemahashes",
+            "ext", "buf", "cache", "serialize", "msgname", "msgversion", "msgminversion", "msgschemahash", "schemahashes",
             "setenvelope", "getenvelope", "isschemakey", "visitvar", "visittext", "tostring", "kfixedoffset",
             "kfixedsize", "kallowextension", "equals", "gethashcode", "gettype",
         };
@@ -26,7 +26,7 @@ namespace Protacoc
         public const int MaxDepth = 8;
 
         // Must equal the runtime limit (Protaco.hpp kMaxSchemaVersions, Protaco.cs Codec.MaxSchemaVersions).
-        public const int MaxWindow = 255;
+        public const int MaxVersions = 255;
 
         private static readonly HashSet<string> CppKeywords = new HashSet<string>
         {
@@ -88,7 +88,7 @@ namespace Protacoc
             return diag.ErrorCount == 0 ? order : null;
         }
 
-        // Version window rules. README.md "Version window".
+        // Version rules. README.md "Versioning".
         private static void CheckVersions(MessageDef message, Diag diag)
         {
             if (VersionNamespace.IsMatch(message.Name))
@@ -98,8 +98,8 @@ namespace Protacoc
                 diag.Error(message.Pos, Codes.BadVersion, "min_version " + message.MinVersion + " is above version " + message.Version);
                 return;
             }
-            if (message.Version - message.MinVersion + 1 > MaxWindow)
-                diag.Error(message.Pos, Codes.BadVersion, "window " + message.MinVersion + ".." + message.Version + " has more than " + MaxWindow + " versions");
+            if (message.Version - message.MinVersion + 1 > MaxVersions)
+                diag.Error(message.Pos, Codes.BadVersion, "min_version " + message.MinVersion + " to version " + message.Version + " spans more than " + MaxVersions + " versions. Raise min_version");
             foreach (FieldDef field in message.Fields)
             {
                 if (field.Added > message.Version)
@@ -111,7 +111,7 @@ namespace Protacoc
                 else if (field.Removed <= field.Added)
                     diag.Error(field.Pos, Codes.BadVersion, "'" + field.Key + "' removed in " + field.Removed + ", not after added " + field.Added);
                 else if (!field.Type.IsFixed && field.Removed <= message.MinVersion)
-                    diag.Error(field.Pos, Codes.DeadLine, "'" + field.Key + "' removed in " + field.Removed + " and min_version is " + message.MinVersion + ": no version in the window has it. Delete the line");
+                    diag.Error(field.Pos, Codes.DeadLine, "'" + field.Key + "' removed in " + field.Removed + " and min_version is " + message.MinVersion + ": no supported version has it. Delete the line");
             }
         }
 
@@ -233,15 +233,18 @@ namespace Protacoc
                     break;
                 case TypeKind.Int:
                     int i32;
-                    ok = !field.DefaultQuoted && int.TryParse(text, out i32);
+                    ok = !field.DefaultQuoted && Loader.IsIntText(text) && int.TryParse(text, out i32);
                     break;
                 case TypeKind.Int64:
                     long i64;
-                    ok = !field.DefaultQuoted && long.TryParse(text, out i64);
+                    ok = !field.DefaultQuoted && Loader.IsIntText(text) && long.TryParse(text, out i64) && i64 != long.MinValue;
                     break;
                 case TypeKind.Double:
-                    // Only forms usable verbatim as C++ and C# literals (no Infinity or NaN).
-                    ok = !field.DefaultQuoted && DoubleText.IsMatch(text);
+                    // Only forms usable verbatim as C++ and C# literals (no Infinity or NaN, no overflow to infinity).
+                    double d;
+                    ok = !field.DefaultQuoted && DoubleText.IsMatch(text)
+                        && double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d)
+                        && !double.IsInfinity(d);
                     break;
                 case TypeKind.String:
                 case TypeKind.FixedString:
@@ -263,7 +266,7 @@ namespace Protacoc
                     return;
             }
             if (!ok)
-                diag.Error(field.Pos, Codes.BadDefault, "default '" + text + "' does not match type " + field.Type + " (write numbers and bools without quotes)");
+                diag.Error(field.Pos, Codes.BadDefault, "default '" + text + "' does not match type " + field.Type + " (numbers and bools without quotes, integers without '+' or leading zeros)");
         }
 
         // Depth-first cycle search. Appends in completion order (dependencies first).

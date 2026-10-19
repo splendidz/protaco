@@ -1,4 +1,4 @@
-﻿// Recipe.g.h. protacoc 0.4.0, source Recipe.yaml (sha1 f97dfa2fc24c). Do not edit.
+﻿// Recipe.g.h. protacoc 0.5.0, source Recipe.yaml (sha1 f97dfa2fc24c). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -32,7 +32,7 @@ public:
         return 2;
     }
 
-    /// Lowest version of the window. Frames carry one schema fingerprint per version from here up.
+    /// Oldest supported version (min_version). Frames carry one schema fingerprint per version from here up.
     static uint16_t MsgMinVersion()
     {
         return 2;
@@ -89,6 +89,7 @@ public:
     void set_path(const std::string& value)
     {
         path_ = value;
+        cache_.valid = false;
     }
 
     /// [type string; default "none"]
@@ -100,15 +101,16 @@ public:
     void set_note(const std::string& value)
     {
         note_ = value;
+        cache_.valid = false;
     }
 
     /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& get_ext() const
+    const protaco::CExt& GetExt() const
     {
         return ext_;
     }
 
-    protaco::CExt& get_mutable_ext()
+    protaco::CExt& GetMutableExt()
     {
         return ext_;
     }
@@ -125,6 +127,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
+    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {
@@ -184,6 +187,7 @@ private:
     std::string path_;
     std::string note_ = "none";
     protaco::CExt ext_;
+    mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
 }  // namespace v2
