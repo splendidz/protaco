@@ -933,7 +933,7 @@ bool TryView(std::vector<uint8_t>&& bytes, typename T::View* view,
 - 매개변수: 입력 프레임, 결과 view, 선택 오류 문자열. T는 명시
 - 반환값: 성공이면 true와 읽기 전용 view. 실패는 TryToObject와 같은 판정·문구
 - 수명: 입력 바이트가 살아 있고 바뀌지 않는 동안만 유효. view를 읽기 전 성공 여부 확인
-- 비용: 성공 경로에서 프레임 복사·할당 없음. ext 값은 view로 접근 불가
+- 비용: 프레임 복사 없음. 고정 영역 뒤 항목(ext, 새 version 필드)이 16개 이하이면 할당도 없음. ext 값은 view로 접근 불가
 - 삭제된 오버로드: 임시 vector를 참조하는 view를 막기 위한 컴파일 오류
 
 **C++**

@@ -887,7 +887,7 @@ if (demo.Heartbeat.TryView(received, out view))
 </details>
 
 - `View` is generated only for a message whose version has no variable fields. It has field getters and envelope getters only
-- `TryView` itself allocates and copies nothing. The view only points at the bytes, so it is valid only while the bytes live and stay unchanged. A fixed-string getter builds a new `std::string` (C# `string`) when called
+- `TryView` does not copy the bytes. In C++ it does not allocate either while at most 16 entries (extension data, or fields of a newer version) follow the fixed block; C# creates a small object for the frame check. The view only points at the bytes, so it is valid only while the bytes live and stay unchanged. A fixed-string getter builds a new `std::string` (C# `string`) when called
 - In C++, passing a temporary vector (`std::vector&&`) is a compile error. This keeps a view from pointing at bytes that are about to disappear
 - Extension data (ext) is not visible through a view
 - Python has no View ([6.4](#64-python))

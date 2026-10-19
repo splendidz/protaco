@@ -324,7 +324,7 @@ namespace Protacoc
         private static void View(CodeWriter w, MessageDef message, VersionView view)
         {
             w.Line();
-            w.Line("/// Fixed fields read in place from received bytes (protaco::TryView<" + message.Name + ">): no allocation, no copy.");
+            w.Line("/// Fixed fields read in place from received bytes (protaco::TryView<" + message.Name + ">): the bytes are not copied.");
             w.Line("/// Valid after a successful TryView while the bytes live and stay unchanged.");
             w.Line("class View : public protaco::CView");
             w.Line("{");

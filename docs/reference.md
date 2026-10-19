@@ -933,7 +933,7 @@ bool TryView(std::vector<uint8_t>&& bytes, typename T::View* view,
 - Parameters: input frame, output view, and optional error string. Specify T explicitly
 - Returns: true with a read-only view on success. Uses the same acceptance checks and error wording as TryToObject
 - Lifetime: valid only while the input bytes remain alive and unchanged. Check success before reading the view
-- Cost: no frame allocation or copy on success. Ext values are not accessible through the view
+- Cost: no copy of the frame. No allocation either while at most 16 entries (ext, or fields of a newer version) follow the fixed block. Ext values are not accessible through the view
 - Deleted overload: prevents a view from referencing a temporary vector
 
 **C++**

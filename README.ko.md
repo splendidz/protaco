@@ -887,7 +887,7 @@ if (demo.Heartbeat.TryView(received, out view))
 </details>
 
 - `View`는 그 version에 가변 필드가 없는 메시지에만 생성됨. 필드 getter와 봉투 getter만 있음
-- `TryView` 호출에는 할당·복사가 없음. view는 바이트를 가리킬 뿐이라 바이트가 살아 있고 바뀌지 않는 동안만 유효. 고정 문자열 getter는 읽을 때 `std::string`(C# `string`)을 새로 만듦
+- `TryView`는 받은 바이트를 복사하지 않음. C++은 고정 영역 뒤 항목(확장 데이터, 새 version 필드)이 16개 이하이면 할당도 없고, C#은 프레임 검사용 객체를 만듦. view는 바이트를 가리킬 뿐이라 바이트가 살아 있고 바뀌지 않는 동안만 유효. 고정 문자열 getter는 읽을 때 `std::string`(C# `string`)을 새로 만듦
 - C++에 임시 vector(`std::vector&&`)를 넘기면 컴파일 오류. 바로 사라질 바이트를 가리키지 않게 막는 장치
 - 확장 데이터(ext)는 view로 볼 수 없음
 - Python에는 View가 없음([6.4](#64-python))

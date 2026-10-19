@@ -86,7 +86,7 @@ public:
         return protaco::detail::Access::ToText(*this, style);
     }
 
-    /// Fixed fields read in place from received bytes (protaco::TryView<D0>): no allocation, no copy.
+    /// Fixed fields read in place from received bytes (protaco::TryView<D0>): the bytes are not copied.
     /// Valid after a successful TryView while the bytes live and stay unchanged.
     class View : public protaco::CView
     {

@@ -71,7 +71,7 @@ namespace demo
             return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
-        /// <summary>Fixed fields read in place from received bytes (TryView): no allocation, no copy.
+        /// <summary>Fixed fields read in place from received bytes (TryView): the bytes are not copied.
         /// Valid while the array is unchanged. ext entries are not visible.</summary>
         public struct View
         {

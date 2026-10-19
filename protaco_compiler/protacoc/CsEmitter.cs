@@ -439,7 +439,7 @@ namespace Protacoc
         // Fixed-only versions: struct View over received bytes and TryView.
         private static void View(CodeWriter w, MessageDef message, VersionView view)
         {
-            w.Line("/// <summary>Fixed fields read in place from received bytes (TryView): no allocation, no copy.");
+            w.Line("/// <summary>Fixed fields read in place from received bytes (TryView): the bytes are not copied.");
             w.Line("/// Valid while the array is unchanged. ext entries are not visible.</summary>");
             w.Open("public struct View");
             w.Line("private readonly byte[] src_;");

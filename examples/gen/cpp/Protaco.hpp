@@ -2371,7 +2371,8 @@ T ToObject(std::vector<uint8_t>&& bytes)
 }
 
 /// Fixed-only messages (T::View exists): checks the frame like TryToObject and reads the fixed fields in place,
-/// without allocating or copying. view stays valid while the bytes live and stay unchanged.
+/// without copying the bytes. No allocation unless more than 16 entries (ext, or fields of a newer version) follow
+/// the fixed block. view stays valid while the bytes live and stay unchanged.
 /// Call with the type: protaco::TryView<Heartbeat>(bytes, &view).
 template <class T>
 bool TryView(const uint8_t* src, size_t size, typename T::View* view, std::string* error = nullptr)
