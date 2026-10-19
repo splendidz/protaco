@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filters follow the real folders. -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="cpp">
+      <UniqueIdentifier>{298CAD0B-5F19-52E0-97D7-F9CF41447FD1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen">
+      <UniqueIdentifier>{EC778B83-D8E0-5BF9-87B7-5E59B37B4C98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp">
+      <UniqueIdentifier>{CB3E4266-40ED-516C-B846-3ED7478A92D7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas">
+      <UniqueIdentifier>{7A83212D-2981-505E-B771-061E2EC7A548}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\gen\cpp\Delivery.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\DeliveryProof.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\DeliveryRoute.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\Heartbeat.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\PizzaOrder.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\Protaco.hpp">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\RouteStop.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\Topping.g.h">
+      <Filter>gen\cpp</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\schemas\Delivery.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\DeliveryProof.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\DeliveryRoute.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\Heartbeat.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\PizzaOrder.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\RouteStop.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\Topping.yaml">
+      <Filter>schemas</Filter>
+    </None>
+  </ItemGroup>
+</Project>

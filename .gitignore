@@ -1,4 +1,6 @@
-build/
+bin/
+.IntermediateDirectory/
 .vs/
 *.user
 *.suo
+__pycache__/

@@ -1,0 +1,11 @@
+# One stop of a delivery route. Element of DeliveryRoute.stops.
+# Every field is fixed-length, so sending it alone costs nothing to serialize.
+message: RouteStop
+version: 1
+namespace: demo
+
+fields:
+  # Order delivered at this stop. Example: A-100
+  - {key: orderId, type: string(16), desc: order number}
+  - {key: address, type: string(48), desc: street address}
+  - {key: etaMin, type: int, default: 15, desc: minutes until arrival}

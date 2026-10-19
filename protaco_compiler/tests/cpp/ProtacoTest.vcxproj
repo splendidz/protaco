@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Unit tests (gtest) for the C++ runtime and generated code. v141 x64, C++17. Only Cpp14Check.cpp builds as C++14.
+     googletest is compiled from the vendored sources in ..\googletest (no prebuilt library, no environment variable).
+     Output: bin\<Configuration>\ProtacoTest.exe. Intermediates: .IntermediateDirectory\ProtacoTest\. -->
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{2B7C0D4E-8A15-4F6B-9C3D-5E7F8A9B0C12}</ProjectGuid>
+    <RootNamespace>ProtacoTest</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseDebugLibraries Condition="'$(Configuration)'=='Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(Configuration)'=='Release'">false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <RepoDir>$(ProjectDir)..\..\..\</RepoDir>
+    <TestsDir>$(ProjectDir)..\</TestsDir>
+    <GTestDir>$(ProjectDir)..\googletest\</GTestDir>
+    <OutDir>$(RepoDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(RepoDir).IntermediateDirectory\ProtacoTest\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <SDLCheck>true</SDLCheck>
+      <!-- /utf-8: sources are UTF-8. gtest header warnings are silenced as external. -->
+      <AdditionalOptions>/utf-8 /experimental:external /external:I "$(GTestDir)include" /external:W0 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(RepoDir)include\cpp;$(TestsDir)gen\cpp\demo;$(TestsDir)gen\cpp;$(GTestDir)include;$(GTestDir)src\gtest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>
+      <Optimization Condition="'$(Configuration)'=='Release'">MaxSpeed</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="ProtacoTest.cpp" />
+    <ClCompile Include="Cpp14CheckTest.cpp" />
+    <ClCompile Include="Cpp14Check.cpp">
+      <LanguageStandard>stdcpp14</LanguageStandard>
+    </ClCompile>
+  </ItemGroup>
+  <!-- googletest sources. Third-party code, warning checks off. -->
+  <ItemGroup>
+    <ClCompile Include="..\googletest\src\gtest\gtest-all.cc">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <SDLCheck>false</SDLCheck>
+    </ClCompile>
+    <ClCompile Include="..\googletest\src\gtest\src\gtest_main.cc">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <SDLCheck>false</SDLCheck>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\include\cpp\Protaco.hpp" />
+    <ClInclude Include="..\gen\cpp\**\*.g.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\schemas\**\*.yaml" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

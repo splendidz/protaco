@@ -60,8 +60,8 @@ namespace는 YAML에서 정합니다. 명령행의 namespace 지정은 지원하
 일반 생성과 파일을 쓰지 않는 검사의 예입니다.
 
 ```bat
-build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
-build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --check
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --check
 ```
 
 런타임은 기본적으로 생성 파일 옆에 같은 버전으로 기록됩니다. `--no_runtime`을 쓰는 프로젝트는 같은 생성기 버전의 런타임을 별도로 제공해야 합니다.
@@ -149,35 +149,33 @@ C++은 `protaco::Error::what`, C#은 `ProtacoException.What`에서 이유를 확
 저장소 루트의 명령 프롬프트에서 실행합니다.
 
 ```bat
-set GTEST_ROOT=<googletest 폴더>
 build.cmd
 ```
 
-googletest 폴더에는 `include\`, `lib\gtest.lib`, `lib\gtest_main.lib`가 필요하며 `/MD`로 빌드한 라이브러리를 사용합니다. `GTEST_ROOT`가 없으면 C++ 시험 빌드와 실행을 생략합니다.
+googletest는 [protaco_compiler/tests/googletest](../protaco_compiler/tests/googletest)의 소스를 시험과 함께 컴파일합니다. 따로 설치하거나 환경 변수를 둘 필요가 없습니다. 출력은 `bin\Release`, 빌드 중간 산물은 `.IntermediateDirectory`에 모입니다.
 
 `build.cmd`의 단계입니다.
 
 1. protacoc 빌드.
-2. `examples/gen`, `tests/gen` 재생성.
-3. C++ 시험 빌드.
-4. 골든 파일을 사용하는 C++ 시험 수행.
-5. C++ 예제 빌드와 실행.
-6. C# 시험 빌드와 수행.
+2. 시험 코드(`protaco_compiler/tests/gen`)와 예제 코드(`examples/gen`) 재생성.
+3. C++ 시험 빌드와 수행(골든 파일 비교 포함).
+4. C# 시험 빌드와 수행.
+5. 예제 솔루션(`examples/examples.sln`) 빌드와 실행.
 
-이 명령은 생성 코드를 다시 씁니다. 기준 프레임(`tests/golden`)은 `PROTACO_UPDATE_GOLDEN=1`일 때만 C++ 시험이 다시 기록하며, 직렬화 형식이 바뀔 때만 씁니다. `MSBUILD` 환경 변수로 MSBuild 경로를 바꿀 수 있습니다. 기본값은 Visual Studio 2017 Professional입니다. IDE에서는 [protaco.sln](../protaco.sln)을 엽니다.
+이 명령은 생성 코드를 다시 씁니다. 기준 프레임(`protaco_compiler/tests/golden`)은 `PROTACO_UPDATE_GOLDEN=1`일 때만 C++ 시험이 다시 기록하며, 직렬화 형식이 바뀔 때만 씁니다. `MSBUILD` 환경 변수로 MSBuild 경로를 바꿀 수 있습니다. 기본값은 Visual Studio 2017 Professional입니다. IDE에서는 [protaco.sln](../protaco.sln)을 엽니다.
 
 ### 4.2 저장소 구성
 
 | 경로 | 내용 |
 |---|---|
-| [src/protacoc](../src/protacoc) | 생성기 |
-| [runtime/cpp](../runtime/cpp), [runtime/cs](../runtime/cs) | 생성기가 복사하는 런타임 원본 |
+| [protaco_compiler/protacoc](../protaco_compiler/protacoc) | 생성기 |
+| [include/cpp](../include/cpp), [include/cs](../include/cs) | 생성기가 복사하는 런타임 원본 |
 | [examples](../examples/README.ko.md) | 예제 스키마, 생성 코드, C++ 프로그램 |
-| [tests/schemas](../tests/schemas) | 버전 관리, 중첩, 순환, 오류 코드별 스키마 |
-| [tests/golden](../tests/golden) | C++이 기록하고 C#과 비교하는 기준 프레임 |
-| [tests/cpp](../tests/cpp) | googletest 시험과 C++14 번역 단위 |
-| [tests/cs](../tests/cs) | 생성기와 C# 런타임 시험 실행기 |
-| [benchmark](../benchmark/README.ko.md) | protobuf 비교 측정 자료 |
+| [protaco_compiler/tests/schemas](../protaco_compiler/tests/schemas) | 버전 관리, 중첩, 순환, 오류 코드별 스키마 |
+| [protaco_compiler/tests/golden](../protaco_compiler/tests/golden) | C++이 기록하고 C#과 비교하는 기준 프레임 |
+| [protaco_compiler/tests/cpp](../protaco_compiler/tests/cpp) | googletest 시험과 C++14 번역 단위 |
+| [protaco_compiler/tests/cs](../protaco_compiler/tests/cs) | 생성기와 C# 런타임 시험 실행기 |
+| [benchmark](benchmark/README.ko.md) | protobuf 비교 측정 자료 |
 | [docs](.) | 상세 참조와 그림 |
 
 기준 프레임은 `DeliveryRoute.bin`, `PizzaOrder.bin`, `Heartbeat.bin`, `DeliveryProof.bin`입니다.
@@ -192,7 +190,7 @@ C++ 시험은 32개입니다.
 - 닫힌 메시지의 모르는 키 처리와 더 새 필드 버림.
 - 중첩 8단계, 필수 필드 누락, 중첩 오류 경로, 확장 데이터 규칙.
 - `ToString()` 출력.
-- 계약 검사 비용 측정. 라이브러리 간 성능 비교는 [벤치마크](../benchmark/README.ko.md) 참고.
+- 계약 검사 비용 측정. 라이브러리 간 성능 비교는 [벤치마크](benchmark/README.ko.md) 참고.
 - 모든 길이에서의 잘림, 무작위 비트 반전.
 - 골든 바이트와 C++14 번역 단위.
 - Serialize 재사용: 값 변경 시 재생성, `get_mutable_` 참조, 복사, ext 대입.

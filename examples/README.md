@@ -24,7 +24,7 @@ examples/
   cpp/example.vcxproj  include path and Pre-Build Event settings
 ```
 
-Generated files can be read directly in the repository. `build.cmd` regenerates them, and a C# test uses `--check` to verify that they are current. The [C# test project](../tests/cs/protacoc.Tests.csproj) compiles `gen/cs` just as an application project would.
+Generated files can be read directly in the repository. `build.cmd` regenerates them, and a C# test uses `--check` to verify that they are current. The [C# test project](../protaco_compiler/tests/cs/protacoc.Tests.csproj) compiles `gen/cs` just as an application project would.
 
 ## 2. Build and run
 
@@ -37,18 +37,18 @@ build.cmd
 The fifth step builds and runs the example. To run those steps manually:
 
 ```bat
-build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
 msbuild examples\cpp\example.vcxproj /p:Configuration=Release /p:Platform=x64
 build\bin\Release\protaco_example.exe
 ```
 
-[example.vcxproj](cpp/example.vcxproj) adds only `examples\gen\cpp` to the include path. Its Pre-Build Event regenerates the schemas when `build\bin\protacoc.exe` exists. No separate runtime library is linked.
+[example.vcxproj](cpp/example.vcxproj) adds only `examples\gen\cpp` to the include path. Its Pre-Build Event regenerates the schemas when `bin\Release\protacoc.exe` exists. No separate runtime library is linked.
 
 ```xml
 <AdditionalIncludeDirectories>$(ProjectDir)..\..\examples\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 ```
 
-The project builds with `/W4 /WX` and C++17. [Cpp14Check.cpp](../tests/cpp/Cpp14Check.cpp) also checks the generated headers' C++14 compatibility. See the [reference](../docs/reference.md#4-build-and-test) for full build and test setup.
+The project builds with `/W4 /WX` and C++17. [Cpp14Check.cpp](../protaco_compiler/tests/cpp/Cpp14Check.cpp) also checks the generated headers' C++14 compatibility. See the [reference](../docs/reference.md#4-build-and-test) for full build and test setup.
 
 ## 3. Schemas
 
@@ -330,11 +330,11 @@ The same values serialize to the same bytes as C++, which C# tests verify agains
 
 ## 6. Version management walkthrough
 
-[build1](../tests/schemas/build1), [build2](../tests/schemas/build2), [build3](../tests/schemas/build3), and [build4](../tests/schemas/build4) contain successive shipped revisions of the same `Order.yaml`. Tests use separate namespaces so the revisions can coexist in one binary. An application keeps one namespace and revises the file.
+[build1](../protaco_compiler/tests/schemas/build1), [build2](../protaco_compiler/tests/schemas/build2), [build3](../protaco_compiler/tests/schemas/build3), and [build4](../protaco_compiler/tests/schemas/build4) contain successive shipped revisions of the same `Order.yaml`. Tests use separate namespaces so the revisions can coexist in one binary. An application keeps one namespace and revises the file.
 
 ### 6.1 Revisions
 
-The [version 1 definition](../tests/schemas/build1/Order.yaml), with its introductory comment omitted:
+The [version 1 definition](../protaco_compiler/tests/schemas/build1/Order.yaml), with its introductory comment omitted:
 
 ```yaml
 message: Order
@@ -347,7 +347,7 @@ fields:
   - {key: color, type: string, required: true}
 ```
 
-The [version 3 definition](../tests/schemas/build3/Order.yaml):
+The [version 3 definition](../protaco_compiler/tests/schemas/build3/Order.yaml):
 
 ```yaml
 message: Order

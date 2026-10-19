@@ -1,42 +1,37 @@
 @echo off
-rem build.cmd - build protacoc, regenerate code, run C++ (gtest) and C# tests, run the example.
+rem build.cmd - build protacoc, regenerate test and example code, run the C++ and C# tests, build and run the examples.
 rem ASCII only: cmd reads batch files in the OEM code page.
-rem Env: MSBUILD (default: VS2017 Professional), GTEST_ROOT (googletest with include\ and lib\, /MD).
-rem Without GTEST_ROOT the C++ tests are skipped.
+rem Env: MSBUILD (default: VS2017 Professional). Output: bin\Release. Intermediates: .IntermediateDirectory.
 setlocal
 pushd "%~dp0"
 if "%MSBUILD%"=="" set "MSBUILD=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\MSBuild\15.0\Bin\MSBuild.exe"
 set CONFIG=Release
-set PROTACOC=build\bin\protacoc.exe
+set BIN=bin\%CONFIG%
+set PROTACOC=%BIN%\protacoc.exe
+set TESTS=protaco_compiler\tests
 
-echo === [1/6] build protacoc
-"%MSBUILD%" src\protacoc\protacoc.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
+echo === [1/5] build protacoc
+"%MSBUILD%" protaco_compiler\protacoc\protacoc.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
 
-echo === [2/6] generate examples and test schemas
+echo === [2/5] generate test and example code
+for %%N in (demo ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
+    %PROTACOC% -I %TESTS%\schemas\%%N --cpp_out %TESTS%\gen\cpp\%%N --cs_out %TESTS%\gen\cs\%%N --no_runtime || goto :fail
+)
 %PROTACOC% -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs || goto :fail
-for %%N in (ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
-    %PROTACOC% -I tests\schemas\%%N --cpp_out tests\gen\cpp\%%N --cs_out tests\gen\cs\%%N --no_runtime || goto :fail
-)
 
-if "%GTEST_ROOT%"=="" (
-    echo === [3/6] GTEST_ROOT not set: C++ tests skipped
-    goto :example
-)
-echo === [3/6] build C++ tests (v141 x64)
-"%MSBUILD%" tests\cpp\ProtacoTest.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
+echo === [3/5] build and run C++ tests (v141 x64)
+"%MSBUILD%" %TESTS%\cpp\ProtacoTest.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
+set "PROTACO_GOLDEN_DIR=%CD%\%TESTS%\golden"
+%BIN%\ProtacoTest.exe || goto :fail
 
-echo === [4/6] run C++ tests
-set "PROTACO_GOLDEN_DIR=%CD%\tests\golden"
-build\bin\%CONFIG%\ProtacoTest.exe || goto :fail
+echo === [4/5] build and run C# tests
+"%MSBUILD%" %TESTS%\cs\protacoc.Tests.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
+%BIN%\protacoc.Tests.exe "%CD%\%TESTS%" || goto :fail
 
-:example
-echo === [5/6] build and run the C++ example
-"%MSBUILD%" examples\cpp\example.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
-build\bin\%CONFIG%\protaco_example.exe || goto :fail
-
-echo === [6/6] build and run C# tests
-"%MSBUILD%" tests\cs\protacoc.Tests.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
-build\bin\protacoc.Tests.exe "%CD%" || goto :fail
+echo === [5/5] build and run the examples
+"%MSBUILD%" examples\examples.sln /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
+%BIN%\protaco_example.exe || goto :fail
+%BIN%\protaco_example_cs.exe || goto :fail
 
 echo === ALL PASSED
 popd

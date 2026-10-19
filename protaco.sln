@@ -3,19 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.1000
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "protacoc", "src\protacoc\protacoc.csproj", "{6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "protacoc", "protaco_compiler\protacoc\protacoc.csproj", "{6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "protacoc.Tests", "tests\cs\protacoc.Tests.csproj", "{8C2A4E6B-1D3F-4A5B-8C7D-9E0F1A2B3C4D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "protacoc.Tests", "protaco_compiler	ests\cs\protacoc.Tests.csproj", "{8C2A4E6B-1D3F-4A5B-8C7D-9E0F1A2B3C4D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61} = {6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProtacoTest", "tests\cpp\ProtacoTest.vcxproj", "{2B7C0D4E-8A15-4F6B-9C3D-5E7F8A9B0C12}"
-	ProjectSection(ProjectDependencies) = postProject
-		{6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61} = {6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example", "examples\cpp\example.vcxproj", "{4D9E1F60-2B37-4C8D-A5E6-7F8091A2B3C4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProtacoTest", "protaco_compiler	ests\cpp\ProtacoTest.vcxproj", "{2B7C0D4E-8A15-4F6B-9C3D-5E7F8A9B0C12}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61} = {6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61}
 	EndProjectSection
@@ -38,10 +33,6 @@ Global
 		{2B7C0D4E-8A15-4F6B-9C3D-5E7F8A9B0C12}.Debug|x64.Build.0 = Debug|x64
 		{2B7C0D4E-8A15-4F6B-9C3D-5E7F8A9B0C12}.Release|x64.ActiveCfg = Release|x64
 		{2B7C0D4E-8A15-4F6B-9C3D-5E7F8A9B0C12}.Release|x64.Build.0 = Release|x64
-		{4D9E1F60-2B37-4C8D-A5E6-7F8091A2B3C4}.Debug|x64.ActiveCfg = Debug|x64
-		{4D9E1F60-2B37-4C8D-A5E6-7F8091A2B3C4}.Debug|x64.Build.0 = Debug|x64
-		{4D9E1F60-2B37-4C8D-A5E6-7F8091A2B3C4}.Release|x64.ActiveCfg = Release|x64
-		{4D9E1F60-2B37-4C8D-A5E6-7F8091A2B3C4}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

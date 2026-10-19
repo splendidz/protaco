@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Example using protacoc generated code. v141 x64, C++17. The only include path is the output folder (examples\gen\cpp).
-     A Pre-Build Event runs protacoc (regenerates on yaml changes, leaves identical files untouched). -->
+<!-- C++ example using protacoc generated code. v141 x64, C++17. The only include path is the output folder (examples\gen\cpp).
+     A Pre-Build Event runs protacoc from bin\Release or bin\Debug (regenerates on yaml changes, leaves identical files untouched).
+     Output: bin\<Configuration>\protaco_example.exe. Intermediates: .IntermediateDirectory\example\. -->
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -28,9 +29,11 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
-    <OutDir>$(ProjectDir)..\..\build\bin\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)..\..\build\obj\example\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)..\..\.IntermediateDirectory\example\$(Configuration)\</IntDir>
     <TargetName>protaco_example</TargetName>
+    <Protacoc Condition="Exists('$(ProjectDir)..\..\bin\Debug\protacoc.exe')">$(ProjectDir)..\..\bin\Debug\protacoc.exe</Protacoc>
+    <Protacoc Condition="Exists('$(ProjectDir)..\..\bin\Release\protacoc.exe')">$(ProjectDir)..\..\bin\Release\protacoc.exe</Protacoc>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -39,13 +42,13 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\examples\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
     </Link>
     <PreBuildEvent>
-      <Command>if exist "$(ProjectDir)..\..\build\bin\protacoc.exe" "$(ProjectDir)..\..\build\bin\protacoc.exe" -I "$(ProjectDir)..\..\examples\schemas" --cpp_out "$(ProjectDir)..\..\examples\gen\cpp" --cs_out "$(ProjectDir)..\..\examples\gen\cs"</Command>
+      <Command Condition="'$(Protacoc)'!=''">"$(Protacoc)" -I "$(ProjectDir)..\schemas" --cpp_out "$(ProjectDir)..\gen\cpp" --cs_out "$(ProjectDir)..\gen\cs"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

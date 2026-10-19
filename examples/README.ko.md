@@ -24,7 +24,7 @@ examples/
   cpp/example.vcxproj  include 경로와 Pre-Build Event 설정
 ```
 
-생성 파일을 저장소에서 바로 읽을 수 있습니다. `build.cmd`가 재생성하며, C# 시험의 `--check` 검사가 생성 결과의 최신 여부를 확인합니다. [C# 시험 프로젝트](../tests/cs/protacoc.Tests.csproj)는 사용자 프로젝트처럼 `gen/cs` 소스를 컴파일합니다.
+생성 파일을 저장소에서 바로 읽을 수 있습니다. `build.cmd`가 재생성하며, C# 시험의 `--check` 검사가 생성 결과의 최신 여부를 확인합니다. [C# 시험 프로젝트](../protaco_compiler/tests/cs/protacoc.Tests.csproj)는 사용자 프로젝트처럼 `gen/cs` 소스를 컴파일합니다.
 
 ## 2. 빌드와 실행
 
@@ -37,18 +37,18 @@ build.cmd
 다섯 번째 단계에서 예제를 빌드하고 실행합니다. 수동 실행은 다음과 같습니다.
 
 ```bat
-build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
 msbuild examples\cpp\example.vcxproj /p:Configuration=Release /p:Platform=x64
 build\bin\Release\protaco_example.exe
 ```
 
-[example.vcxproj](cpp/example.vcxproj)는 `examples\gen\cpp`만 include 경로에 추가합니다. `build\bin\protacoc.exe`가 있으면 Pre-Build Event에서 스키마를 다시 생성합니다. 별도 런타임 라이브러리는 링크하지 않습니다.
+[example.vcxproj](cpp/example.vcxproj)는 `examples\gen\cpp`만 include 경로에 추가합니다. `bin\Release\protacoc.exe`가 있으면 Pre-Build Event에서 스키마를 다시 생성합니다. 별도 런타임 라이브러리는 링크하지 않습니다.
 
 ```xml
 <AdditionalIncludeDirectories>$(ProjectDir)..\..\examples\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 ```
 
-프로젝트는 `/W4 /WX`, C++17로 빌드합니다. 생성 헤더의 C++14 호환성은 [Cpp14Check.cpp](../tests/cpp/Cpp14Check.cpp)에서도 확인합니다. 전체 빌드와 시험 설정은 [상세 참조](../docs/reference.ko.md#4-빌드와-시험)에 있습니다.
+프로젝트는 `/W4 /WX`, C++17로 빌드합니다. 생성 헤더의 C++14 호환성은 [Cpp14Check.cpp](../protaco_compiler/tests/cpp/Cpp14Check.cpp)에서도 확인합니다. 전체 빌드와 시험 설정은 [상세 참조](../docs/reference.ko.md#4-빌드와-시험)에 있습니다.
 
 ## 3. 스키마
 
@@ -330,11 +330,11 @@ demo.DeliveryRoute got = Protaco.Codec.ToObject<demo.DeliveryRoute>(bytes);
 
 ## 6. 버전 관리 예제
 
-[build1](../tests/schemas/build1), [build2](../tests/schemas/build2), [build3](../tests/schemas/build3), [build4](../tests/schemas/build4)는 같은 `Order.yaml`의 배포 이력입니다. 시험에서는 여러 개정을 한 바이너리에 넣기 위해 namespace를 나눕니다. 사용자 프로젝트에서는 하나의 namespace를 유지하며 파일 내용을 개정합니다.
+[build1](../protaco_compiler/tests/schemas/build1), [build2](../protaco_compiler/tests/schemas/build2), [build3](../protaco_compiler/tests/schemas/build3), [build4](../protaco_compiler/tests/schemas/build4)는 같은 `Order.yaml`의 배포 이력입니다. 시험에서는 여러 개정을 한 바이너리에 넣기 위해 namespace를 나눕니다. 사용자 프로젝트에서는 하나의 namespace를 유지하며 파일 내용을 개정합니다.
 
 ### 6.1 개정 내용
 
-[version 1](../tests/schemas/build1/Order.yaml)의 정의입니다. 맨 위 설명 주석은 생략했습니다.
+[version 1](../protaco_compiler/tests/schemas/build1/Order.yaml)의 정의입니다. 맨 위 설명 주석은 생략했습니다.
 
 ```yaml
 message: Order
@@ -347,7 +347,7 @@ fields:
   - {key: color, type: string, required: true}
 ```
 
-[version 3](../tests/schemas/build3/Order.yaml)의 정의입니다.
+[version 3](../protaco_compiler/tests/schemas/build3/Order.yaml)의 정의입니다.
 
 ```yaml
 message: Order

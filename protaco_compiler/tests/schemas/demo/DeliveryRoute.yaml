@@ -1,0 +1,10 @@
+# Delivery route of one rider.
+message: DeliveryRoute
+version: 1
+namespace: demo
+
+fields:
+  - {key: rider, type: string, required: true, desc: rider id}
+  # Stops, visited in order.
+  - {key: stops, type: list<RouteStop>, required: true, desc: stops}
+  - {key: note, type: string, default: "", desc: why this route}

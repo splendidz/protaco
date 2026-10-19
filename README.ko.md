@@ -139,7 +139,7 @@ Linux 지원과 Python 출력은 개발 예정입니다.
 build.cmd
 ```
 
-생성기는 `build\bin\protacoc.exe`로 만들어집니다. 이 명령은 예제와 시험 코드 재생성, 시험, 예제 실행도 수행합니다. 단계와 환경 변수는 [빌드와 시험](docs/reference.ko.md#4-빌드와-시험)에 있습니다. Visual Studio에서는 [protaco.sln](protaco.sln)을 열 수 있습니다.
+생성기는 `bin\Release\protacoc.exe`로 만들어집니다. 이 명령은 예제와 시험 코드 재생성, 시험, 예제 실행도 수행합니다. 단계와 환경 변수는 [빌드와 시험](docs/reference.ko.md#4-빌드와-시험)에 있습니다. Visual Studio에서는 [protaco.sln](protaco.sln)을 열 수 있습니다.
 
 ### 3.3 스키마 작성
 
@@ -148,7 +148,7 @@ build.cmd
 ### 3.4 코드 생성
 
 ```bat
-build\bin\protacoc.exe -I schemas --cpp_out gen\cpp --cs_out gen\cs
+bin\Release\protacoc.exe -I schemas --cpp_out gen\cpp --cs_out gen\cs
 ```
 
 C++ 출력은 `RouteStop.g.h`, `DeliveryRoute.g.h`, `Protaco.hpp`입니다. C# 출력은 `RouteStop.g.cs`, `DeliveryRoute.g.cs`, `Protaco.cs`입니다.
@@ -663,7 +663,7 @@ Fixed512는 고정 영역 512바이트, Fixed1K는 1,024바이트, Mixed256은 �
 | Mixed256 다시 직렬화 | 1.3 / 80.0 ns | 98% 짧음 |
 | Mixed256 디코딩 | 136.4 / 155.1 ns | 12% 짧음 |
 
-스키마, 측정 코드와 재현 조건은 [benchmark/README.ko.md](benchmark/README.ko.md)에 있습니다.
+스키마, 측정 코드와 재현 조건은 [docs/benchmark/README.ko.md](docs/benchmark/README.ko.md)에 있습니다.
 
 프레임 크기(protaco / protobuf)는 Fixed512 556 / 571 B, Fixed1K 1,067 / 1,132 B, Mixed256 300 / 268 B입니다.
 

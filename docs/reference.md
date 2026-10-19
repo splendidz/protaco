@@ -60,8 +60,8 @@ Set namespaces in YAML; command-line namespace selection is not supported. Witho
 Generate normally, then check without writing:
 
 ```bat
-build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
-build\bin\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --check
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --check
 ```
 
 By default, a matching runtime is written beside the generated files. Projects using `--no_runtime` must supply the runtime from the same generator version separately.
@@ -149,35 +149,33 @@ A failure while reading a newer frame's body ends with `(frame version N read as
 From a command prompt at the repository root:
 
 ```bat
-set GTEST_ROOT=<googletest folder>
 build.cmd
 ```
 
-The googletest folder needs `include\`, `lib\gtest.lib`, and `lib\gtest_main.lib`, with libraries built using `/MD`. Without `GTEST_ROOT`, both the C++ test build and execution are skipped.
+googletest is compiled with the tests from the sources in [protaco_compiler/tests/googletest](../protaco_compiler/tests/googletest); there is nothing to install and no environment variable to set. Output goes to `bin\Release`, intermediates to `.IntermediateDirectory`.
 
 Steps performed by `build.cmd`:
 
 1. Build protacoc.
-2. Regenerate `examples/gen` and `tests/gen`.
-3. Build the C++ tests.
-4. Run the C++ tests using golden files.
-5. Build and run the C++ example.
-6. Build and run the C# tests.
+2. Regenerate the test code (`protaco_compiler/tests/gen`) and example code (`examples/gen`).
+3. Build and run the C++ tests, including the golden file comparison.
+4. Build and run the C# tests.
+5. Build and run the examples solution (`examples/examples.sln`).
 
-This command rewrites generated code. The C++ tests rewrite the reference frames in `tests/golden` only when `PROTACO_UPDATE_GOLDEN=1` is set, which is needed only when the serialization format changes. Set `MSBUILD` to override the MSBuild path; the default is Visual Studio 2017 Professional. For IDE use, open [protaco.sln](../protaco.sln).
+This command rewrites generated code. The C++ tests rewrite the reference frames in `protaco_compiler/tests/golden` only when `PROTACO_UPDATE_GOLDEN=1` is set, which is needed only when the serialization format changes. Set `MSBUILD` to override the MSBuild path; the default is Visual Studio 2017 Professional. For IDE use, open [protaco.sln](../protaco.sln).
 
 ### 4.2 Repository layout
 
 | Path | Contents |
 |---|---|
-| [src/protacoc](../src/protacoc) | Generator |
-| [runtime/cpp](../runtime/cpp), [runtime/cs](../runtime/cs) | Runtime sources copied by the generator |
+| [protaco_compiler/protacoc](../protaco_compiler/protacoc) | Generator |
+| [include/cpp](../include/cpp), [include/cs](../include/cs) | Runtime sources copied by the generator |
 | [examples](../examples/README.md) | Sample schemas, generated code, C++ program |
-| [tests/schemas](../tests/schemas) | Version management, nesting, cycles, and diagnostic schemas |
-| [tests/golden](../tests/golden) | Reference frames written by C++ and compared with C# |
-| [tests/cpp](../tests/cpp) | googletest suite and C++14 translation unit |
-| [tests/cs](../tests/cs) | Generator and C# runtime test runner |
-| [benchmark](../benchmark/README.md) | Measurements against protobuf |
+| [protaco_compiler/tests/schemas](../protaco_compiler/tests/schemas) | Version management, nesting, cycles, and diagnostic schemas |
+| [protaco_compiler/tests/golden](../protaco_compiler/tests/golden) | Reference frames written by C++ and compared with C# |
+| [protaco_compiler/tests/cpp](../protaco_compiler/tests/cpp) | googletest suite and C++14 translation unit |
+| [protaco_compiler/tests/cs](../protaco_compiler/tests/cs) | Generator and C# runtime test runner |
+| [benchmark](benchmark/README.md) | Measurements against protobuf |
 | [docs](.) | Reference documentation and figures |
 
 The reference frames are `DeliveryRoute.bin`, `PizzaOrder.bin`, `Heartbeat.bin`, and `DeliveryProof.bin`.
@@ -192,7 +190,7 @@ There are 32 C++ tests covering:
 - Unknown keys in closed messages and discarding newer fields.
 - Nesting to 8 levels, missing required fields, nested error paths, and extension rules.
 - `ToString()` output.
-- Contract-check cost measurement. Library comparisons are in the [benchmark](../benchmark/README.md).
+- Contract-check cost measurement. Library comparisons are in the [benchmark](benchmark/README.md).
 - Truncation at every length and random bit flips.
 - Golden bytes and the C++14 translation unit.
 - Serialize reuse: rebuilding after changes, `get_mutable_` references, copying, and ext assignment.

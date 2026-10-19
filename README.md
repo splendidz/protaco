@@ -139,7 +139,7 @@ Run from the repository root:
 build.cmd
 ```
 
-The generator is written to `build\bin\protacoc.exe`. This command also regenerates example and test code, runs tests, and runs the example. See [Build and test](docs/reference.md#4-build-and-test) for the steps and environment variables. In Visual Studio, open [protaco.sln](protaco.sln).
+The generator is written to `bin\Release\protacoc.exe`. This command also regenerates example and test code, runs tests, and runs the example. See [Build and test](docs/reference.md#4-build-and-test) for the steps and environment variables. In Visual Studio, open [protaco.sln](protaco.sln).
 
 ### 3.3 Write a schema
 
@@ -148,7 +148,7 @@ Save the earlier `RouteStop.yaml` and `DeliveryRoute.yaml` definitions in a `sch
 ### 3.4 Generate code
 
 ```bat
-build\bin\protacoc.exe -I schemas --cpp_out gen\cpp --cs_out gen\cs
+bin\Release\protacoc.exe -I schemas --cpp_out gen\cpp --cs_out gen\cs
 ```
 
 C++ output consists of `RouteStop.g.h`, `DeliveryRoute.g.h`, and `Protaco.hpp`. C# output consists of `RouteStop.g.cs`, `DeliveryRoute.g.cs`, and `Protaco.cs`.
@@ -663,7 +663,7 @@ Fixed512 has a 512-byte fixed block, Fixed1K has 1,024 bytes, and Mixed256 combi
 | Mixed256 serialize again | 1.3 / 80.0 ns | 98% |
 | Mixed256 decode | 136.4 / 155.1 ns | 12% |
 
-Schemas, measurement code, and reproduction details are in [benchmark/README.md](benchmark/README.md).
+Schemas, measurement code, and reproduction details are in [docs/benchmark/README.md](docs/benchmark/README.md).
 
 Frame sizes (protaco / protobuf) are 556 / 571 B for Fixed512, 1,067 / 1,132 B for Fixed1K, and 300 / 268 B for Mixed256.
 

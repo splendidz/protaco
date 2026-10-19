@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filters follow the real folders. -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="cpp">
+      <UniqueIdentifier>{9A21A56A-123E-5BA0-9939-A92F5F65B7DC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen">
+      <UniqueIdentifier>{C99319FD-483C-592A-BDF4-F8C85822C11D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp">
+      <UniqueIdentifier>{99C687F9-87F9-5ADB-80C8-4E2542AF8DCC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\alt">
+      <UniqueIdentifier>{45B521A6-F699-5A13-80A5-435C00E70419}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\build1">
+      <UniqueIdentifier>{894FB66F-435B-54CA-8AC3-D4DE60B38C25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\build2">
+      <UniqueIdentifier>{91BE6FEB-DF55-5348-8CC9-198DF36A07A3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\build3">
+      <UniqueIdentifier>{6911A701-7174-506F-9EBF-295D8E120D82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\build4">
+      <UniqueIdentifier>{FF05FA02-DDE8-5964-ACFC-A8586FB92FB9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\deep">
+      <UniqueIdentifier>{3D992345-4483-5EAE-8617-43CCA99FA3ED}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\demo">
+      <UniqueIdentifier>{EBC3CCA2-3493-5B16-BD6A-5C628AD64908}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\partial">
+      <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\ver_v1">
+      <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\ver_v2">
+      <UniqueIdentifier>{0EB11328-CE63-5DA8-B8AB-0157B91C6317}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="googletest">
+      <UniqueIdentifier>{6673539F-D205-57D3-B9A1-2A3EE9529D0C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="googletest\src">
+      <UniqueIdentifier>{DC7E9029-3E26-5DC4-B2BE-90776A0F6CE5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="googletest\src\gtest">
+      <UniqueIdentifier>{B710E976-8040-595B-83BD-4EB8593DD0EA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="googletest\src\gtest\src">
+      <UniqueIdentifier>{DEE10A68-EB29-56AF-A088-4BE9B76A41B8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{6876F1E2-0AEF-5C6D-A49B-734D87681E50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\cpp">
+      <UniqueIdentifier>{FCB898C7-0BA9-5BCB-BA39-EA2ACECFE42B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas">
+      <UniqueIdentifier>{02B38662-C587-524F-B466-0774DCF844A0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\alt">
+      <UniqueIdentifier>{C72D2DD9-C331-5768-BCAE-4E558A551A77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\build1">
+      <UniqueIdentifier>{5F4FD5E1-6923-5AFA-8A89-D107F44B19B0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\build2">
+      <UniqueIdentifier>{F2AAA9AF-0A19-5148-BD7A-90515568CE10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\build3">
+      <UniqueIdentifier>{01DB124E-C4B8-58BD-94C2-B42B2C7E6041}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\build4">
+      <UniqueIdentifier>{B2EFC683-218D-5A6C-AF5B-86A0DEC914CC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\cycle">
+      <UniqueIdentifier>{BAF93070-2AEE-5B45-ABA5-178C233606DE}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\deep">
+      <UniqueIdentifier>{C0948540-0954-5407-9E50-4B7E6274D82E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\demo">
+      <UniqueIdentifier>{8F9BB853-02B9-5601-9D8E-90F9101B811C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\errors">
+      <UniqueIdentifier>{334EE2F5-5C20-561E-B40D-80E2E0EEFB0C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\nestedwin">
+      <UniqueIdentifier>{8048C03B-E8E2-5CF8-82A7-F09D20C0633C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\nsmix">
+      <UniqueIdentifier>{C1DEC6D8-4797-54DA-8A14-33D072A5AD55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\partial">
+      <UniqueIdentifier>{E201DE73-D8D2-5838-A52A-2B47CB7E57E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\toodeep">
+      <UniqueIdentifier>{3F5E8D07-8850-5090-A7F1-9604915FD81C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\ver_v1">
+      <UniqueIdentifier>{97C30856-1694-5DD2-84EC-B1AE16A75412}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\ver_v2">
+      <UniqueIdentifier>{39F6911C-60C3-599C-9C86-CBFCA31784FD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\googletest\src\gtest\gtest-all.cc">
+      <Filter>googletest\src\gtest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\googletest\src\gtest\src\gtest_main.cc">
+      <Filter>googletest\src\gtest\src</Filter>
+    </ClCompile>
+    <ClCompile Include="Cpp14Check.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="Cpp14CheckTest.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="ProtacoTest.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\include\cpp\Protaco.hpp">
+      <Filter>include\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\alt\Recipe.g.h">
+      <Filter>gen\cpp\alt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\build1\Order.g.h">
+      <Filter>gen\cpp\build1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\build1\Ping.g.h">
+      <Filter>gen\cpp\build1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\build2\Order.g.h">
+      <Filter>gen\cpp\build2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\build2\Ping.g.h">
+      <Filter>gen\cpp\build2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\build3\Order.g.h">
+      <Filter>gen\cpp\build3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\build4\Order.g.h">
+      <Filter>gen\cpp\build4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D0.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D1.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D2.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D3.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D4.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D5.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D6.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D7.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\deep\D8.g.h">
+      <Filter>gen\cpp\deep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\Delivery.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\DeliveryProof.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\DeliveryRoute.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\Heartbeat.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\PizzaOrder.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\RouteStop.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\demo\Topping.g.h">
+      <Filter>gen\cpp\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\partial\Delivery.g.h">
+      <Filter>gen\cpp\partial</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\partial\DeliveryRoute.g.h">
+      <Filter>gen\cpp\partial</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\partial\PizzaOrder.g.h">
+      <Filter>gen\cpp\partial</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\partial\Topping.g.h">
+      <Filter>gen\cpp\partial</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\ver_v1\Recipe.g.h">
+      <Filter>gen\cpp\ver_v1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\ver_v2\Recipe.g.h">
+      <Filter>gen\cpp\ver_v2</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\schemas\alt\Recipe.yaml">
+      <Filter>schemas\alt</Filter>
+    </None>
+    <None Include="..\schemas\build1\Order.yaml">
+      <Filter>schemas\build1</Filter>
+    </None>
+    <None Include="..\schemas\build1\Ping.yaml">
+      <Filter>schemas\build1</Filter>
+    </None>
+    <None Include="..\schemas\build2\Order.yaml">
+      <Filter>schemas\build2</Filter>
+    </None>
+    <None Include="..\schemas\build2\Ping.yaml">
+      <Filter>schemas\build2</Filter>
+    </None>
+    <None Include="..\schemas\build3\Order.yaml">
+      <Filter>schemas\build3</Filter>
+    </None>
+    <None Include="..\schemas\build4\Order.yaml">
+      <Filter>schemas\build4</Filter>
+    </None>
+    <None Include="..\schemas\cycle\NodeA.yaml">
+      <Filter>schemas\cycle</Filter>
+    </None>
+    <None Include="..\schemas\cycle\NodeB.yaml">
+      <Filter>schemas\cycle</Filter>
+    </None>
+    <None Include="..\schemas\deep\D0.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D1.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D2.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D3.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D4.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D5.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D6.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D7.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\deep\D8.yaml">
+      <Filter>schemas\deep</Filter>
+    </None>
+    <None Include="..\schemas\demo\Delivery.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\demo\DeliveryProof.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\demo\DeliveryRoute.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\demo\Heartbeat.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\demo\PizzaOrder.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\demo\RouteStop.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\demo\Topping.yaml">
+      <Filter>schemas\demo</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC101_tab.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC102_comma.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC102_flowlist.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC201_deprecated.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC201_owner.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC201_top.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC202_namespace.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC203_attr.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC203_since.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC204_bool.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC204_extension.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC206_keyword.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC206_namespace.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC301_name.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC302_dup.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC303_cache.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC303_keyword.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC303_prefix.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC304_type.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC305_reqfixed.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC308_bytes.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC308_default.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC308_infinity.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC308_octal.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC310_length.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC311_clash.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC312_added.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC312_min.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC312_removed.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC313_dead.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC402_ref.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_element.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\v2.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\nestedwin\Inner.yaml">
+      <Filter>schemas\nestedwin</Filter>
+    </None>
+    <None Include="..\schemas\nestedwin\Outer.yaml">
+      <Filter>schemas\nestedwin</Filter>
+    </None>
+    <None Include="..\schemas\nsmix\A.yaml">
+      <Filter>schemas\nsmix</Filter>
+    </None>
+    <None Include="..\schemas\nsmix\B.yaml">
+      <Filter>schemas\nsmix</Filter>
+    </None>
+    <None Include="..\schemas\partial\Delivery.yaml">
+      <Filter>schemas\partial</Filter>
+    </None>
+    <None Include="..\schemas\partial\DeliveryRoute.yaml">
+      <Filter>schemas\partial</Filter>
+    </None>
+    <None Include="..\schemas\partial\PizzaOrder.yaml">
+      <Filter>schemas\partial</Filter>
+    </None>
+    <None Include="..\schemas\partial\Topping.yaml">
+      <Filter>schemas\partial</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T0.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T1.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T2.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T3.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T4.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T5.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T6.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T7.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T8.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\toodeep\T9.yaml">
+      <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\ver_v1\Recipe.yaml">
+      <Filter>schemas\ver_v1</Filter>
+    </None>
+    <None Include="..\schemas\ver_v2\Recipe.yaml">
+      <Filter>schemas\ver_v2</Filter>
+    </None>
+  </ItemGroup>
+</Project>

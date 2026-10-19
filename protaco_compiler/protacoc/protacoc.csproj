@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- protacoc. Message yaml code generator, .NET Framework 4.6.1 (Visual Studio 2017 and later).
+     protacoc.net.csproj builds the same sources for .NET 8 (dotnet CLI, Linux).
+     Output: bin\<Configuration>\protacoc.exe. Intermediates: .IntermediateDirectory\protacoc\. -->
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>..\..\.IntermediateDirectory\protacoc\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6F1E2B6A-3C1D-4E5A-9B7C-1A2B3C4D5E61}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Protacoc</RootNamespace>
+    <AssemblyName>protacoc</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <FileAlignment>512</FileAlignment>
+    <OutputPath>..\..\bin\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>..\..\.IntermediateDirectory\protacoc\$(Configuration)\</IntermediateOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CppEmitter.cs" />
+    <Compile Include="CsEmitter.cs" />
+    <Compile Include="Diag.cs" />
+    <Compile Include="Linker.cs" />
+    <Compile Include="Loader.cs" />
+    <Compile Include="Model.cs" />
+    <Compile Include="Naming.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="SchemaFingerprint.cs" />
+    <Compile Include="YamlLite.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Runtime sources from include\. Embedded as resources and written next to generated code. -->
+    <EmbeddedResource Include="..\..\include\cpp\Protaco.hpp">
+      <LogicalName>Protaco.hpp</LogicalName>
+      <Link>include\Protaco.hpp</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\include\cs\Protaco.cs">
+      <LogicalName>Protaco.cs</LogicalName>
+      <Link>include\Protaco.cs</Link>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
