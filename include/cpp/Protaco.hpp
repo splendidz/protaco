@@ -94,7 +94,7 @@ struct TextStyle
     }
 };
 
-/// Decode error carried by CParseError. path looks like "stops[2].orderId". Try* functions give the same text as one string.
+/// Decode error carried by CParseError. path looks like "sections[0].name". Try* functions give the same text as one string.
 struct Error
 {
     std::string path;
@@ -2299,7 +2299,7 @@ inline bool PeekHeader(const uint8_t* src, size_t size, Header* out, std::string
 }
 
 /// Bytes to object without exceptions. On failure returns false, out is unchanged, and error gets "path: reason"
-/// (path such as "stops[2].orderId", empty for header errors).
+/// (path such as "sections[0].name", empty for header errors).
 /// Accepts frames of T's version and newer: a newer frame is read as T's version (README.md "Versioning").
 template <class T>
 bool TryToObject(const uint8_t* src, size_t size, T* out, std::string* error = nullptr)

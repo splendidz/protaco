@@ -12,7 +12,7 @@ namespace ProtacoExample
             DeliveryRoute route = new DeliveryRoute { Rider = "rider-7", Note = "closest-first" };
             route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St", EtaMin = 10 });
 
-            byte[] bytes = route.Serialize();   // same bytes as the C++ example
+            byte[] bytes = route.Serialize();   // same serialization format as the C++ example
             Console.WriteLine("DeliveryRoute: " + bytes.Length + " bytes");
 
             DeliveryRoute got = Protaco.Codec.ToObject<DeliveryRoute>(bytes);
