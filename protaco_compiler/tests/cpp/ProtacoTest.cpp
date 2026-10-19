@@ -287,6 +287,7 @@ void ExpectCheckCostNegligible(const T& message, int count)
 // Empty string if unset.
 std::string GetEnv(const char* name)
 {
+#ifdef _MSC_VER
     char* value = nullptr;
     size_t length = 0;
     if (_dupenv_s(&value, &length, name) != 0 || value == nullptr)
@@ -294,6 +295,10 @@ std::string GetEnv(const char* name)
     const std::string text(value);
     std::free(value);
     return text;
+#else
+    const char* value = std::getenv(name);
+    return value == nullptr ? std::string() : std::string(value);
+#endif
 }
 
 std::string GoldenDir()
@@ -1100,7 +1105,9 @@ TEST(Protaco, BitFlipsNeverCrash)
             bytes[random() % bytes.size()] ^= static_cast<uint8_t>(1u << (random() % 8));
         PizzaOrder got;
         if (protaco::TryToObject(bytes.data(), bytes.size(), &got))
+        {
             EXPECT_TRUE(protaco::TryToObject(got.Serialize().data(), got.Serialize().size(), &got));
+        }
     }
 }
 

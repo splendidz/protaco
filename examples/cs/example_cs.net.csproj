@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- C# example on .NET 8. Same sources as example_cs.csproj. Output: bin/<Configuration>/net8.0/protaco_example_cs. -->
+<Project>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <BaseIntermediateOutputPath>..\..\.IntermediateDirectory\example_cs.net\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <RootNamespace>ProtacoExample</RootNamespace>
+    <AssemblyName>protaco_example_cs</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>..\..\bin\$(Configuration)\</OutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\gen\cs\*.cs" Link="gen\cs\%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

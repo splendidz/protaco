@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tests for protacoc and the C# runtime on .NET 8. Same sources as protacoc.Tests.csproj.
+     Output: bin/<Configuration>/net8.0/protacoc.Tests, next to protacoc. -->
+<Project>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <BaseIntermediateOutputPath>..\..\..\.IntermediateDirectory\protacoc.Tests.net\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <RootNamespace>Protacoc.Tests</RootNamespace>
+    <AssemblyName>protacoc.Tests</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>..\..\..\bin\$(Configuration)\</OutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\include\cs\Protaco.cs" Link="include\Protaco.cs" />
+    <Compile Include="..\gen\cs\**\*.cs" Link="gen\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

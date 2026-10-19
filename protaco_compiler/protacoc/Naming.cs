@@ -17,12 +17,6 @@ namespace Protacoc
             return char.ToUpperInvariant(key[0]) + key.Substring(1);
         }
 
-        // String bytes use the ANSI code page. C# uses Encoding.Default.
-        public static int AcpLength(string text)
-        {
-            return Encoding.Default.GetByteCount(text);
-        }
-
         public static bool IsAscii(string text)
         {
             return text.All(c => c < 0x80);

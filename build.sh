@@ -1,0 +1,57 @@
+#!/bin/sh
+# build.sh - build.cmd for Linux and macOS: protacoc on .NET 8, regenerate test and example code, run the C++, C# and
+# Python tests, build and run the examples.
+# Env: DOTNET (default: dotnet, SDK 8 or newer), CXX (default: g++, C++17), PYTHON (default: python3, 3.8 or newer).
+# Output: bin/Release (C++), bin/Release/net8.0 (.NET). Intermediates: .IntermediateDirectory.
+set -e
+cd "$(dirname "$0")"
+DOTNET=${DOTNET:-dotnet}
+CXX=${CXX:-g++}
+PYTHON=${PYTHON:-python3}
+# The .NET apphosts (protacoc, protacoc.Tests) find the runtime here when dotnet is not installed system-wide.
+DOTNET_ROOT=${DOTNET_ROOT:-$(dirname "$(readlink -f "$(command -v "$DOTNET")")")}
+export DOTNET_ROOT
+CONFIG=Release
+BIN=bin/$CONFIG
+NET=$BIN/net8.0
+PROTACOC=$NET/protacoc
+TESTS=protaco_compiler/tests
+OBJ=.IntermediateDirectory/gcc/$CONFIG
+GTEST=$TESTS/googletest
+CXXFLAGS="-O2 -Wall -Wextra -Werror -pthread"
+
+echo "=== [1/6] build protacoc (.NET 8)"
+"$DOTNET" build protaco_compiler/protacoc/protacoc.net.csproj -c $CONFIG -nologo -v quiet
+
+echo "=== [2/6] generate test and example code"
+for n in demo scalars enums maps recursive ver_v1 ver_v2 alt partial deep build1 build2 build3 build4; do
+    $PROTACOC -I $TESTS/schemas/$n --cpp_out $TESTS/gen/cpp/$n --cs_out $TESTS/gen/cs/$n --py_out $TESTS/gen/py --no_runtime
+done
+$PROTACOC -I examples/schemas --cpp_out examples/gen/cpp --cs_out examples/gen/cs --py_out examples/gen/py
+
+echo "=== [3/6] build and run C++ tests ($CXX)"
+mkdir -p $OBJ $BIN
+INC="-Iinclude/cpp -I$TESTS/gen/cpp/demo -I$TESTS/gen/cpp -isystem $GTEST/include -I$GTEST/src/gtest"
+$CXX -std=c++17 $CXXFLAGS $INC -c $TESTS/cpp/ProtacoTest.cpp -o $OBJ/ProtacoTest.o
+$CXX -std=c++17 $CXXFLAGS $INC -c $TESTS/cpp/Cpp14CheckTest.cpp -o $OBJ/Cpp14CheckTest.o
+$CXX -std=c++14 $CXXFLAGS $INC -c $TESTS/cpp/Cpp14Check.cpp -o $OBJ/Cpp14Check.o
+$CXX -std=c++17 -O2 -w -pthread $INC -c $GTEST/src/gtest/gtest-all.cc -o $OBJ/gtest-all.o
+$CXX -std=c++17 -O2 -w -pthread $INC -c $GTEST/src/gtest/src/gtest_main.cc -o $OBJ/gtest_main.o
+$CXX -pthread $OBJ/ProtacoTest.o $OBJ/Cpp14CheckTest.o $OBJ/Cpp14Check.o $OBJ/gtest-all.o $OBJ/gtest_main.o -o $BIN/ProtacoTest
+PROTACO_GOLDEN_DIR="$PWD/$TESTS/golden" $BIN/ProtacoTest
+
+echo "=== [4/6] build and run C# tests (.NET 8)"
+"$DOTNET" build $TESTS/cs/protacoc.Tests.net.csproj -c $CONFIG -nologo -v quiet
+$NET/protacoc.Tests "$PWD/$TESTS"
+
+echo "=== [5/6] run Python tests"
+"$PYTHON" $TESTS/py/test_protaco.py "$PWD/$TESTS"
+
+echo "=== [6/6] build and run the examples"
+$CXX -std=c++17 $CXXFLAGS -Iexamples/gen/cpp examples/cpp/main.cpp -o $BIN/protaco_example
+$BIN/protaco_example
+"$DOTNET" build examples/cs/example_cs.net.csproj -c $CONFIG -nologo -v quiet
+$NET/protaco_example_cs
+"$PYTHON" examples/py/main.py
+
+echo "=== ALL PASSED"

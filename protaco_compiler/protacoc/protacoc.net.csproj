@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- protacoc for .NET 8 (dotnet CLI on Linux, macOS and Windows). Same sources and runtime resources as protacoc.csproj.
+     Output: bin/<Configuration>/net8.0/protacoc. Intermediates: .IntermediateDirectory/protacoc.net/. -->
+<Project>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <BaseIntermediateOutputPath>..\..\.IntermediateDirectory\protacoc.net\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <RootNamespace>Protacoc</RootNamespace>
+    <AssemblyName>protacoc</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>..\..\bin\$(Configuration)\</OutputPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Runtime sources from include/. Embedded as resources and written next to generated code. -->
+    <EmbeddedResource Include="..\..\include\cpp\Protaco.hpp" LogicalName="Protaco.hpp" />
+    <EmbeddedResource Include="..\..\include\cs\Protaco.cs" LogicalName="Protaco.cs" />
+    <EmbeddedResource Include="..\..\include\python\protaco.py" LogicalName="protaco.py" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>
