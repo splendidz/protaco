@@ -7,6 +7,7 @@
 #ifndef PROTACO_RUNTIME_0_6_0
 #define PROTACO_RUNTIME_0_6_0
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -18,7 +19,6 @@
 #include <new>
 #include <stdexcept>
 #include <string>
-#include <algorithm>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
