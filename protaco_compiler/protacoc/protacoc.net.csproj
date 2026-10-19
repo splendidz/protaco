@@ -20,9 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Runtime sources from include/. Embedded as resources and written next to generated code. -->
-    <EmbeddedResource Include="..\..\include\cpp\Protaco.hpp" LogicalName="Protaco.hpp" />
-    <EmbeddedResource Include="..\..\include\cs\Protaco.cs" LogicalName="Protaco.cs" />
-    <EmbeddedResource Include="..\..\include\python\protaco.py" LogicalName="protaco.py" />
+    <EmbeddedResource Include="..\..\include\cpp\Protaco.hpp" LogicalName="Protaco.hpp" Link="include\cpp\Protaco.hpp" />
+    <EmbeddedResource Include="..\..\include\cs\Protaco.cs" LogicalName="Protaco.cs" Link="include\cs\Protaco.cs" />
+    <EmbeddedResource Include="..\..\include\python\protaco.py" LogicalName="protaco.py" Link="include\python\protaco.py" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

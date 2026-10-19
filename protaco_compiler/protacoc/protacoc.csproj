@@ -55,15 +55,15 @@
     <!-- Runtime sources from include\. Embedded as resources and written next to generated code. -->
     <EmbeddedResource Include="..\..\include\cpp\Protaco.hpp">
       <LogicalName>Protaco.hpp</LogicalName>
-      <Link>include\Protaco.hpp</Link>
+      <Link>include\cpp\Protaco.hpp</Link>
     </EmbeddedResource>
     <EmbeddedResource Include="..\..\include\cs\Protaco.cs">
       <LogicalName>Protaco.cs</LogicalName>
-      <Link>include\Protaco.cs</Link>
+      <Link>include\cs\Protaco.cs</Link>
     </EmbeddedResource>
     <EmbeddedResource Include="..\..\include\python\protaco.py">
       <LogicalName>protaco.py</LogicalName>
-      <Link>include\protaco.py</Link>
+      <Link>include\python\protaco.py</Link>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

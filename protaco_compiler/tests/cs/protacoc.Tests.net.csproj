@@ -19,8 +19,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\include\cs\Protaco.cs" Link="include\Protaco.cs" />
-    <Compile Include="..\gen\cs\**\*.cs" Link="gen\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\..\include\cs\Protaco.cs" Link="include\cs\Protaco.cs" />
+    <Compile Include="..\gen\cs\**\*.cs" Link="gen\cs\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

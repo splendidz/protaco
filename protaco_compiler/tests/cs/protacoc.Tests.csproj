@@ -30,10 +30,10 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="..\..\..\include\cs\Protaco.cs">
-      <Link>include\Protaco.cs</Link>
+      <Link>include\cs\Protaco.cs</Link>
     </Compile>
     <Compile Include="..\gen\cs\**\*.cs">
-      <Link>gen\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <Link>gen\cs\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>
