@@ -29,11 +29,9 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
-    <RepoDir>$(ProjectDir)..\..\..\</RepoDir>
-    <TestsDir>$(ProjectDir)..\</TestsDir>
     <GTestDir>$(ProjectDir)..\googletest\</GTestDir>
-    <OutDir>$(RepoDir)bin\$(Configuration)\</OutDir>
-    <IntDir>$(RepoDir).IntermediateDirectory\ProtacoTest\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\..\bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)..\..\..\.IntermediateDirectory\ProtacoTest\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -43,7 +41,7 @@
       <SDLCheck>true</SDLCheck>
       <!-- /utf-8: sources are UTF-8. gtest header warnings are silenced as external. -->
       <AdditionalOptions>/utf-8 /experimental:external /external:I "$(GTestDir)include" /external:W0 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(RepoDir)include\cpp;$(TestsDir)gen\cpp\demo;$(TestsDir)gen\cpp;$(GTestDir)include;$(GTestDir)src\gtest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\cpp;$(ProjectDir)..\gen\cpp\demo;$(ProjectDir)..\gen\cpp;$(GTestDir)include;$(GTestDir)src\gtest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>
       <Optimization Condition="'$(Configuration)'=='Release'">MaxSpeed</Optimization>
