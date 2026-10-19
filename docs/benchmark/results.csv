@@ -1,0 +1,12 @@
+# protaco 0.6.0 and protobuf 3.21.12. Intel Core i9-13900H, Windows 11, MSVC 14.16 (v141) x64 /O2 /MD.
+# bench.cpp, three runs; each row is the run with the median mean. ns per call; sd over 20 rounds of 100,000 calls.
+message,operation,library,mean_ns,sd_ns,frame_bytes
+Fixed512,encode,protaco,23.3,0.2,556
+Fixed512,decode,protaco,55.4,1.6,556
+Fixed512,decode,protaco TryView,11.9,0.5,556
+Fixed512,encode,protobuf,200.1,2.5,571
+Fixed512,decode,protobuf,252.3,9.2,571
+Mixed256,encode,protaco,20.7,0.5,300
+Mixed256,decode,protaco,126.9,1.4,300
+Mixed256,encode,protobuf,93.3,3.4,268
+Mixed256,decode,protobuf,164.5,4.9,268
