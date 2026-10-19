@@ -506,9 +506,9 @@ namespace Protacoc.Tests
         }
 
         // Same values as the C++ test MakeNumbers.
-        private static types.Numbers MakeNumbers()
+        private static scalars.Numbers MakeNumbers()
         {
-            types.Numbers numbers = new types.Numbers { U32 = 0, Name = "\uD55C\uAE00 \u2713", Text = "caf\u00E9 \u5BFF\u53F8" };
+            scalars.Numbers numbers = new scalars.Numbers { U32 = 0, Name = "\uD55C\uAE00 \u2713", Text = "caf\u00E9 \u5BFF\u53F8" };
             numbers.Us.AddRange(new uint[] { 0, 1, 4294967295 });
             numbers.U64s.Add(18446744073709551615);
             numbers.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
@@ -517,13 +517,13 @@ namespace Protacoc.Tests
 
         private static void UnsignedTypesAndUtf8()
         {
-            types.Numbers defaults = new types.Numbers();
+            scalars.Numbers defaults = new scalars.Numbers();
             Equal(4000000000u, defaults.U32, "u32 default");
             Equal(18446744073709551615ul, defaults.U64, "u64 default");
             Equal(-9000000000L, defaults.I64, "i64 default");
             byte[] bytes = MakeNumbers().Serialize();
             Check(bytes.SequenceEqual(Golden("Numbers.bin")), "same bytes as C++");
-            types.Numbers got = Protaco.Codec.ToObject<types.Numbers>(Golden("Numbers.bin"));
+            scalars.Numbers got = Protaco.Codec.ToObject<scalars.Numbers>(Golden("Numbers.bin"));
             Equal("\uD55C\uAE00 \u2713", got.Name, "name");
             Equal(4294967295u, got.Us[2], "us[2]");
             Equal("Numbers{u32=0, u64=18446744073709551615, i64=-9000000000, us=[0, 1, 4294967295], u64s=[18446744073709551615], "

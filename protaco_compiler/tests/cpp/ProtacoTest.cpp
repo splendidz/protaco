@@ -33,7 +33,7 @@
 #include "enums/Pie.g.h"
 #include "maps/Menu.g.h"
 #include "recursive/Node.g.h"
-#include "types/Numbers.g.h"
+#include "scalars/Numbers.g.h"
 #include "ver_v1/Recipe.g.h"
 #include "ver_v2/Recipe.g.h"
 
@@ -105,9 +105,9 @@ Heartbeat MakeHeartbeat()
 }
 
 // Golden values. Same as the C# test MakeNumbers.
-types::Numbers MakeNumbers()
+scalars::Numbers MakeNumbers()
 {
-    types::Numbers numbers;
+    scalars::Numbers numbers;
     numbers.set_u32(0);
     numbers.mutable_us() = { 0u, 1u, 4294967295u };
     numbers.mutable_u64s().push_back(18446744073709551615ull);
@@ -699,13 +699,13 @@ TEST(Protaco, ExtRejectsSchemaAndReservedKeys)
 // Unsigned types at their limits, and UTF-8 text in variable and fixed strings. Same values as the C# test MakeNumbers.
 TEST(Protaco, UnsignedTypesAndUtf8RoundTrip)
 {
-    const types::Numbers defaults;
+    const scalars::Numbers defaults;
     EXPECT_EQ(4000000000u, defaults.get_u32());
     EXPECT_EQ(18446744073709551615ull, defaults.get_u64());
     EXPECT_EQ(-9000000000ll, defaults.get_i64());
 
-    const types::Numbers sent = MakeNumbers();
-    const types::Numbers got = protaco::ToObject<types::Numbers>(sent.Serialize());
+    const scalars::Numbers sent = MakeNumbers();
+    const scalars::Numbers got = protaco::ToObject<scalars::Numbers>(sent.Serialize());
     EXPECT_EQ(0u, got.get_u32());
     EXPECT_EQ(std::vector<uint32_t>({ 0u, 1u, 4294967295u }), got.get_us());
     EXPECT_EQ(std::vector<uint64_t>({ 18446744073709551615ull }), got.get_u64s());
@@ -717,7 +717,7 @@ TEST(Protaco, UnsignedTypesAndUtf8RoundTrip)
     ExpectGolden("Numbers.bin", sent.Serialize());
 
     std::string error;
-    types::Numbers fixed;
+    scalars::Numbers fixed;
     EXPECT_FALSE(fixed.set_name(std::string(17, 'x'), &error));
     EXPECT_EQ("name: 17 bytes, longer than string(16)", error);
     EXPECT_TRUE(fixed.set_name(u8"한글한글한", &error));   // 15 UTF-8 bytes

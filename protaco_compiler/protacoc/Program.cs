@@ -1,5 +1,5 @@
 ﻿// Program.cs. protacoc.exe command line (protoc style).
-//   protacoc -I <yaml dir> [-I ...] --cpp_out <dir> [--cs_out <dir>] [--no_runtime] [--check] [name or yaml path...]
+//   protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [--no_runtime] [--check] [name or yaml path...]
 // Inputs: <Name>.yaml (one message) and <Name>.enum.yaml (one enum).
 // The namespace comes from each yaml header (namespace:).
 // Exit codes: 0 success, 1 usage, 2 schema error, 3 --check mismatch
@@ -18,6 +18,7 @@ namespace Protacoc
             public List<string> ProtoPaths = new List<string>();
             public string CppOut;
             public string CsOut;
+            public string PyOut;
             public bool Runtime = true;
             public bool Check;
             public List<string> Targets = new List<string>();
@@ -93,6 +94,9 @@ namespace Protacoc
                     case "--cs_out":
                         options.CsOut = next();
                         break;
+                    case "--py_out":
+                        options.PyOut = next();
+                        break;
                     case "--namespace":
                         return "--namespace was removed. Set the namespace in each yaml header (namespace: a.b)";
                     case "--no_runtime":
@@ -110,18 +114,19 @@ namespace Protacoc
             }
             if (options.ProtoPaths.Count == 0)
                 return "-I <yaml dir> required";
-            if (options.CppOut == null && options.CsOut == null)
-                return "--cpp_out or --cs_out required";
+            if (options.CppOut == null && options.CsOut == null && options.PyOut == null)
+                return "--cpp_out, --cs_out or --py_out required";
             return null;
         }
 
         private static void PrintUsage()
         {
-            Console.WriteLine("protacoc " + Naming.Version + ". message yaml to C++ (.g.h) / C# (.g.cs)");
-            Console.WriteLine("usage: protacoc -I <yaml dir> [-I ...] --cpp_out <dir> [--cs_out <dir>] [options] [message...]");
+            Console.WriteLine("protacoc " + Naming.Version + ". message yaml to C++ (.g.h) / C# (.g.cs) / Python (_g.py)");
+            Console.WriteLine("usage: protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [options] [message...]");
             Console.WriteLine("  -I, --proto_path <dir>   yaml folder. Several folders share one name space");
             Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h, <enum>.enum.h and the runtime Protaco.hpp");
             Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.cs and the runtime Protaco.cs");
+            Console.WriteLine("  --py_out <dir>           writes <namespace folders>/<message>_g.py, <enum>_enum.py and the runtime protaco.py");
             Console.WriteLine("  --no_runtime             skips the runtime files");
             Console.WriteLine("  --check                  checks without writing. Exit code 3 if anything differs");
             Console.WriteLine("  name...                  generates only these messages or enums (name or yaml path). Default: all");
@@ -172,6 +177,8 @@ namespace Protacoc
                     output.Write(Path.Combine(options.CppOut, enumDef.Name + ".enum.h"), CppEmitter.EmitEnum(enumDef, enumDef.Namespace.Split('.')));
                 if (options.CsOut != null)
                     output.Write(Path.Combine(options.CsOut, enumDef.Name + ".enum.cs"), CsEmitter.EmitEnum(enumDef, enumDef.Namespace));
+                if (options.PyOut != null)
+                    output.Write(Path.Combine(PyPackage(options.PyOut, enumDef), enumDef.Name + "_enum.py"), PyEmitter.EmitEnum(enumDef));
             }
             foreach (MessageDef message in order.Where(targets.Contains))
             {
@@ -179,6 +186,8 @@ namespace Protacoc
                     output.Write(Path.Combine(options.CppOut, message.Name + ".g.h"), CppEmitter.Emit(message, message.Namespace.Split('.')));
                 if (options.CsOut != null)
                     output.Write(Path.Combine(options.CsOut, message.Name + ".g.cs"), CsEmitter.Emit(message, message.Namespace));
+                if (options.PyOut != null)
+                    output.Write(Path.Combine(PyPackage(options.PyOut, message), message.Name + "_g.py"), PyEmitter.Emit(message));
             }
             if (!options.Runtime)
                 return;
@@ -186,6 +195,14 @@ namespace Protacoc
                 output.Write(Path.Combine(options.CppOut, "Protaco.hpp"), Resource("Protaco.hpp"));
             if (options.CsOut != null)
                 output.Write(Path.Combine(options.CsOut, "Protaco.cs"), Resource("Protaco.cs"));
+            if (options.PyOut != null)
+                output.Write(Path.Combine(options.PyOut, "protaco.py"), Resource("protaco.py"));
+        }
+
+        // Python package folder of a namespace: shop.orders -> <py_out>/shop/orders.
+        private static string PyPackage(string pyOut, SchemaDef def)
+        {
+            return Path.Combine(new[] { pyOut }.Concat(def.Namespace.Split('.')).ToArray());
         }
 
         // Runtime files are embedded resources, written next to generated code so versions always match.

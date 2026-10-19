@@ -47,6 +47,7 @@
     <Compile Include="Model.cs" />
     <Compile Include="Naming.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="PyEmitter.cs" />
     <Compile Include="SchemaFingerprint.cs" />
     <Compile Include="YamlLite.cs" />
   </ItemGroup>
@@ -59,6 +60,10 @@
     <EmbeddedResource Include="..\..\include\cs\Protaco.cs">
       <LogicalName>Protaco.cs</LogicalName>
       <Link>include\Protaco.cs</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\include\python\protaco.py">
+      <LogicalName>protaco.py</LogicalName>
+      <Link>include\protaco.py</Link>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,9 +1,9 @@
-﻿// Numbers.g.h. protacoc 0.6.0, source Numbers.yaml (sha1 c290760e398e). Do not edit.
+﻿// Numbers.g.h. protacoc 0.6.0, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
 
-namespace types
+namespace scalars
 {
 
 /// Unsigned integers at their limits and UTF-8 strings.
@@ -232,4 +232,4 @@ private:
     mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };
 
-}  // namespace types
+}  // namespace scalars

@@ -35,11 +35,17 @@
     <Filter Include="gen\cpp\enums">
       <UniqueIdentifier>{B6775DAE-09C3-5B17-9AD5-B6F26FC5075A}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gen\cpp\maps">
+      <UniqueIdentifier>{B573B2D2-64E3-596F-9E71-DA2674C30852}</UniqueIdentifier>
+    </Filter>
     <Filter Include="gen\cpp\partial">
       <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\types">
-      <UniqueIdentifier>{000ADF0C-DB51-5CD7-91DE-913902BB8446}</UniqueIdentifier>
+    <Filter Include="gen\cpp\recursive">
+      <UniqueIdentifier>{E92BA104-1AE7-541C-AD1C-433520DC4A13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gen\cpp\scalars">
+      <UniqueIdentifier>{57E4C229-818C-5AAD-8514-3337D3FBA117}</UniqueIdentifier>
     </Filter>
     <Filter Include="gen\cpp\ver_v1">
       <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
@@ -101,6 +107,9 @@
     <Filter Include="schemas\errors">
       <UniqueIdentifier>{334EE2F5-5C20-561E-B40D-80E2E0EEFB0C}</UniqueIdentifier>
     </Filter>
+    <Filter Include="schemas\maps">
+      <UniqueIdentifier>{A079EBFB-0048-539A-8754-86EF2672167C}</UniqueIdentifier>
+    </Filter>
     <Filter Include="schemas\nestedwin">
       <UniqueIdentifier>{8048C03B-E8E2-5CF8-82A7-F09D20C0633C}</UniqueIdentifier>
     </Filter>
@@ -110,11 +119,11 @@
     <Filter Include="schemas\partial">
       <UniqueIdentifier>{E201DE73-D8D2-5838-A52A-2B47CB7E57E6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="schemas\toodeep">
-      <UniqueIdentifier>{3F5E8D07-8850-5090-A7F1-9604915FD81C}</UniqueIdentifier>
+    <Filter Include="schemas\recursive">
+      <UniqueIdentifier>{BB187D34-865E-5371-BE8D-EB3134BB2CA7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="schemas\types">
-      <UniqueIdentifier>{AC157CDA-83A4-5311-BFBC-1DD73A1EC8E6}</UniqueIdentifier>
+    <Filter Include="schemas\scalars">
+      <UniqueIdentifier>{2BC154C2-2D8D-5418-B87E-2C8FD1072DDF}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas\ver_v1">
       <UniqueIdentifier>{97C30856-1694-5DD2-84EC-B1AE16A75412}</UniqueIdentifier>
@@ -219,6 +228,15 @@
     <ClInclude Include="..\gen\cpp\enums\PizzaSize.enum.h">
       <Filter>gen\cpp\enums</Filter>
     </ClInclude>
+    <ClInclude Include="..\gen\cpp\maps\Dish.g.h">
+      <Filter>gen\cpp\maps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\maps\Grade.enum.h">
+      <Filter>gen\cpp\maps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\maps\Menu.g.h">
+      <Filter>gen\cpp\maps</Filter>
+    </ClInclude>
     <ClInclude Include="..\gen\cpp\partial\Delivery.g.h">
       <Filter>gen\cpp\partial</Filter>
     </ClInclude>
@@ -231,8 +249,14 @@
     <ClInclude Include="..\gen\cpp\partial\Topping.g.h">
       <Filter>gen\cpp\partial</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\types\Numbers.g.h">
-      <Filter>gen\cpp\types</Filter>
+    <ClInclude Include="..\gen\cpp\recursive\Node.g.h">
+      <Filter>gen\cpp\recursive</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\scalars\Move.g.h">
+      <Filter>gen\cpp\scalars</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\scalars\Numbers.g.h">
+      <Filter>gen\cpp\scalars</Filter>
     </ClInclude>
     <ClInclude Include="..\gen\cpp\ver_v1\Recipe.g.h">
       <Filter>gen\cpp\ver_v1</Filter>
@@ -338,6 +362,9 @@
     <None Include="..\schemas\errors\PC102_flowlist.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC102_mapquote.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC201_deprecated.yaml">
       <Filter>schemas\errors</Filter>
     </None>
@@ -392,10 +419,16 @@
     <None Include="..\schemas\errors\PC303_prefix.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC304_mapvalue.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC304_type.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC305_reqfixed.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC306_self.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC308_bytes.yaml">
@@ -405,6 +438,9 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC308_infinity.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC308_mapdefault.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC308_octal.yaml">
@@ -437,11 +473,32 @@
     <None Include="..\schemas\errors\PC402_ref.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC403_selfmap.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC404_element.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_listmap.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_mapfixed.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_mapkey.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\v2.yaml">
       <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\maps\Dish.yaml">
+      <Filter>schemas\maps</Filter>
+    </None>
+    <None Include="..\schemas\maps\Grade.enum.yaml">
+      <Filter>schemas\maps</Filter>
+    </None>
+    <None Include="..\schemas\maps\Menu.yaml">
+      <Filter>schemas\maps</Filter>
     </None>
     <None Include="..\schemas\nestedwin\Inner.yaml">
       <Filter>schemas\nestedwin</Filter>
@@ -467,38 +524,14 @@
     <None Include="..\schemas\partial\Topping.yaml">
       <Filter>schemas\partial</Filter>
     </None>
-    <None Include="..\schemas\toodeep\T0.yaml">
-      <Filter>schemas\toodeep</Filter>
+    <None Include="..\schemas\recursive\Node.yaml">
+      <Filter>schemas\recursive</Filter>
     </None>
-    <None Include="..\schemas\toodeep\T1.yaml">
-      <Filter>schemas\toodeep</Filter>
+    <None Include="..\schemas\scalars\Move.yaml">
+      <Filter>schemas\scalars</Filter>
     </None>
-    <None Include="..\schemas\toodeep\T2.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T3.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T4.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T5.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T6.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T7.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T8.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\toodeep\T9.yaml">
-      <Filter>schemas\toodeep</Filter>
-    </None>
-    <None Include="..\schemas\types\Numbers.yaml">
-      <Filter>schemas\types</Filter>
+    <None Include="..\schemas\scalars\Numbers.yaml">
+      <Filter>schemas\scalars</Filter>
     </None>
     <None Include="..\schemas\ver_v1\Recipe.yaml">
       <Filter>schemas\ver_v1</Filter>

@@ -17,7 +17,7 @@ namespace Protacoc
             "ext", "buf", "cache", "serialize", "msgname", "msgversion", "msgminversion", "msgschemahash", "schemahashes",
             "setenvelope", "getenvelope", "isschemakey", "visitvar", "visittext", "tostring", "kfixedoffset",
             "kfixedsize", "kallowextension", "equals", "gethashcode", "gettype", "getid", "setid", "getcorr", "setcorr",
-            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp", "protaco", "view", "tryview",
+            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp", "trygettimefromtimestampparts", "protaco", "view", "tryview",
         };
 
         // Where a type appears. Decides which kinds are allowed.
@@ -115,8 +115,8 @@ namespace Protacoc
         {
             if (VersionNamespace.IsMatch(def.Name))
                 diag.Error(def.Pos, Codes.ReservedName, kind + " name '" + def.Name + "' is reserved for version namespaces (v1, v2, ...)");
-            if (CppKeywords.Contains(def.Name) || CsKeywords.Contains(def.Name))
-                diag.Error(def.Pos, Codes.Reserved, "'" + def.Name + "' is a C++ or C# keyword");
+            if (CppKeywords.Contains(def.Name) || CsKeywords.Contains(def.Name) || PyEmitter.Keywords.Contains(def.Name))
+                diag.Error(def.Pos, Codes.Reserved, "'" + def.Name + "' is a C++, C# or Python keyword");
             if (def.MinVersion > def.Version)
             {
                 diag.Error(def.Pos, Codes.BadVersion, "min_version " + def.MinVersion + " is above version " + def.Version);
@@ -157,11 +157,14 @@ namespace Protacoc
             if (!CheckVersionRange(enumDef, "enum", diag))
                 return;
             HashSet<string> keys = new HashSet<string>();
+            HashSet<string> pyNames = new HashSet<string>();
             Dictionary<int, string> numbers = new Dictionary<int, string>();
             foreach (EnumValueDef value in enumDef.Values)
             {
                 if (!keys.Add(value.Key))
                     diag.Error(value.Pos, Codes.DupKey, "duplicate enum value key '" + value.Key + "'");
+                else if (!pyNames.Add(PyEmitter.Name(value.Key)))
+                    diag.Error(value.Pos, Codes.NameClash, "Python name '" + PyEmitter.Name(value.Key) + "' clashes (a Python keyword gets a trailing '_')");
                 if (CppKeywords.Contains(value.Key) || CsKeywords.Contains(value.Key))
                     diag.Error(value.Pos, Codes.Reserved, "'" + value.Key + "' is a C++ or C# keyword");
                 string other;
@@ -221,11 +224,14 @@ namespace Protacoc
         {
             HashSet<string> keys = new HashSet<string>();
             HashSet<string> csNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> pyNames = new HashSet<string>();
             foreach (FieldDef field in message.Fields)
             {
                 SourcePos pos = field.Pos;
                 if (!keys.Add(field.Key))
                     diag.Error(pos, Codes.DupKey, "duplicate field key '" + field.Key + "'");
+                else if (!pyNames.Add(PyEmitter.Name(field.Key)))
+                    diag.Error(pos, Codes.NameClash, "Python attribute '" + PyEmitter.Name(field.Key) + "' clashes (a Python keyword gets a trailing '_')");
                 CheckName(message, field, csNames, diag);
                 if (!ResolveType(field.Type, field, byName, diag, Place.Field) || !CheckSelf(message, field, diag))
                     continue;

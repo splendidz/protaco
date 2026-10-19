@@ -1,7 +1,7 @@
 # Unsigned integers at their limits and UTF-8 strings.
 message: Numbers
 version: 1
-namespace: types
+namespace: scalars
 fields:
   - {key: u32, type: uint, default: 4000000000}
   - {key: u64, type: uint64, default: 18446744073709551615}
