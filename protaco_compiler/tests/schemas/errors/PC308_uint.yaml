@@ -1,0 +1,6 @@
+# expect: PC308
+message: PC308_uint
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: uint, default: -1}

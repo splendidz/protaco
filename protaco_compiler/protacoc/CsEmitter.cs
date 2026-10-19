@@ -88,6 +88,10 @@ namespace Protacoc
                     return "int";
                 case TypeKind.Int64:
                     return "long";
+                case TypeKind.UInt:
+                    return "uint";
+                case TypeKind.UInt64:
+                    return "ulong";
                 case TypeKind.Double:
                     return "double";
                 case TypeKind.String:
@@ -229,6 +233,10 @@ namespace Protacoc
                     return "writer.Int(" + at + ", " + value + ");";
                 case TypeKind.Int64:
                     return "writer.Int64(" + at + ", " + value + ");";
+                case TypeKind.UInt:
+                    return "writer.UInt(" + at + ", " + value + ");";
+                case TypeKind.UInt64:
+                    return "writer.UInt64(" + at + ", " + value + ");";
                 case TypeKind.Double:
                     return "writer.Double(" + at + ", " + value + ");";
                 default:
@@ -248,6 +256,10 @@ namespace Protacoc
                     return name + " = reader.Int(" + at + ");";
                 case TypeKind.Int64:
                     return name + " = reader.Int64(" + at + ");";
+                case TypeKind.UInt:
+                    return name + " = reader.UInt(" + at + ");";
+                case TypeKind.UInt64:
+                    return name + " = reader.UInt64(" + at + ");";
                 case TypeKind.Double:
                     return name + " = reader.Double(" + at + ");";
                 default:
@@ -272,6 +284,10 @@ namespace Protacoc
                             return "ListInt";
                         case TypeKind.Int64:
                             return "ListInt64";
+                        case TypeKind.UInt:
+                            return "ListUInt";
+                        case TypeKind.UInt64:
+                            return "ListUInt64";
                         case TypeKind.Double:
                             return "ListDouble";
                         case TypeKind.String:

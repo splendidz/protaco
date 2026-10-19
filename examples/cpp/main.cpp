@@ -20,7 +20,7 @@ void SendAndReceive()
     stop.set_orderId("A-100");
     stop.set_address("1 Pizza St");
     stop.set_etaMin(10);
-    route.get_mutable_stops().push_back(stop);
+    route.mutable_stops().push_back(stop);
     route.set_note("closest-first");
 
     const std::vector<uint8_t>& bytes = route.Serialize();   // send bytes.data(), bytes.size()
@@ -51,15 +51,15 @@ void ExtraData()
     order.set_orderId("A-100");
     demo::Topping basil;
     basil.set_name("basil");
-    order.get_mutable_toppings().push_back(basil);
-    order.GetMutableExt().SetString("secretSauce", "yes please");   // key not in the yaml
-    order.GetMutableExt().SetInt("pineapple", 0);
+    order.mutable_toppings().push_back(basil);
+    order.GetMutableExt().SetValue("secretSauce", "yes please");   // key not in the yaml
+    order.GetMutableExt().SetValue("pineapple", 0);
 
     const demo::PizzaOrder got = protaco::ToObject<demo::PizzaOrder>(order.Serialize());
     std::string sauce;
-    got.GetExt().GetString("secretSauce", &sauce);
+    got.GetExt().TryGetValue("secretSauce", &sauce);
     std::printf("PizzaOrder ext: secretSauce=%s, schema key in ext=%s\n",
-        sauce.c_str(), order.GetMutableExt().SetInt("orderId", 9) ? "accepted (bug)" : "rejected");
+        sauce.c_str(), order.GetMutableExt().SetValue("orderId", 9) ? "accepted (bug)" : "rejected");
 }
 
 // 4. Errors: TryToObject never throws.
@@ -67,9 +67,9 @@ void ErrorHandling()
 {
     const std::vector<uint8_t> bytes = demo::Heartbeat().Serialize();
     demo::DeliveryRoute wrong;
-    protaco::Error error;
+    std::string error;
     if (!protaco::TryToObject(bytes.data(), bytes.size(), &wrong, &error))
-        std::printf("decode failed: path='%s' what='%s'\n", error.path.c_str(), error.what.c_str());
+        std::printf("decode failed: %s\n", error.c_str());
 }
 
 // 5. Logs: ToString shows every field, ext entries under ext{...}.
@@ -80,8 +80,8 @@ void Logging()
     demo::RouteStop stop;
     stop.set_orderId("A-100");
     stop.set_address("1 Pizza St");
-    route.get_mutable_stops().push_back(stop);
-    route.GetMutableExt().SetInt("priority", 5);
+    route.mutable_stops().push_back(stop);
+    route.GetMutableExt().SetValue("priority", 5);
     std::printf("%s\n", route.ToString().c_str());
     std::printf("%s\n", route.ToString(protaco::TextStyle::Pretty()).c_str());
 }

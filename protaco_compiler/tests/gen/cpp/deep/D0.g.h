@@ -1,4 +1,4 @@
-﻿// D0.g.h. protacoc 0.5.0, source D0.yaml (sha1 c36d92fc3a71). Do not edit.
+﻿// D0.g.h. protacoc 0.6.0, source D0.yaml (sha1 c36d92fc3a71). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -77,7 +77,7 @@ public:
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Fixed fields only. With an empty ext, serializing costs nothing.
-    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
+    /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {

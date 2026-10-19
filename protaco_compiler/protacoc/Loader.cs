@@ -213,7 +213,7 @@ namespace Protacoc
             return text;
         }
 
-        // Type syntax: bool | int | int64 | double | string | string(N) | bytes | list<T> | message name
+        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | message name
         public static TypeRef ParseType(string text, SourcePos pos, Diag diag)
         {
             if (text == null)
@@ -226,6 +226,10 @@ namespace Protacoc
                     return new TypeRef { Kind = TypeKind.Int };
                 case "int64":
                     return new TypeRef { Kind = TypeKind.Int64 };
+                case "uint":
+                    return new TypeRef { Kind = TypeKind.UInt };
+                case "uint64":
+                    return new TypeRef { Kind = TypeKind.UInt64 };
                 case "double":
                     return new TypeRef { Kind = TypeKind.Double };
                 case "string":
@@ -254,7 +258,7 @@ namespace Protacoc
             }
             if (Ident.IsMatch(text))
                 return new TypeRef { Kind = TypeKind.Message, MessageName = text };
-            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, double, string, string(N), bytes, list<T>, message name");
+            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, message name");
             return null;
         }
 

@@ -12,11 +12,11 @@ bool Cpp14RoundTrip()
 {
     DeliveryRoute route;
     route.set_rider("rider-7");
-    route.get_mutable_stops().push_back(RouteStop());
-    route.GetMutableExt().SetInt("priority", 5);
+    route.mutable_stops().push_back(RouteStop());
+    route.GetMutableExt().SetValue("priority", 5);
     PizzaOrder order;
-    order.get_mutable_toppings().push_back(Topping());
-    order.get_mutable_delivery().get_mutable_doorCode().push_back(1);
+    order.mutable_toppings().push_back(Topping());
+    order.mutable_delivery().mutable_doorCode().push_back(1);
     Heartbeat beat;
     DeliveryRoute routeBack;
     PizzaOrder orderBack;

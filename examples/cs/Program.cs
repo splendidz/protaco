@@ -25,12 +25,12 @@ namespace ProtacoExample
         {
             PizzaOrder order = new PizzaOrder { OrderId = "A-100" };
             order.Toppings.Add(new Topping { Name = "basil" });
-            order.Ext.SetString("secretSauce", "yes please");
+            order.Ext.SetValue("secretSauce", "yes please");
 
             PizzaOrder got = Protaco.Codec.ToObject<PizzaOrder>(order.Serialize());
             string sauce;
-            got.Ext.TryGetString("secretSauce", out sauce);
-            Console.WriteLine("PizzaOrder ext: secretSauce=" + sauce + ", schema key in ext=" + (order.Ext.SetInt("orderId", 9) ? "accepted (bug)" : "rejected"));
+            got.Ext.TryGetValue("secretSauce", out sauce);
+            Console.WriteLine("PizzaOrder ext: secretSauce=" + sauce + ", schema key in ext=" + (order.Ext.SetValue("orderId", 9) ? "accepted (bug)" : "rejected"));
         }
 
         // 3. Errors: TryToObject never throws.
@@ -38,9 +38,9 @@ namespace ProtacoExample
         {
             byte[] bytes = new Heartbeat().Serialize();
             DeliveryRoute wrong;
-            Protaco.ProtacoException error;
+            string error;
             if (!Protaco.Codec.TryToObject(bytes, out wrong, out error))
-                Console.WriteLine("decode failed: path='" + error.Path + "' what='" + error.What + "'");
+                Console.WriteLine("decode failed: " + error);
         }
 
         // 4. Logs: ToString shows every field, ext entries under ext{...}.
@@ -48,7 +48,7 @@ namespace ProtacoExample
         {
             DeliveryRoute route = new DeliveryRoute { Rider = "rider-7" };
             route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St" });
-            route.Ext.SetInt("priority", 5);
+            route.Ext.SetValue("priority", 5);
             Console.WriteLine(route.ToString());
             Console.WriteLine(route.ToString(Protaco.TextStyle.Pretty()));
         }

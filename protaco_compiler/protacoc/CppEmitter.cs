@@ -1,6 +1,6 @@
 ﻿// CppEmitter.cs. One message -> <Name>.g.h (C++14 compatible, header-only).
 // The latest version is <ns>::<Name>. Older supported versions are <ns>::v<N>::<Name>.
-// Public: user API only (constructor, get_/set_/get_mutable_ field accessors, GetExt/GetMutableExt when allowed, envelope,
+// Public: user API only (constructor, get_/set_/mutable_ field accessors, GetExt/GetMutableExt when allowed, envelope,
 // Serialize, ToString). Field accessors are snake_case get_<key>; everything else is PascalCase.
 // Buffer, visitors and constants are private; the runtime gets in as a friend.
 using System.Collections.Generic;
@@ -80,6 +80,10 @@ namespace Protacoc
                     return "int32_t";
                 case TypeKind.Int64:
                     return "int64_t";
+                case TypeKind.UInt:
+                    return "uint32_t";
+                case TypeKind.UInt64:
+                    return "uint64_t";
                 case TypeKind.Double:
                     return "double";
                 case TypeKind.String:
@@ -119,7 +123,7 @@ namespace Protacoc
                         w.Line("protaco::detail::StoreBool(" + FixedAt(field) + ", true);");
                         break;
                     case TypeKind.FixedString:
-                        w.Line("protaco::detail::StoreChars(" + FixedAt(field) + ", " + field.Type.FixedLength + ", " + literal + ");");
+                        w.Line("protaco::detail::StoreChars(" + FixedAt(field) + ", " + field.Type.FixedLength + ", " + literal + ", \"" + field.Key + "\", nullptr);");
                         break;
                     default:
                         w.Line("protaco::detail::Store<" + CppType(field.Type) + ">(" + FixedAt(field) + ", " + literal + ");");
@@ -145,8 +149,14 @@ namespace Protacoc
                     return text.Length == 0 ? null : Naming.CppString(text);
                 case TypeKind.Double:
                     return double.Parse(text, System.Globalization.CultureInfo.InvariantCulture) == 0 ? null : text;
+                case TypeKind.Int64:
+                    return text == "0" ? null : text + "ll";
+                case TypeKind.UInt:
+                    return text == "0" ? null : text + "u";
+                case TypeKind.UInt64:
+                    return text == "0" ? null : text + "ull";
                 default:
-                    return text == "0" || text == "-0" ? null : text;
+                    return text == "0" ? null : text;
             }
         }
 
@@ -179,8 +189,9 @@ namespace Protacoc
                         break;
                     case TypeKind.FixedString:
                         Method(w, "std::string get_" + key + "() const", "return protaco::detail::LoadChars(" + at + ", " + field.Type.FixedLength + ");");
-                        w.Line("/// Returns false and keeps the old value if longer than " + field.Type.FixedLength + " bytes.");
-                        Method(w, "bool set_" + key + "(const std::string& value)", "return protaco::detail::StoreChars(" + at + ", " + field.Type.FixedLength + ", value);");
+                        w.Line("/// Returns false, keeps the old value and writes the reason to error if longer than " + field.Type.FixedLength + " bytes.");
+                        Method(w, "bool set_" + key + "(const std::string& value, std::string* error = nullptr)",
+                            "return protaco::detail::StoreChars(" + at + ", " + field.Type.FixedLength + ", value, \"" + key + "\", error);");
                         break;
                     default:
                         Method(w, type + " get_" + key + "() const", "return protaco::detail::Load<" + type + ">(" + at + ");");
@@ -191,7 +202,7 @@ namespace Protacoc
             }
             Method(w, "const " + type + "& get_" + key + "() const", "return " + key + "_;");
             if (field.Type.Kind != TypeKind.String)
-                Method(w, type + "& get_mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_;");
+                Method(w, type + "& mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_;");
             Method(w, "void set_" + key + "(const " + type + "& value)", key + "_ = value;", "cache_.valid = false;");
         }
 
@@ -219,7 +230,7 @@ namespace Protacoc
             w.Line("/// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.");
             if (view.AliveVar.Count == 0)
                 w.Line("/// Fixed fields only. " + (message.AllowExtension ? "With an empty ext, serializing" : "Serializing") + " costs nothing.");
-            w.Line("/// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.");
+            w.Line("/// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.");
             w.Line("/// The returned reference is valid until this object is modified.");
             Method(w, "const std::vector<uint8_t>& Serialize() const", "return protaco::detail::Access::Serialize(*this);");
             w.Line("/// Text for logs: field names and values" + (message.AllowExtension ? ", ext entries under ext{...}" : "") + ". protaco::TextStyle::Pretty() for one field per line.");

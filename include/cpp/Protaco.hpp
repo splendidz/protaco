@@ -1,10 +1,11 @@
 ﻿// Protaco.hpp. Header-only runtime for protacoc generated code (*.g.h).
-// C++14 compatible. Only ToObject throws. Format v3: README.md "Serialization format".
+// C++14 compatible. Only ToObject throws; every Try* call reports failure through its return value and an optional
+// std::string* error. Format v4: README.md "Serialization format".
 // protacoc.exe writes this file next to the generated code, so generator and runtime versions always match.
 #pragma once
 // Each output folder has its own copy. The same version is included once; mixing versions is a redefinition error.
-#ifndef PROTACO_RUNTIME_0_5_0
-#define PROTACO_RUNTIME_0_5_0
+#ifndef PROTACO_RUNTIME_0_6_0
+#define PROTACO_RUNTIME_0_6_0
 
 #include <cmath>
 #include <cstdint>
@@ -31,15 +32,17 @@ enum class TacoType : uint8_t
     Message = 6,
     List = 7,
     Bytes = 8,
+    UInt = 9,
+    UInt64 = 10,
 };
 
 enum : uint32_t
 {
-    kFrameVersion = 3,
+    kFrameVersion = 4,
     kMaxDepth = 8,                 // max nested message depth
     kMaxSchemaVersions = 255,      // max supported versions per frame (min version..version)
     kMaxFields = 1024,             // max variable fields per body
-    kMaxFrameBytes = 1048575,      // max frame size
+    kMaxFrameBytes = 0xFFFFFFFFu,  // max frame size (4 GiB - 1): every length in the format is u32
     kMaxKeyLength = 255,
 };
 
@@ -79,7 +82,7 @@ struct TextStyle
     }
 };
 
-/// Decode error. path looks like "moves[2].from".
+/// Decode error carried by CParseError. path looks like "stops[2].orderId". Try* functions give the same text as one string.
 struct Error
 {
     std::string path;
@@ -110,8 +113,27 @@ namespace detail
 struct Access;
 }
 
-/// Extra key-value data not in the yaml. Receivers keep unknown keys here.
-/// Schema keys and keys starting with '_' are rejected (Set returns false).
+namespace detail
+{
+// yaml type word of a TacoType, for error text.
+inline const char* TypeName(uint8_t type)
+{
+    static const char* const kNames[] = { "unknown", "bool", "int", "int64", "double", "string", "message", "list", "bytes", "uint", "uint64" };
+    return type < sizeof(kNames) / sizeof(kNames[0]) ? kNames[type] : "unknown";
+}
+
+inline bool SetError(std::string* error, const std::string& text)
+{
+    if (error != nullptr)
+        *error = text;
+    return false;
+}
+}  // namespace detail
+
+/// Extra key-value data not in the yaml. Receivers keep unknown keys here and send them on.
+/// Value types: bool, int32_t, int64_t, uint32_t, uint64_t, double, std::string (also const char*), std::vector<uint8_t> (bytes).
+/// Keys: 1..255 bytes, not starting with '_', not a field key of the message (any version).
+/// Every call returns false on failure and, when error is not null, writes the reason there. Nothing throws.
 class CExt
 {
 public:
@@ -134,74 +156,103 @@ public:
         return *this;
     }
 
-    bool SetBool(const std::string& key, bool value)
+    bool SetValue(const std::string& key, bool value, std::string* error = nullptr)
     {
         const uint8_t raw = value ? 1 : 0;
-        return Put(key, TacoType::Bool, &raw, sizeof(raw));
+        return Put(key, TacoType::Bool, &raw, sizeof(raw), error);
     }
 
-    bool SetInt(const std::string& key, int32_t value)
+    bool SetValue(const std::string& key, int32_t value, std::string* error = nullptr)
     {
-        return Put(key, TacoType::Int, &value, sizeof(value));
+        return Put(key, TacoType::Int, &value, sizeof(value), error);
     }
 
-    bool SetInt64(const std::string& key, int64_t value)
+    bool SetValue(const std::string& key, int64_t value, std::string* error = nullptr)
     {
-        return Put(key, TacoType::Int64, &value, sizeof(value));
+        return Put(key, TacoType::Int64, &value, sizeof(value), error);
     }
 
-    bool SetDouble(const std::string& key, double value)
+    bool SetValue(const std::string& key, uint32_t value, std::string* error = nullptr)
     {
-        return Put(key, TacoType::Double, &value, sizeof(value));
+        return Put(key, TacoType::UInt, &value, sizeof(value), error);
     }
 
-    bool SetString(const std::string& key, const std::string& value)
+    bool SetValue(const std::string& key, uint64_t value, std::string* error = nullptr)
     {
-        return Put(key, TacoType::String, value.data(), value.size());
+        return Put(key, TacoType::UInt64, &value, sizeof(value), error);
     }
 
-    bool SetBytes(const std::string& key, const std::vector<uint8_t>& value)
+    bool SetValue(const std::string& key, double value, std::string* error = nullptr)
     {
-        return Put(key, TacoType::Bytes, value.data(), value.size());
+        return Put(key, TacoType::Double, &value, sizeof(value), error);
     }
 
-    /// Returns false and leaves out unchanged if missing or of another kind.
-    bool GetBool(const std::string& key, bool* out) const
+    bool SetValue(const std::string& key, const std::string& value, std::string* error = nullptr)
     {
-        const Entry* entry = Find(key, TacoType::Bool, 1);
+        return Put(key, TacoType::String, value.data(), value.size(), error);
+    }
+
+    bool SetValue(const std::string& key, const char* value, std::string* error = nullptr)
+    {
+        return SetValue(key, std::string(value != nullptr ? value : ""), error);
+    }
+
+    bool SetValue(const std::string& key, const std::vector<uint8_t>& value, std::string* error = nullptr)
+    {
+        return Put(key, TacoType::Bytes, value.data(), value.size(), error);
+    }
+
+    // Other types (long long on Linux, char, float, ...) are not stored implicitly: cast to one of the types above.
+    template <class T>
+    bool SetValue(const std::string& key, T value, std::string* error = nullptr) = delete;
+
+    /// Returns false and leaves out unchanged if the key is missing or holds another type.
+    bool TryGetValue(const std::string& key, bool* out, std::string* error = nullptr) const
+    {
+        const Entry* entry = Find(key, TacoType::Bool, 1, error);
         if (entry == nullptr)
             return false;
         *out = entry->value[0] != 0;
         return true;
     }
 
-    bool GetInt(const std::string& key, int32_t* out) const
+    bool TryGetValue(const std::string& key, int32_t* out, std::string* error = nullptr) const
     {
-        return GetPod(key, TacoType::Int, out);
+        return GetPod(key, TacoType::Int, out, error);
     }
 
-    bool GetInt64(const std::string& key, int64_t* out) const
+    bool TryGetValue(const std::string& key, int64_t* out, std::string* error = nullptr) const
     {
-        return GetPod(key, TacoType::Int64, out);
+        return GetPod(key, TacoType::Int64, out, error);
     }
 
-    bool GetDouble(const std::string& key, double* out) const
+    bool TryGetValue(const std::string& key, uint32_t* out, std::string* error = nullptr) const
     {
-        return GetPod(key, TacoType::Double, out);
+        return GetPod(key, TacoType::UInt, out, error);
     }
 
-    bool GetString(const std::string& key, std::string* out) const
+    bool TryGetValue(const std::string& key, uint64_t* out, std::string* error = nullptr) const
     {
-        const Entry* entry = Find(key, TacoType::String, SIZE_MAX);
+        return GetPod(key, TacoType::UInt64, out, error);
+    }
+
+    bool TryGetValue(const std::string& key, double* out, std::string* error = nullptr) const
+    {
+        return GetPod(key, TacoType::Double, out, error);
+    }
+
+    bool TryGetValue(const std::string& key, std::string* out, std::string* error = nullptr) const
+    {
+        const Entry* entry = Find(key, TacoType::String, SIZE_MAX, error);
         if (entry == nullptr)
             return false;
         out->assign(entry->value.begin(), entry->value.end());
         return true;
     }
 
-    bool GetBytes(const std::string& key, std::vector<uint8_t>* out) const
+    bool TryGetValue(const std::string& key, std::vector<uint8_t>* out, std::string* error = nullptr) const
     {
-        const Entry* entry = Find(key, TacoType::Bytes, SIZE_MAX);
+        const Entry* entry = Find(key, TacoType::Bytes, SIZE_MAX, error);
         if (entry == nullptr)
             return false;
         *out = entry->value;
@@ -247,9 +298,9 @@ private:
     };
 
     template <class T>
-    bool GetPod(const std::string& key, TacoType type, T* out) const
+    bool GetPod(const std::string& key, TacoType type, T* out, std::string* error) const
     {
-        const Entry* entry = Find(key, type, sizeof(T));
+        const Entry* entry = Find(key, type, sizeof(T), error);
         if (entry == nullptr)
             return false;
         std::memcpy(out, entry->value.data(), sizeof(T));
@@ -266,30 +317,46 @@ private:
         return SIZE_MAX;
     }
 
-    // size == SIZE_MAX skips the length check (strings).
-    const Entry* Find(const std::string& key, TacoType type, size_t size) const
+    // size == SIZE_MAX skips the length check (strings, bytes).
+    const Entry* Find(const std::string& key, TacoType type, size_t size, std::string* error) const
     {
         const size_t index = IndexOf(key);
         if (index == SIZE_MAX)
+        {
+            detail::SetError(error, "ext key not found: " + key);
             return nullptr;
+        }
         const Entry& entry = entries_[index];
         if (entry.type != type)
+        {
+            detail::SetError(error, "ext key " + key + " holds " + detail::TypeName(static_cast<uint8_t>(entry.type)) + ", not "
+                + detail::TypeName(static_cast<uint8_t>(type)));
             return nullptr;
+        }
         if (size != SIZE_MAX && entry.value.size() != size)
+        {
+            detail::SetError(error, "ext key " + key + " has a bad " + detail::TypeName(static_cast<uint8_t>(type)) + " value");
             return nullptr;
+        }
         return &entry;
     }
 
-    bool IsUsableKey(const std::string& key) const
+    bool CheckKey(const std::string& key, std::string* error) const
     {
-        if (key.empty() || key.size() > kMaxKeyLength || key[0] == '_')
-            return false;
-        return isSchemaKey_ == nullptr || !isSchemaKey_(key.c_str());
+        if (key.empty())
+            return detail::SetError(error, "ext key is empty");
+        if (key.size() > kMaxKeyLength)
+            return detail::SetError(error, "ext key is longer than 255 bytes: " + key.substr(0, 32) + "...");
+        if (key[0] == '_')
+            return detail::SetError(error, "ext key starts with '_' (reserved): " + key);
+        if (isSchemaKey_ != nullptr && isSchemaKey_(key.c_str()))
+            return detail::SetError(error, "ext key is a field of the message: " + key);
+        return true;
     }
 
-    bool Put(const std::string& key, TacoType type, const void* data, size_t size)
+    bool Put(const std::string& key, TacoType type, const void* data, size_t size, std::string* error)
     {
-        if (!IsUsableKey(key))
+        if (!CheckKey(key, error))
             return false;
         const uint8_t* bytes = static_cast<const uint8_t*>(data);
         const size_t index = IndexOf(key);
@@ -310,7 +377,7 @@ private:
 
     std::vector<Entry> entries_;
     bool (*isSchemaKey_)(const char*) = nullptr;
-    uint32_t revision_ = 0;   // changes on every Set, Remove and assignment
+    uint32_t revision_ = 0;   // changes on every SetValue, Remove and assignment
 };
 
 namespace detail
@@ -349,11 +416,11 @@ inline std::string LoadChars(const uint8_t* src, size_t capacity)
     return std::string(reinterpret_cast<const char*>(src), length);
 }
 
-// Returns false and keeps the old value if too long (never truncates).
-inline bool StoreChars(uint8_t* dst, size_t capacity, const std::string& value)
+// Returns false and keeps the old value if too long (never truncates). key names the field in the error text.
+inline bool StoreChars(uint8_t* dst, size_t capacity, const std::string& value, const char* key, std::string* error)
 {
     if (value.size() > capacity)
-        return false;
+        return SetError(error, std::string(key) + ": " + std::to_string(value.size()) + " bytes, longer than string(" + std::to_string(capacity) + ")");
     std::memcpy(dst, value.data(), value.size());
     std::memset(dst + value.size(), 0, capacity - value.size());
     return true;
@@ -464,13 +531,6 @@ inline std::string Hex32(uint32_t value)
     char text[11];
     std::snprintf(text, sizeof(text), "0x%08X", value);
     return text;
-}
-
-// yaml type word of a TacoType, for error text.
-inline const char* TypeName(uint8_t type)
-{
-    static const char* const kNames[] = { "unknown", "bool", "int", "int64", "double", "string", "message", "list", "bytes" };
-    return type < sizeof(kNames) / sizeof(kNames[0]) ? kNames[type] : "unknown";
 }
 
 // Prefixes the outer name to an inner error path: "from" -> "[2].from" -> "moves[2].from"
@@ -751,6 +811,16 @@ struct Codec<int32_t> : PodCodec<int32_t, TacoType::Int>
 
 template <>
 struct Codec<int64_t> : PodCodec<int64_t, TacoType::Int64>
+{
+};
+
+template <>
+struct Codec<uint32_t> : PodCodec<uint32_t, TacoType::UInt>
+{
+};
+
+template <>
+struct Codec<uint64_t> : PodCodec<uint64_t, TacoType::UInt64>
 {
 };
 
@@ -1150,6 +1220,16 @@ private:
         out_ += std::to_string(value);
     }
 
+    void Value(uint32_t value)
+    {
+        out_ += std::to_string(value);
+    }
+
+    void Value(uint64_t value)
+    {
+        out_ += std::to_string(value);
+    }
+
     void Value(double value)
     {
         if (std::isnan(value))
@@ -1222,6 +1302,14 @@ private:
         case TacoType::Int64:
             if (value.size() == 8)
                 return Value(Load<int64_t>(value.data()));
+            break;
+        case TacoType::UInt:
+            if (value.size() == 4)
+                return Value(Load<uint32_t>(value.data()));
+            break;
+        case TacoType::UInt64:
+            if (value.size() == 8)
+                return Value(Load<uint64_t>(value.data()));
             break;
         case TacoType::Double:
             if (value.size() == 8)
@@ -1351,75 +1439,77 @@ void Access::WriteText(const T& message, CTextWriter& writer)
 
 }  // namespace detail
 
-/// Parses the frame header only, not the body.
-inline bool PeekHeader(const uint8_t* src, size_t size, Header* out, Error* error = nullptr)
+namespace detail
 {
-    if (size < detail::HeaderSize(0, 0))
-        return detail::Fail(error, "frame too short");
+inline bool ReadHeader(const uint8_t* src, size_t size, Header* out, Error* error)
+{
+    if (size < HeaderSize(0, 0))
+        return Fail(error, "frame too short");
     if (src[0] != 'P' || src[1] != 'C')
-        return detail::Fail(error, "bad magic");
+        return Fail(error, "bad magic");
     if (src[2] != kFrameVersion)
-        return detail::Fail(error, "unknown frame version " + std::to_string(src[2]) + ", expected " + std::to_string(static_cast<unsigned>(kFrameVersion)));
+        return Fail(error, "unknown frame version " + std::to_string(src[2]) + ", expected " + std::to_string(static_cast<unsigned>(kFrameVersion)));
     const size_t nameLength = src[3];
-    if (size < detail::HeaderSize(nameLength, 0))
-        return detail::Fail(error, "frame too short");
-    const uint16_t version = detail::Load<uint16_t>(src + 4 + nameLength);
-    const uint16_t minVersion = detail::Load<uint16_t>(src + 6 + nameLength);
+    if (size < HeaderSize(nameLength, 0))
+        return Fail(error, "frame too short");
+    const uint16_t version = Load<uint16_t>(src + 4 + nameLength);
+    const uint16_t minVersion = Load<uint16_t>(src + 6 + nameLength);
     if (minVersion == 0 || minVersion > version || static_cast<uint32_t>(version - minVersion) >= kMaxSchemaVersions)
-        return detail::Fail(error, "bad version range " + std::to_string(minVersion) + ".." + std::to_string(version));
+        return Fail(error, "bad version range " + std::to_string(minVersion) + ".." + std::to_string(version));
     const size_t hashCount = static_cast<size_t>(version - minVersion) + 1;
-    if (size < detail::HeaderSize(nameLength, hashCount))
-        return detail::Fail(error, "frame too short");
+    if (size < HeaderSize(nameLength, hashCount))
+        return Fail(error, "frame too short");
     out->name.assign(reinterpret_cast<const char*>(src + 4), nameLength);
     out->version = version;
     out->minVersion = minVersion;
-    out->env = detail::LoadEnvelope(src);
-    out->bodySize = detail::Load<uint32_t>(src + 24 + nameLength);
-    out->schemaHash = detail::Load<uint32_t>(src + 28 + nameLength + 4 * (hashCount - 1));
+    out->env = LoadEnvelope(src);
+    out->bodySize = Load<uint32_t>(src + 24 + nameLength);
+    out->schemaHash = Load<uint32_t>(src + 28 + nameLength + 4 * (hashCount - 1));
     return true;
 }
 
-/// Bytes to object without exceptions. On failure returns false with the error path; out is unchanged.
-/// Accepts frames of T's version and newer: a newer frame is read as T's version (README.md "Versioning").
-/// Decodes into a temporary and then moves it, so src may point into out's own buffer.
+inline std::string ErrorText(const Error& error)
+{
+    return error.path.empty() ? error.what : error.path + ": " + error.what;
+}
+
+// Decodes into a temporary and then moves it, so src may point into out's own buffer. out is unchanged on failure.
 template <class T>
-bool TryToObject(const uint8_t* src, size_t size, T* out, Error* error = nullptr)
+bool Decode(const uint8_t* src, size_t size, T* out, Error* error)
 {
     try
     {
-        if (error != nullptr)
-            *error = Error();
         if (size > kMaxFrameBytes)
-            return detail::Fail(error, "frame too large");
+            return Fail(error, "frame too large");
         Header header;
-        if (!PeekHeader(src, size, &header, error))
+        if (!ReadHeader(src, size, &header, error))
             return false;
         const std::string name = T::MsgName();
         const uint16_t mine = T::MsgVersion();
         if (header.name != name)
-            return detail::Fail(error, "message name mismatch: expected " + name + ", got " + header.name);
+            return Fail(error, "message name mismatch: expected " + name + ", got " + header.name);
         if (header.version < mine)
         {
             std::string what = "message version too old: " + name + " reads version " + std::to_string(mine) + " or newer, got " + std::to_string(header.version);
             if (header.version >= T::MsgMinVersion())
                 what += ". Use the v" + std::to_string(header.version) + " type";
-            return detail::Fail(error, what);
+            return Fail(error, what);
         }
         if (header.minVersion > mine)
-            return detail::Fail(error, "message version too new: " + name + " reads version " + std::to_string(mine) + ", sender supports "
+            return Fail(error, "message version too new: " + name + " reads version " + std::to_string(mine) + ", sender supports "
                 + std::to_string(header.minVersion) + ".." + std::to_string(header.version));
         const size_t nameLength = header.name.size();
-        const uint32_t hash = detail::Load<uint32_t>(src + 28 + nameLength + 4 * static_cast<size_t>(mine - header.minVersion));
+        const uint32_t hash = Load<uint32_t>(src + 28 + nameLength + 4 * static_cast<size_t>(mine - header.minVersion));
         if (hash != T::MsgSchemaHash())
-            return detail::Fail(error, "schema mismatch: " + name + " version " + std::to_string(mine) + " expected " + detail::Hex32(T::MsgSchemaHash())
-                + ", got " + detail::Hex32(hash));
-        const size_t headerSize = detail::HeaderSize(nameLength, static_cast<size_t>(header.version - header.minVersion) + 1);
+            return Fail(error, "schema mismatch: " + name + " version " + std::to_string(mine) + " expected " + Hex32(T::MsgSchemaHash())
+                + ", got " + Hex32(hash));
+        const size_t headerSize = HeaderSize(nameLength, static_cast<size_t>(header.version - header.minVersion) + 1);
         if (size - headerSize != header.bodySize)
-            return detail::Fail(error, size - headerSize < header.bodySize ? "frame truncated" : "trailing bytes after frame");
+            return Fail(error, size - headerSize < header.bodySize ? "frame truncated" : "trailing bytes after frame");
         T decoded;
         decoded.SetEnvelope(header.env);
         const bool newer = header.version > mine;
-        if (!detail::Access::ReadBody(decoded, src + headerSize, header.bodySize, error, 0, newer))
+        if (!Access::ReadBody(decoded, src + headerSize, header.bodySize, error, 0, newer))
         {
             if (newer && error != nullptr)
                 error->what += " (frame version " + std::to_string(header.version) + " read as " + std::to_string(mine) + ")";
@@ -1430,17 +1520,45 @@ bool TryToObject(const uint8_t* src, size_t size, T* out, Error* error = nullptr
     }
     catch (const std::bad_alloc&)
     {
-        return detail::Fail(error, "out of memory");
+        return Fail(error, "out of memory");
     }
 }
+}  // namespace detail
 
-/// Bytes to object. Throws CParseError on failure.
+/// Parses the frame header only, not the body (for dispatch). Returns false with the reason in error.
+inline bool PeekHeader(const uint8_t* src, size_t size, Header* out, std::string* error = nullptr)
+{
+    Error detailError;
+    if (detail::ReadHeader(src, size, out, &detailError))
+        return true;
+    return detail::SetError(error, detail::ErrorText(detailError));
+}
+
+/// Bytes to object without exceptions. On failure returns false, out is unchanged, and error gets "path: reason"
+/// (path such as "stops[2].orderId", empty for header errors).
+/// Accepts frames of T's version and newer: a newer frame is read as T's version (README.md "Versioning").
+template <class T>
+bool TryToObject(const uint8_t* src, size_t size, T* out, std::string* error = nullptr)
+{
+    Error detailError;
+    if (detail::Decode(src, size, out, &detailError))
+        return true;
+    return detail::SetError(error, detail::ErrorText(detailError));
+}
+
+template <class T>
+bool TryToObject(const std::vector<uint8_t>& bytes, T* out, std::string* error = nullptr)
+{
+    return TryToObject(bytes.data(), bytes.size(), out, error);
+}
+
+/// Bytes to object. Throws CParseError on failure (catch it in the same module).
 template <class T>
 T ToObject(const uint8_t* src, size_t size)
 {
     T object;
     Error error;
-    if (!TryToObject(src, size, &object, &error))
+    if (!detail::Decode(src, size, &object, &error))
         throw CParseError(error);
     return object;
 }
@@ -1453,4 +1571,4 @@ T ToObject(const std::vector<uint8_t>& bytes)
 
 }  // namespace protaco
 
-#endif  // PROTACO_RUNTIME_0_5_0
+#endif  // PROTACO_RUNTIME_0_6_0

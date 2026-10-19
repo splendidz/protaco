@@ -1,4 +1,4 @@
-﻿// D1.g.h. protacoc 0.5.0, source D1.yaml (sha1 3d397ff46a35). Do not edit.
+﻿// D1.g.h. protacoc 0.6.0, source D1.yaml (sha1 3d397ff46a35). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -48,7 +48,7 @@ public:
         return d_;
     }
 
-    D0& get_mutable_d()
+    D0& mutable_d()
     {
         cache_.exposed = true;
         return d_;
@@ -83,7 +83,7 @@ public:
     }
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
-    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
+    /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {

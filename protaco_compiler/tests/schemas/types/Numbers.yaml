@@ -1,0 +1,12 @@
+# Unsigned integers at their limits and UTF-8 strings.
+message: Numbers
+version: 1
+namespace: types
+fields:
+  - {key: u32, type: uint, default: 4000000000}
+  - {key: u64, type: uint64, default: 18446744073709551615}
+  - {key: i64, type: int64, default: -9000000000}
+  - {key: us, type: list<uint>}
+  - {key: u64s, type: list<uint64>}
+  - {key: name, type: string(16), default: ""}
+  - {key: text, type: string}

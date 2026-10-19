@@ -203,7 +203,7 @@ namespace Protacoc
                 TypeRef element = type.Element;
                 if (element.Kind == TypeKind.Bool || element.Kind == TypeKind.FixedString)
                 {
-                    diag.Error(field.Pos, Codes.BadElement, "list<" + element + "> is not supported. Allowed elements: int, int64, double, string, bytes, message");
+                    diag.Error(field.Pos, Codes.BadElement, "list<" + element + "> is not supported. Allowed elements: int, int64, uint, uint64, double, string, bytes, message");
                     return;
                 }
                 ResolveType(element, field, byName, diag, true);
@@ -238,6 +238,14 @@ namespace Protacoc
                 case TypeKind.Int64:
                     long i64;
                     ok = !field.DefaultQuoted && Loader.IsIntText(text) && long.TryParse(text, out i64) && i64 != long.MinValue;
+                    break;
+                case TypeKind.UInt:
+                    uint u32;
+                    ok = !field.DefaultQuoted && Loader.IsIntText(text) && !text.StartsWith("-") && uint.TryParse(text, out u32);
+                    break;
+                case TypeKind.UInt64:
+                    ulong u64;
+                    ok = !field.DefaultQuoted && Loader.IsIntText(text) && !text.StartsWith("-") && ulong.TryParse(text, out u64);
                     break;
                 case TypeKind.Double:
                     // Only forms usable verbatim as C++ and C# literals (no Infinity or NaN, no overflow to infinity).

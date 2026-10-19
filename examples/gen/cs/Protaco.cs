@@ -1,5 +1,6 @@
 ﻿// Protaco.cs. C# runtime for protacoc generated code (*.g.cs). .NET Framework 4.6.1, C# 7.3.
-// Produces the same bytes as the C++ runtime (Protaco.hpp). Format v3: README.md "Serialization format".
+// Produces the same bytes as the C++ runtime (Protaco.hpp). Format v4: README.md "Serialization format".
+// Strings are UTF-8 on every platform. Try* calls report failure through the return value and an error string.
 // protacoc.exe writes this file next to the generated code, so generator and runtime versions always match.
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,8 @@ namespace Protaco
         Message = 6,
         List = 7,
         Bytes = 8,
+        UInt = 9,
+        UInt64 = 10,
     }
 
     /// <summary>Message envelope: request id, correlation id, time (us).</summary>
@@ -100,14 +103,15 @@ namespace Protaco
     /// <summary>Serialize and deserialize entry points.</summary>
     public static class Codec
     {
-        public const int FrameVersion = 3;
+        public const int FrameVersion = 4;
         public const int MaxDepth = 8;
         public const int MaxSchemaVersions = 255;
         public const int MaxFields = 1024;
-        public const int MaxFrameBytes = 1048575;
+        // The format allows 4 GiB - 1; a .NET byte array holds at most this many bytes.
+        public const int MaxFrameBytes = 0x7FFFFFC7;
 
-        // String bytes use the system ANSI code page, same bytes as a C++ std::string.
-        internal static readonly Encoding Text = Encoding.Default;
+        // String bytes are UTF-8 on every platform. Invalid UTF-8 from a peer decodes to U+FFFD.
+        internal static readonly Encoding Text = new UTF8Encoding(false);
 
         public static byte[] Serialize(IMessage message, Envelope env)
         {
@@ -203,6 +207,10 @@ namespace Protaco
                     return "int";
                 case TacoType.Int64:
                     return "int64";
+                case TacoType.UInt:
+                    return "uint";
+                case TacoType.UInt64:
+                    return "uint64";
                 case TacoType.Double:
                     return "double";
                 case TacoType.String:
@@ -218,8 +226,8 @@ namespace Protaco
             }
         }
 
-        /// <summary>Bytes to object without exceptions.</summary>
-        public static bool TryToObject<T>(byte[] bytes, out T message, out ProtacoException error) where T : IMessage, new()
+        /// <summary>Bytes to object without exceptions. On failure message is default and error is "path: reason".</summary>
+        public static bool TryToObject<T>(byte[] bytes, out T message, out string error) where T : IMessage, new()
         {
             try
             {
@@ -230,29 +238,46 @@ namespace Protaco
             catch (ProtacoException e)
             {
                 message = default(T);
-                error = e;
+                error = e.Message;
+                return false;
+            }
+        }
+
+        public static bool TryToObject<T>(byte[] bytes, out T message) where T : IMessage, new()
+        {
+            string error;
+            return TryToObject(bytes, out message, out error);
+        }
+
+        /// <summary>Frame header only, without the body (for dispatch).</summary>
+        public static bool PeekHeader(byte[] bytes, out Header header, out string error)
+        {
+            try
+            {
+                header = ReadHeader(bytes);
+                error = null;
+                return true;
+            }
+            catch (ProtacoException e)
+            {
+                header = null;
+                error = e.Message;
                 return false;
             }
         }
 
         public static bool PeekHeader(byte[] bytes, out Header header)
         {
-            try
-            {
-                header = ReadHeader(bytes);
-                return true;
-            }
-            catch (ProtacoException)
-            {
-                header = null;
-                return false;
-            }
+            string error;
+            return PeekHeader(bytes, out header, out error);
         }
 
+        /// <summary>Fixed-length string setters call this. Same bytes limit as C++ (UTF-8 byte count).</summary>
         public static void CheckChars(string value, int capacity, string key)
         {
-            if (Text.GetByteCount(value ?? "") > capacity)
-                throw new ArgumentException(key + ": longer than fixed length " + capacity + " bytes");
+            int length = Text.GetByteCount(value ?? "");
+            if (length > capacity)
+                throw new ArgumentException(key + ": " + length + " bytes, longer than string(" + capacity + ")");
         }
 
         private static Header ReadHeader(byte[] bytes)
@@ -346,6 +371,16 @@ namespace Protaco
             Put(offset, BitConverter.GetBytes(value));
         }
 
+        public void UInt(int offset, uint value)
+        {
+            Put(offset, BitConverter.GetBytes(value));
+        }
+
+        public void UInt64(int offset, ulong value)
+        {
+            Put(offset, BitConverter.GetBytes(value));
+        }
+
         public void Double(int offset, double value)
         {
             Put(offset, BitConverter.GetBytes(value));
@@ -390,6 +425,16 @@ namespace Protaco
         public long Int64(int offset)
         {
             return BitConverter.ToInt64(src_, start_ + offset);
+        }
+
+        public uint UInt(int offset)
+        {
+            return BitConverter.ToUInt32(src_, start_ + offset);
+        }
+
+        public ulong UInt64(int offset)
+        {
+            return BitConverter.ToUInt64(src_, start_ + offset);
         }
 
         public double Double(int offset)
@@ -440,6 +485,16 @@ namespace Protaco
         public void ListInt64(string key, List<long> list)
         {
             WriteList(key, TacoType.Int64, list, item => writer_.Write(item));
+        }
+
+        public void ListUInt(string key, List<uint> list)
+        {
+            WriteList(key, TacoType.UInt, list, item => writer_.Write(item));
+        }
+
+        public void ListUInt64(string key, List<ulong> list)
+        {
+            WriteList(key, TacoType.UInt64, list, item => writer_.Write(item));
         }
 
         public void ListDouble(string key, List<double> list)
@@ -576,6 +631,16 @@ namespace Protaco
         public List<long> ListInt64(string key, bool required, List<long> fallback)
         {
             return ReadList(key, required, fallback, TacoType.Int64, (offset, length) => BitConverter.ToInt64(src_, CheckSize(offset, length, 8)));
+        }
+
+        public List<uint> ListUInt(string key, bool required, List<uint> fallback)
+        {
+            return ReadList(key, required, fallback, TacoType.UInt, (offset, length) => BitConverter.ToUInt32(src_, CheckSize(offset, length, 4)));
+        }
+
+        public List<ulong> ListUInt64(string key, bool required, List<ulong> fallback)
+        {
+            return ReadList(key, required, fallback, TacoType.UInt64, (offset, length) => BitConverter.ToUInt64(src_, CheckSize(offset, length, 8)));
         }
 
         public List<double> ListDouble(string key, bool required, List<double> fallback)
@@ -746,76 +811,164 @@ namespace Protaco
             }
         }
 
-        public bool SetBool(string key, bool value)
+        /// <summary>Value types: bool, int, long, uint, ulong, double, string, byte[]. Returns false if the key is rejected
+        /// (empty, longer than 255 bytes, starting with '_', or a field of the message) or the type is not supported.</summary>
+        public bool SetValue<T>(string key, T value)
         {
-            return Put(key, TacoType.Bool, new[] { (byte)(value ? 1 : 0) });
+            string error;
+            return SetValue(key, value, out error);
         }
 
-        public bool SetInt(string key, int value)
+        public bool SetValue<T>(string key, T value, out string error)
         {
-            return Put(key, TacoType.Int, BitConverter.GetBytes(value));
+            TacoType type;
+            byte[] bytes;
+            if (!Encode(value, out type, out bytes, out error))
+                return false;
+            return Put(key, type, bytes, out error);
         }
 
-        public bool SetInt64(string key, long value)
+        /// <summary>Returns false (value is default) if the key is missing or holds another type.</summary>
+        public bool TryGetValue<T>(string key, out T value)
         {
-            return Put(key, TacoType.Int64, BitConverter.GetBytes(value));
+            string error;
+            return TryGetValue(key, out value, out error);
         }
 
-        public bool SetDouble(string key, double value)
+        public bool TryGetValue<T>(string key, out T value, out string error)
         {
-            return Put(key, TacoType.Double, BitConverter.GetBytes(value));
+            value = default(T);
+            TacoType wanted;
+            int size;
+            if (!KindOf(typeof(T), out wanted, out size))
+            {
+                error = "unsupported ext value type " + typeof(T).Name;
+                return false;
+            }
+            int index = IndexOf(key);
+            if (index < 0)
+            {
+                error = "ext key not found: " + key;
+                return false;
+            }
+            Entry entry = entries_[index];
+            if (entry.Type != wanted)
+            {
+                error = "ext key " + key + " holds " + Codec.TypeName(entry.Type) + ", not " + Codec.TypeName(wanted);
+                return false;
+            }
+            if (size >= 0 && entry.Value.Length != size)
+            {
+                error = "ext key " + key + " has a bad " + Codec.TypeName(wanted) + " value";
+                return false;
+            }
+            value = (T)Decode(wanted, entry.Value);
+            error = null;
+            return true;
         }
 
-        public bool SetString(string key, string value)
+        private static bool KindOf(Type type, out TacoType kind, out int size)
         {
-            return Put(key, TacoType.String, Codec.Text.GetBytes(value ?? ""));
+            size = -1;
+            kind = TacoType.Bool;
+            if (type == typeof(bool))
+                size = 1;
+            else if (type == typeof(int))
+            {
+                kind = TacoType.Int;
+                size = 4;
+            }
+            else if (type == typeof(long))
+            {
+                kind = TacoType.Int64;
+                size = 8;
+            }
+            else if (type == typeof(uint))
+            {
+                kind = TacoType.UInt;
+                size = 4;
+            }
+            else if (type == typeof(ulong))
+            {
+                kind = TacoType.UInt64;
+                size = 8;
+            }
+            else if (type == typeof(double))
+            {
+                kind = TacoType.Double;
+                size = 8;
+            }
+            else if (type == typeof(string))
+                kind = TacoType.String;
+            else if (type == typeof(byte[]))
+                kind = TacoType.Bytes;
+            else
+                return false;
+            return true;
         }
 
-        public bool SetBytes(string key, byte[] value)
+        private static bool Encode<T>(T value, out TacoType type, out byte[] bytes, out string error)
         {
-            return Put(key, TacoType.Bytes, (byte[])(value ?? new byte[0]).Clone());
+            int size;
+            bytes = null;
+            if (!KindOf(typeof(T), out type, out size))
+            {
+                error = "unsupported ext value type " + typeof(T).Name;
+                return false;
+            }
+            object boxed = value;
+            switch (type)
+            {
+                case TacoType.Bool:
+                    bytes = new[] { (byte)((bool)boxed ? 1 : 0) };
+                    break;
+                case TacoType.Int:
+                    bytes = BitConverter.GetBytes((int)boxed);
+                    break;
+                case TacoType.Int64:
+                    bytes = BitConverter.GetBytes((long)boxed);
+                    break;
+                case TacoType.UInt:
+                    bytes = BitConverter.GetBytes((uint)boxed);
+                    break;
+                case TacoType.UInt64:
+                    bytes = BitConverter.GetBytes((ulong)boxed);
+                    break;
+                case TacoType.Double:
+                    bytes = BitConverter.GetBytes((double)boxed);
+                    break;
+                case TacoType.String:
+                    bytes = Codec.Text.GetBytes((string)boxed ?? "");
+                    break;
+                default:
+                    bytes = (byte[])((byte[])boxed ?? new byte[0]).Clone();
+                    break;
+            }
+            error = null;
+            return true;
         }
 
-        public bool TryGetBool(string key, out bool value)
+        private static object Decode(TacoType type, byte[] value)
         {
-            Entry entry = Find(key, TacoType.Bool, 1);
-            value = entry != null && entry.Value[0] != 0;
-            return entry != null;
-        }
-
-        public bool TryGetInt(string key, out int value)
-        {
-            Entry entry = Find(key, TacoType.Int, 4);
-            value = entry == null ? 0 : BitConverter.ToInt32(entry.Value, 0);
-            return entry != null;
-        }
-
-        public bool TryGetInt64(string key, out long value)
-        {
-            Entry entry = Find(key, TacoType.Int64, 8);
-            value = entry == null ? 0 : BitConverter.ToInt64(entry.Value, 0);
-            return entry != null;
-        }
-
-        public bool TryGetDouble(string key, out double value)
-        {
-            Entry entry = Find(key, TacoType.Double, 8);
-            value = entry == null ? 0 : BitConverter.ToDouble(entry.Value, 0);
-            return entry != null;
-        }
-
-        public bool TryGetString(string key, out string value)
-        {
-            Entry entry = Find(key, TacoType.String, -1);
-            value = entry == null ? null : Codec.Text.GetString(entry.Value);
-            return entry != null;
-        }
-
-        public bool TryGetBytes(string key, out byte[] value)
-        {
-            Entry entry = Find(key, TacoType.Bytes, -1);
-            value = entry == null ? null : (byte[])entry.Value.Clone();
-            return entry != null;
+            switch (type)
+            {
+                case TacoType.Bool:
+                    return value[0] != 0;
+                case TacoType.Int:
+                    return BitConverter.ToInt32(value, 0);
+                case TacoType.Int64:
+                    return BitConverter.ToInt64(value, 0);
+                case TacoType.UInt:
+                    return BitConverter.ToUInt32(value, 0);
+                case TacoType.UInt64:
+                    return BitConverter.ToUInt64(value, 0);
+                case TacoType.Double:
+                    return BitConverter.ToDouble(value, 0);
+                case TacoType.String:
+                    return Codec.Text.GetString(value);
+                default:
+                    return value.Clone();
+            }
         }
 
         public bool Has(string key)
@@ -863,22 +1016,18 @@ namespace Protaco
             return -1;
         }
 
-        private Entry Find(string key, TacoType type, int length)
+        private bool Put(string key, TacoType type, byte[] value, out string error)
         {
-            int index = IndexOf(key);
-            if (index < 0)
-                return null;
-            Entry entry = entries_[index];
-            if (entry.Type != type || (length >= 0 && entry.Value.Length != length))
-                return null;
-            return entry;
-        }
-
-        private bool Put(string key, TacoType type, byte[] value)
-        {
-            if (string.IsNullOrEmpty(key) || Codec.Text.GetByteCount(key) > 255 || key[0] == '_')
-                return false;
-            if (isSchemaKey_ != null && isSchemaKey_(key))
+            error = null;
+            if (string.IsNullOrEmpty(key))
+                error = "ext key is empty";
+            else if (Codec.Text.GetByteCount(key) > 255)
+                error = "ext key is longer than 255 bytes: " + key.Substring(0, Math.Min(32, key.Length)) + "...";
+            else if (key[0] == '_')
+                error = "ext key starts with '_' (reserved): " + key;
+            else if (isSchemaKey_ != null && isSchemaKey_(key))
+                error = "ext key is a field of the message: " + key;
+            if (error != null)
                 return false;
             int index = IndexOf(key);
             if (index >= 0)
@@ -954,6 +1103,18 @@ namespace Protaco
             Value(value);
         }
 
+        public void Field(string key, uint value)
+        {
+            Key(key);
+            Value(value);
+        }
+
+        public void Field(string key, ulong value)
+        {
+            Key(key);
+            Value(value);
+        }
+
         public void Field(string key, double value)
         {
             Key(key);
@@ -985,6 +1146,18 @@ namespace Protaco
         }
 
         public void Field(string key, List<long> value)
+        {
+            Key(key);
+            Items(value, Value);
+        }
+
+        public void Field(string key, List<uint> value)
+        {
+            Key(key);
+            Items(value, Value);
+        }
+
+        public void Field(string key, List<ulong> value)
         {
             Key(key);
             Items(value, Value);
@@ -1082,6 +1255,16 @@ namespace Protaco
             out_.Append(value.ToString(CultureInfo.InvariantCulture));
         }
 
+        private void Value(uint value)
+        {
+            out_.Append(value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        private void Value(ulong value)
+        {
+            out_.Append(value.ToString(CultureInfo.InvariantCulture));
+        }
+
         // Same digits as C++ "%.15g".
         private void Value(double value)
         {
@@ -1135,12 +1318,20 @@ namespace Protaco
                 case TacoType.Int64 when value.Length == 8:
                     Value(BitConverter.ToInt64(value, 0));
                     return;
+                case TacoType.UInt when value.Length == 4:
+                    Value(BitConverter.ToUInt32(value, 0));
+                    return;
+                case TacoType.UInt64 when value.Length == 8:
+                    Value(BitConverter.ToUInt64(value, 0));
+                    return;
                 case TacoType.Double when value.Length == 8:
                     Value(BitConverter.ToDouble(value, 0));
                     return;
                 case TacoType.Bool:
                 case TacoType.Int:
                 case TacoType.Int64:
+                case TacoType.UInt:
+                case TacoType.UInt64:
                 case TacoType.Double:
                     out_.Append("<bad value>");
                     return;

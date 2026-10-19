@@ -35,6 +35,9 @@
     <Filter Include="gen\cpp\partial">
       <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gen\cpp\types">
+      <UniqueIdentifier>{000ADF0C-DB51-5CD7-91DE-913902BB8446}</UniqueIdentifier>
+    </Filter>
     <Filter Include="gen\cpp\ver_v1">
       <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
     </Filter>
@@ -100,6 +103,9 @@
     </Filter>
     <Filter Include="schemas\toodeep">
       <UniqueIdentifier>{3F5E8D07-8850-5090-A7F1-9604915FD81C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\types">
+      <UniqueIdentifier>{AC157CDA-83A4-5311-BFBC-1DD73A1EC8E6}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas\ver_v1">
       <UniqueIdentifier>{97C30856-1694-5DD2-84EC-B1AE16A75412}</UniqueIdentifier>
@@ -209,6 +215,9 @@
     </ClInclude>
     <ClInclude Include="..\gen\cpp\partial\Topping.g.h">
       <Filter>gen\cpp\partial</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\types\Numbers.g.h">
+      <Filter>gen\cpp\types</Filter>
     </ClInclude>
     <ClInclude Include="..\gen\cpp\ver_v1\Recipe.g.h">
       <Filter>gen\cpp\ver_v1</Filter>
@@ -365,6 +374,9 @@
     <None Include="..\schemas\errors\PC308_octal.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC308_uint.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC310_length.yaml">
       <Filter>schemas\errors</Filter>
     </None>
@@ -445,6 +457,9 @@
     </None>
     <None Include="..\schemas\toodeep\T9.yaml">
       <Filter>schemas\toodeep</Filter>
+    </None>
+    <None Include="..\schemas\types\Numbers.yaml">
+      <Filter>schemas\types</Filter>
     </None>
     <None Include="..\schemas\ver_v1\Recipe.yaml">
       <Filter>schemas\ver_v1</Filter>

@@ -47,6 +47,7 @@ namespace Protacoc.Tests
             Run("C#: fixed-length string overflow is rejected", FixedStringOverflow);
             Run("C#: ext key rules", ExtRules);
             Run("C#: ToString matches C++", ToStringMatchesCpp);
+            Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
             Console.WriteLine();
             Console.WriteLine("passed " + passed_ + " / failed " + failures_.Count);
             foreach (string failure in failures_)
@@ -254,7 +255,7 @@ namespace Protacoc.Tests
             DeliveryRoute route = new DeliveryRoute { Rider = "rider-7", Note = "closest-first" };
             route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St", EtaMin = 10 });
             route.Stops.Add(new RouteStop { OrderId = "A-101", Address = "2 Pasta Ave", EtaMin = 25 });
-            route.Ext.SetInt("priority", 5);
+            route.Ext.SetValue("priority", 5);
             return route;
         }
 
@@ -287,6 +288,40 @@ namespace Protacoc.Tests
         private static Heartbeat MakeHeartbeat()
         {
             return new Heartbeat { Node = "oven-1", Seq = 123456789, CpuLoad = 0.25, UptimeSec = 3600 };
+        }
+
+        // Same values as the C++ test MakeNumbers.
+        private static types.Numbers MakeNumbers()
+        {
+            types.Numbers numbers = new types.Numbers { U32 = 0, Name = "\uD55C\uAE00 \u2713", Text = "caf\u00E9 \u5BFF\u53F8" };
+            numbers.Us.AddRange(new uint[] { 0, 1, 4294967295 });
+            numbers.U64s.Add(18446744073709551615);
+            return numbers;
+        }
+
+        private static void UnsignedTypesAndUtf8()
+        {
+            types.Numbers defaults = new types.Numbers();
+            Equal(4000000000u, defaults.U32, "u32 default");
+            Equal(18446744073709551615ul, defaults.U64, "u64 default");
+            Equal(-9000000000L, defaults.I64, "i64 default");
+            byte[] bytes = MakeNumbers().Serialize();
+            Check(bytes.SequenceEqual(Golden("Numbers.bin")), "same bytes as C++");
+            types.Numbers got = Protaco.Codec.ToObject<types.Numbers>(Golden("Numbers.bin"));
+            Equal("\uD55C\uAE00 \u2713", got.Name, "name");
+            Equal(4294967295u, got.Us[2], "us[2]");
+            Equal("Numbers{u32=0, u64=18446744073709551615, i64=-9000000000, us=[0, 1, 4294967295], u64s=[18446744073709551615], "
+                + "name=\"\uD55C\uAE00 \u2713\", text=\"caf\u00E9 \u5BFF\u53F8\"}", got.ToString(), "text");
+            try
+            {
+                got.Name = new string('x', 17);
+            }
+            catch (ArgumentException e)
+            {
+                Equal("name: 17 bytes, longer than string(16)", e.Message, "fixed string error");
+                return;
+            }
+            throw new Exception("17 bytes accepted");
         }
 
         // Same values as the C++ test MakeDeliveryProof.
@@ -329,12 +364,22 @@ namespace Protacoc.Tests
             return result;
         }
 
+        // Decoding must fail. TryToObject reports "path: reason"; ToObject throws the same failure split into Path and What.
         private static Protaco.ProtacoException Fails<T>(byte[] bytes) where T : Protaco.IMessage, new()
         {
             T got;
-            Protaco.ProtacoException error;
-            Check(!Protaco.Codec.TryToObject(bytes, out got, out error), typeof(T).FullName + " accepted");
-            return error;
+            string text;
+            Check(!Protaco.Codec.TryToObject(bytes, out got, out text), typeof(T).FullName + " accepted");
+            try
+            {
+                Protaco.Codec.ToObject<T>(bytes);
+            }
+            catch (Protaco.ProtacoException e)
+            {
+                Equal(text, e.Message, "TryToObject error text");
+                return e;
+            }
+            throw new Exception(typeof(T).FullName + " accepted by ToObject");
         }
 
         private static void RoundTrip()
@@ -346,7 +391,7 @@ namespace Protacoc.Tests
             Equal("1 Pizza St", got.Stops[0].Address, "stops[0].address");
             Equal("closest-first", got.Note, "note");
             int priority;
-            Check(got.Ext.TryGetInt("priority", out priority) && priority == 5, "ext priority");
+            Check(got.Ext.TryGetValue("priority", out priority) && priority == 5, "ext priority");
             Check(bytes.SequenceEqual(got.Serialize(RouteEnvelope())), "re-serialized bytes differ");
         }
 
@@ -372,9 +417,9 @@ namespace Protacoc.Tests
             Check(proof.Photo.SequenceEqual(MakeDeliveryProof().Photo), "photo bytes");
             Equal(3, proof.Signatures.Count, "signatures");
             Equal(0, proof.Signatures[1].Length, "signatures[1] empty");
-            proof.Ext.SetBytes("thumbnail", new byte[] { 0x00, 0xFF });
+            proof.Ext.SetValue("thumbnail", new byte[] { 0x00, 0xFF });
             byte[] thumbnail;
-            Check(Protaco.Codec.ToObject<DeliveryProof>(proof.Serialize()).Ext.TryGetBytes("thumbnail", out thumbnail) && thumbnail.SequenceEqual(new byte[] { 0x00, 0xFF }), "ext bytes");
+            Check(Protaco.Codec.ToObject<DeliveryProof>(proof.Serialize()).Ext.TryGetValue("thumbnail", out thumbnail) && thumbnail.SequenceEqual(new byte[] { 0x00, 0xFF }), "ext bytes");
         }
 
         private static void VersionMismatch()
@@ -455,7 +500,7 @@ namespace Protacoc.Tests
             Equal("unknown key (allow_extension false)", error.What, "what");
             DeliveryRoute open = Protaco.Codec.ToObject<DeliveryRoute>(WithExtraTlv(MakeDeliveryRoute().Serialize(), "abc", 7));
             int value;
-            Check(open.Ext.TryGetInt("abc", out value) && value == 7, "open message lost the key");
+            Check(open.Ext.TryGetValue("abc", out value) && value == 7, "open message lost the key");
         }
 
         private static void Errors()
@@ -491,8 +536,8 @@ namespace Protacoc.Tests
             for (int length = 0; length < bytes.Length; ++length)
             {
                 PizzaOrder got;
-                Protaco.ProtacoException error;
-                Check(!Protaco.Codec.TryToObject(bytes.Take(length).ToArray(), out got, out error), "accepted at length " + length);
+                string error;
+                Check(!Protaco.Codec.TryToObject(bytes.Take(length).ToArray(), out got, out error) && !string.IsNullOrEmpty(error), "accepted at length " + length);
             }
         }
 
@@ -514,9 +559,19 @@ namespace Protacoc.Tests
         private static void ExtRules()
         {
             DeliveryRoute route = new DeliveryRoute();
-            Check(!route.Ext.SetInt("rider", 1), "schema key accepted");
-            Check(!route.Ext.SetInt("_x", 1), "reserved key accepted");
-            Check(route.Ext.SetString("channel", "web"), "plain key rejected");
+            string error;
+            Check(!route.Ext.SetValue("rider", 1, out error), "schema key accepted");
+            Equal("ext key is a field of the message: rider", error, "schema key error");
+            Check(!route.Ext.SetValue("_x", 1, out error), "reserved key accepted");
+            Equal("ext key starts with '_' (reserved): _x", error, "reserved key error");
+            Check(route.Ext.SetValue("channel", "web"), "plain key rejected");
+            int wrongType = 7;
+            Check(!route.Ext.TryGetValue("channel", out wrongType, out error), "string read as int");
+            Equal("ext key channel holds string, not int", error, "type error");
+            Equal(0, wrongType, "value on failure");
+            string missing;
+            Check(!route.Ext.TryGetValue("missing", out missing, out error), "missing key found");
+            Equal("ext key not found: missing", error, "missing key error");
         }
 
         // Same strings as ProtacoTest.cpp ToString* tests.
@@ -550,12 +605,12 @@ namespace Protacoc.Tests
             Protaco.TextStyle style = new Protaco.TextStyle { Separator = "; ", Open = "(", Close = ")", MaxText = 4 };
             Equal("RouteStop(orderId=\"a\\\"b\\\\\"...(+2); address=\"Main\"; etaMin=3)", new RouteStop { OrderId = "a\"b\\c\n", Address = "Main", EtaMin = 3 }.ToString(style), "style");
             DeliveryRoute route = new DeliveryRoute { Rider = "rider-7" };
-            route.Ext.SetInt("priority", 5);
-            route.Ext.SetString("channel", "web");
-            route.Ext.SetBool("hot", true);
-            route.Ext.SetDouble("ratio", 0.5);
-            route.Ext.SetInt64("big", 1234567890123);
-            route.Ext.SetBytes("blob", new byte[] { 0x00, 0xFF });
+            route.Ext.SetValue("priority", 5);
+            route.Ext.SetValue("channel", "web");
+            route.Ext.SetValue("hot", true);
+            route.Ext.SetValue("ratio", 0.5);
+            route.Ext.SetValue("big", 1234567890123L);
+            route.Ext.SetValue("blob", new byte[] { 0x00, 0xFF });
             Equal("DeliveryRoute{rider=\"rider-7\", stops=[], note=\"\", "
                 + "ext{priority=5, channel=\"web\", hot=true, ratio=0.5, big=1234567890123, blob=<2 bytes: 00 FF>}}", route.ToString(), "ext kinds");
         }

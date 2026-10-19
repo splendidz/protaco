@@ -1,4 +1,4 @@
-﻿// RouteStop.g.h. protacoc 0.5.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
+﻿// RouteStop.g.h. protacoc 0.6.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -52,10 +52,10 @@ public:
         return protaco::detail::LoadChars(buf_.data() + kFixedOffset + 0, 16);
     }
 
-    /// Returns false and keeps the old value if longer than 16 bytes.
-    bool set_orderId(const std::string& value)
+    /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
+    bool set_orderId(const std::string& value, std::string* error = nullptr)
     {
-        return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 16, value);
+        return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 16, value, "orderId", error);
     }
 
     /// street address
@@ -65,10 +65,10 @@ public:
         return protaco::detail::LoadChars(buf_.data() + kFixedOffset + 16, 48);
     }
 
-    /// Returns false and keeps the old value if longer than 48 bytes.
-    bool set_address(const std::string& value)
+    /// Returns false, keeps the old value and writes the reason to error if longer than 48 bytes.
+    bool set_address(const std::string& value, std::string* error = nullptr)
     {
-        return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 16, 48, value);
+        return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 16, 48, value, "address", error);
     }
 
     /// minutes until arrival
@@ -107,7 +107,7 @@ public:
 
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Fixed fields only. With an empty ext, serializing costs nothing.
-    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
+    /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
     const std::vector<uint8_t>& Serialize() const
     {

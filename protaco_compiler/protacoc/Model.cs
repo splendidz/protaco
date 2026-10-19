@@ -1,4 +1,4 @@
-﻿// Model.cs. Message definitions read from yaml. Shared by all generator stages.
+// Model.cs. Message definitions read from yaml. Shared by all generator stages.
 using System.Collections.Generic;
 
 namespace Protacoc
@@ -8,6 +8,8 @@ namespace Protacoc
         Bool,
         Int,
         Int64,
+        UInt,
+        UInt64,
         Double,
         String,
         FixedString,
@@ -29,8 +31,8 @@ namespace Protacoc
         {
             get
             {
-                return Kind == TypeKind.Bool || Kind == TypeKind.Int || Kind == TypeKind.Int64
-                    || Kind == TypeKind.Double || Kind == TypeKind.FixedString;
+                return Kind == TypeKind.Bool || Kind == TypeKind.Int || Kind == TypeKind.Int64 || Kind == TypeKind.UInt
+                    || Kind == TypeKind.UInt64 || Kind == TypeKind.Double || Kind == TypeKind.FixedString;
             }
         }
 
@@ -43,8 +45,10 @@ namespace Protacoc
                     case TypeKind.Bool:
                         return 1;
                     case TypeKind.Int:
+                    case TypeKind.UInt:
                         return 4;
                     case TypeKind.Int64:
+                    case TypeKind.UInt64:
                     case TypeKind.Double:
                         return 8;
                     case TypeKind.FixedString:
@@ -65,6 +69,10 @@ namespace Protacoc
                     return "int";
                 case TypeKind.Int64:
                     return "int64";
+                case TypeKind.UInt:
+                    return "uint";
+                case TypeKind.UInt64:
+                    return "uint64";
                 case TypeKind.Double:
                     return "double";
                 case TypeKind.String:

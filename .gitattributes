@@ -2,4 +2,6 @@
 *.bin binary
 # Generated files stay byte-for-byte as protacoc writes them (UTF-8 BOM + CRLF). The --check test compares bytes.
 examples/gen/** -text
-tests/gen/** -text
+protaco_compiler/tests/gen/** -text
+*.cmd text eol=crlf
+*.sh text eol=lf
