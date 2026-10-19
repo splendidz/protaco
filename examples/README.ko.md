@@ -1,8 +1,8 @@
+# Protaco 예제
+
 [English](README.md) · [README](../README.ko.md) · [상세 참조](../docs/reference.ko.md)
 
-# 🌮 Protaco 예제
-
-이 폴더에는 protacoc 0.5.0의 YAML 스키마, 실제 생성 코드, 이를 사용하는 C++ 프로그램이 있습니다. C# 생성 소스는 C# 시험 프로젝트에서 함께 컴파일합니다. 마지막 장은 `Order`의 개정 이력으로 버전 관리 방법을 설명합니다.
+이 폴더에는 protaco 0.6.0의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
 
 ## 목차
 
@@ -17,63 +17,102 @@
 
 ```text
 examples/
-  schemas/             YAML 스키마, namespace demo
-  gen/cpp/             생성 C++ 헤더와 Protaco.hpp
-  gen/cs/              생성 C# 소스와 Protaco.cs
-  cpp/main.cpp         생성 클래스를 사용하는 C++ 프로그램
-  cpp/example.vcxproj  include 경로와 Pre-Build Event 설정
+  schemas/
+  gen/
+    cpp/                  *.g.h, *.enum.h, Protaco.hpp
+    cs/                   *.g.cs, *.enum.cs, Protaco.cs
+    py/
+      protaco.py
+      demo/               *_g.py, *_enum.py
+  cpp/
+    main.cpp
+    example.vcxproj
+    example.vcxproj.filters
+  cs/
+    Program.cs
+    example_cs.csproj
+    example_cs.net.csproj
+  py/
+    main.py
+  examples.sln
 ```
 
-생성 파일을 저장소에서 바로 읽을 수 있습니다. `build.cmd`가 재생성하며, C# 시험의 `--check` 검사가 생성 결과의 최신 여부를 확인합니다. [C# 시험 프로젝트](../protaco_compiler/tests/cs/protacoc.Tests.csproj)는 사용자 프로젝트처럼 `gen/cs` 소스를 컴파일합니다.
+`schemas/`의 namespace는 `demo`입니다. 생성 파일에는 각 언어의 런타임도 들어 있습니다. [examples.sln](examples.sln)은 C++과 .NET Framework C# 예제를 묶습니다. .NET 8 C# 프로젝트와 Python 프로그램은 별도로 실행합니다. 루트의 빌드 스크립트는 세 언어 코드를 다시 생성한 뒤 예제를 빌드하고 실행합니다.
 
 ## 2. 빌드와 실행
 
-저장소 루트에서 실행합니다.
+### Windows
+
+저장소 루트에서 실행합니다. Windows는 Visual Studio 2017 이상과 v141 C++ 도구, .NET Framework 4.6.1, Python 3.8 이상이 필요합니다. [build.cmd](../build.cmd)의 전체 6단계 중 2단계에서 예제 코드를 생성하고 6단계에서 세 언어 예제를 빌드·실행합니다.
+
+**Windows cmd**
 
 ```bat
 build.cmd
 ```
 
-다섯 번째 단계에서 예제를 빌드하고 실행합니다. 수동 실행은 다음과 같습니다.
+수동으로 실행할 때는 MSBuild가 경로에 있는 Visual Studio 개발자 명령 프롬프트를 사용합니다.
+
+**Windows cmd**
 
 ```bat
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs
-msbuild examples\cpp\example.vcxproj /p:Configuration=Release /p:Platform=x64
-build\bin\Release\protaco_example.exe
+msbuild protaco_compiler\protacoc\protacoc.csproj /p:Configuration=Release
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py
+msbuild examples\examples.sln /p:Configuration=Release /p:Platform=x64
+bin\Release\protaco_example.exe
+bin\Release\protaco_example_cs.exe
+python examples\py\main.py
 ```
 
-[example.vcxproj](cpp/example.vcxproj)는 `examples\gen\cpp`만 include 경로에 추가합니다. `bin\Release\protacoc.exe`가 있으면 Pre-Build Event에서 스키마를 다시 생성합니다. 별도 런타임 라이브러리는 링크하지 않습니다.
+[example.vcxproj](cpp/example.vcxproj)의 include 경로는 `$(ProjectDir)..\gen\cpp`입니다. Pre-Build Event는 `bin\Release\protacoc.exe`가 있으면 사용하고, 없으면 `bin\Debug\protacoc.exe`를 사용해 C++과 C# 코드를 생성합니다. Python 코드는 위의 `--py_out` 명령이나 전체 빌드 스크립트로 생성합니다. 프로젝트 설정은 v141 x64, C++17, `/W4 /WX`, `/utf-8`이며 별도 런타임 라이브러리를 링크하지 않습니다. 생성 헤더의 C++14 호환성은 [Cpp14Check.cpp](../protaco_compiler/tests/cpp/Cpp14Check.cpp)에서 검사합니다.
 
-```xml
-<AdditionalIncludeDirectories>$(ProjectDir)..\..\examples\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+### Linux
+
+Linux에서는 .NET SDK 8 이상, g++, Python 3.8 이상을 사용합니다. [build.sh](../build.sh)도 같은 6단계를 실행합니다.
+
+**sh**
+
+```sh
+sh build.sh
 ```
 
-프로젝트는 `/W4 /WX`, C++17로 빌드합니다. 생성 헤더의 C++14 호환성은 [Cpp14Check.cpp](../protaco_compiler/tests/cpp/Cpp14Check.cpp)에서도 확인합니다. 전체 빌드와 시험 설정은 [상세 참조](../docs/reference.ko.md#4-빌드와-시험)에 있습니다.
+예제만 수동으로 빌드·실행하는 명령입니다.
+
+**sh**
+
+```sh
+dotnet build protaco_compiler/protacoc/protacoc.net.csproj -c Release
+bin/Release/net8.0/protacoc -I examples/schemas --cpp_out examples/gen/cpp --cs_out examples/gen/cs --py_out examples/gen/py
+mkdir -p bin/Release
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -Iexamples/gen/cpp examples/cpp/main.cpp -o bin/Release/protaco_example
+bin/Release/protaco_example
+dotnet build examples/cs/example_cs.net.csproj -c Release
+bin/Release/net8.0/protaco_example_cs
+python3 examples/py/main.py
+```
+
+Windows 스크립트는 `MSBUILD`·`PYTHON`, Linux 스크립트는 `DOTNET`·`CXX`·`PYTHON` 환경 변수를 받습니다. .NET이 시스템 전체에 설치되어 있지 않으면 `DOTNET=~/.dotnet/dotnet sh build.sh`처럼 실행합니다. 수동 실행에서는 .NET 앱 호스트가 런타임을 찾을 수 있도록 `DOTNET_ROOT`도 설치 경로로 설정합니다.
 
 ## 3. 스키마
 
-| 스키마 | 보여 주는 기능 | 사용하는 곳 |
+| 스키마 | 보여 주는 기능 | 쓰는 곳 |
 |---|---|---|
-| [RouteStop](schemas/RouteStop.yaml) | 고정 문자열과 기본값 있는 정수 | `DeliveryRoute.stops`의 원소 |
-| [DeliveryRoute](schemas/DeliveryRoute.yaml) | 가변 문자열, required, 중첩 메시지 목록 | 송수신, 오류 처리, 로그 |
-| [Heartbeat](schemas/Heartbeat.yaml) | 모든 필드 고정, `allow_extension: false` | 고정 버퍼 직접 기록 |
+| [RouteStop](schemas/RouteStop.yaml) | 고정 문자열, 정수 기본값 | `DeliveryRoute.stops` 원소 |
+| [DeliveryRoute](schemas/DeliveryRoute.yaml) | 가변 문자열, required, 중첩 메시지 목록 | 송수신·오류·로그·봉투 |
+| [Heartbeat](schemas/Heartbeat.yaml) | 고정 필드, `allow_extension: false` | 고정 버퍼·View |
 | [PizzaOrder](schemas/PizzaOrder.yaml) | 기본값, 목록, 중첩 메시지 | 확장 데이터 |
-| [Topping](schemas/Topping.yaml) | 작은 고정 필드 메시지 | `PizzaOrder.toppings`의 원소 |
+| [Topping](schemas/Topping.yaml) | 작은 고정 필드 메시지 | `PizzaOrder.toppings` 원소 |
 | [Delivery](schemas/Delivery.yaml) | `list<int>`, `list<string>` | `PizzaOrder.delivery` |
-| [DeliveryProof](schemas/DeliveryProof.yaml) | `bytes`, `list<bytes>`, required bytes | 바이너리 전달 |
+| [DeliveryProof](schemas/DeliveryProof.yaml) | `bytes`, `list<bytes>`, required bytes | 바이너리 전달용 스키마 |
+| [PizzaSize.enum](schemas/PizzaSize.enum.yaml) | enum 값과 이름 | `Menu.defaultSize` |
+| [Menu](schemas/Menu.yaml) | enum, `map<string, double>`, 메시지 목록 | 매장 메뉴 |
+| [Category](schemas/Category.yaml) | `list<Category>` 자기 참조 | 메뉴의 하위 섹션 |
 
-```mermaid
-flowchart LR
-    R["DeliveryRoute"] -->|stops| S["RouteStop"]
-    P["PizzaOrder"] -->|toppings| T["Topping"]
-    P -->|delivery| D["Delivery"]
-```
+다음은 실제 스키마 발췌입니다. 맨 위 설명 주석은 생략했습니다. `Heartbeat`는 예제에서 피자 오븐 `oven-1`의 상태를 전달합니다.
 
-`Heartbeat.yaml`의 실제 정의입니다.
+**YAML · Heartbeat.yaml**
 
 ```yaml
-# Device liveness signal. Every field is fixed-length and ext is off, so Serialize() returns the buffer as is (zero cost).
-# Recommended shape for messages sent very often.
 message: Heartbeat
 version: 1
 namespace: demo
@@ -88,20 +127,59 @@ fields:
   - {key: uptimeSec, type: int, desc: uptime in seconds}
 ```
 
-`PizzaOrder`는 매장마다 사용하는 필드가 조금 다른 주문을 표현합니다. `woodFired`와 `deepDishCm`의 용도는 주석으로 설명합니다. 모든 필드는 같은 메시지 계약에 속하며 주석은 직렬화 동작을 바꾸지 않습니다.
+**YAML · Menu.yaml**
+
+```yaml
+message: Menu
+version: 1
+namespace: demo
+fields:
+  - {key: store, type: string(16), desc: store code}
+  - {key: defaultSize, type: PizzaSize, default: Large, desc: size when an order does not say}
+  # Map types contain ',', so they are quoted inside {...}.
+  - {key: prices, type: "map<string, double>", desc: price by dish name}
+  - {key: sections, type: list<Category>, desc: top-level sections}
+```
+
+**YAML · Category.yaml**
+
+```yaml
+message: Category
+version: 1
+namespace: demo
+fields:
+  - {key: name, type: string, desc: section name}
+  - {key: dishes, type: list<string>, desc: dish names}
+  - {key: subsections, type: list<Category>, desc: sections inside this one}
+```
+
+**YAML · PizzaSize.enum.yaml**
+
+```yaml
+enum: PizzaSize
+version: 1
+namespace: demo
+values:
+  - {key: Small, value: 1, desc: 10 inch}
+  - {key: Medium, value: 2, desc: 12 inch}
+  - {key: Large, value: 3, desc: 14 inch}
+```
+
+`map<K, V>`는 쉼표를 포함하므로 YAML의 `{...}` 안에서는 따옴표로 감쌉니다. `Category.subsections`는 자기 자신을 담는 목록입니다. `PizzaOrder`의 `woodFired`와 `deepDishCm`은 매장별 용도를 주석으로 설명하며, 주석은 직렬화 동작을 바꾸지 않습니다.
 
 ## 4. 프로그램 설명
 
-[cpp/main.cpp](cpp/main.cpp)는 송수신, 고정 필드, 확장 데이터, 오류 처리, 텍스트 출력을 차례로 실행합니다. 0.5.0 Release x64 실행 출력입니다.
+[C++](cpp/main.cpp)은 아래 8단계를 실행합니다. [C#](cs/Program.cs)은 고정 버퍼 단계가 없는 7단계이고, [Python](py/main.py)은 zero-copy 단계가 없는 7단계입니다. 다음은 C++의 실제 실행 출력입니다. 봉투 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
 
 ```text
 DeliveryRoute: 182 bytes
   rider=rider-7 first=A-100 at 1 Pizza St in 10 min, note=closest-first
 Heartbeat: received uptime=11, same buffer=yes
 PizzaOrder ext: secretSauce=yes please, schema key in ext=rejected
-decode failed: path='' what='message name mismatch: expected DeliveryRoute, got Heartbeat'
+decode failed: message name mismatch: expected DeliveryRoute, got Heartbeat
 DeliveryRoute{rider="rider-7", stops=[RouteStop{orderId="A-100", address="1 Pizza St", etaMin=15}], note="", ext{priority=5}}
 DeliveryRoute{
+  envelope{id=8, corr=0, ts=2026-10-20 03:07:13.940328},
   rider="rider-7",
   stops=[
     RouteStop{
@@ -115,9 +193,18 @@ DeliveryRoute{
     priority=5
   }
 }
+Menu: default size Large, margherita 9.5
+Menu{store="NAPOLI-1", defaultSize=Large(3), prices={"margherita": 9.5, "marinara": 8}, sections=[Category{name="pizza", dishes=["margherita", "marinara"], subsections=[Category{name="white", dishes=["bianca"], subsections=[]}]}]}
+Heartbeat view: node=oven-1 uptime=42
+DeliveryRoute adopted the buffer: yes
+Envelope: request id=15, reply id=16 corr=15 at 2026-10-20 03:07:13.941056
 ```
 
+C# 출력에는 `Heartbeat: received uptime=11, same buffer=yes`와 `DeliveryRoute adopted the buffer: yes` 줄이 없습니다. Python은 고정 필드 단계에서 `Heartbeat: received uptime=10`을 출력하며, `Heartbeat view: ...`와 `DeliveryRoute adopted the buffer: ...` 줄이 없습니다. 아래 코드는 각 프로그램의 함수 본문에서 발췌했습니다. include·using·import는 원본 프로그램을 따릅니다.
+
 ### 4.1 송신과 수신
+
+**C++**
 
 ```cpp
 demo::DeliveryRoute route;
@@ -126,60 +213,183 @@ demo::RouteStop stop;
 stop.set_orderId("A-100");
 stop.set_address("1 Pizza St");
 stop.set_etaMin(10);
-route.get_mutable_stops().push_back(stop);
+route.mutable_stops().push_back(stop);
 route.set_note("closest-first");
 
-const std::vector<uint8_t>& bytes = route.Serialize();
+const std::vector<uint8_t>& bytes = route.Serialize();   // send bytes.data(), bytes.size()
+std::printf("DeliveryRoute: %zu bytes\n", bytes.size());
+
 const demo::DeliveryRoute got = protaco::ToObject<demo::DeliveryRoute>(bytes);
+std::printf("  rider=%s first=%s at %s in %d min, note=%s\n",
+    got.get_rider().c_str(), got.get_stops()[0].get_orderId().c_str(), got.get_stops()[0].get_address().c_str(),
+    got.get_stops()[0].get_etaMin(), got.get_note().c_str());
 ```
 
-`Serialize()`는 객체의 프레임 버퍼 참조를 반환합니다. 전송 수단에는 `bytes.data()`와 `bytes.size()`를 넘깁니다. `ToObject<T>`는 이름, version, 지문을 확인하고 디코딩하며 실패하면 `protaco::CParseError`를 던집니다.
+<details>
+<summary>C#</summary>
 
-이 예제는 목록을 직접 수정하기 위해 `get_mutable_stops()`를 사용합니다. 해당 객체는 이후 직렬화마다 가변 블록을 다시 만듭니다. 마지막 바이트 재사용이 필요하면 `set_stops(...)`를 사용하는 객체로 구성합니다. [Serialize 재사용](../README.ko.md#83-serialize-재사용)에 조건이 있습니다.
+```csharp
+DeliveryRoute route = new DeliveryRoute { Rider = "rider-7", Note = "closest-first" };
+route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St", EtaMin = 10 });
+
+byte[] bytes = route.Serialize();   // same serialization format as the C++ example
+Console.WriteLine("DeliveryRoute: " + bytes.Length + " bytes");
+
+DeliveryRoute got = Protaco.Codec.ToObject<DeliveryRoute>(bytes);
+Console.WriteLine("  rider=" + got.Rider + " first=" + got.Stops[0].OrderId + " at " + got.Stops[0].Address
+    + " in " + got.Stops[0].EtaMin + " min, note=" + got.Note);
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+route = DeliveryRoute(rider="rider-7", note="closest-first")
+route.stops.append(RouteStop(orderId="A-100", address="1 Pizza St", etaMin=10))
+
+data = route.Serialize()   # send these bytes
+print("DeliveryRoute: %d bytes" % len(data))
+
+got = protaco.ToObject(DeliveryRoute, data)
+stop = got.stops[0]
+print("  rider=%s first=%s at %s in %d min, note=%s" % (got.rider, stop.orderId, stop.address, stop.etaMin, got.note))
+```
+
+</details>
+
+C++ `Serialize()`는 객체의 프레임 버퍼 참조를 반환합니다. 전송 수단에 `bytes.data()`와 `bytes.size()`를 넘깁니다. `ToObject<T>`는 이름·version·지문을 검사하고 실패하면 `protaco::CParseError`를 던집니다. `mutable_stops()`를 호출한 객체는 이후 수정을 추적할 수 없으므로 직렬화마다 가변 블록을 다시 만듭니다. C# `Serialize()`는 매번 새 배열을, Python은 `bytes`를 반환합니다.
 
 ### 4.2 고정 필드만 있는 메시지
+
+**C++**
 
 ```cpp
 demo::Heartbeat beat;
 beat.set_node("oven-1");
 beat.set_uptimeSec(10);
 const std::vector<uint8_t>& bytes = beat.Serialize();
-beat.set_uptimeSec(11);
+beat.set_uptimeSec(11);   // written into the same buffer, no need to call Serialize again
+std::printf("Heartbeat: received uptime=%d, same buffer=%s\n",
+    protaco::ToObject<demo::Heartbeat>(bytes).get_uptimeSec(), &bytes == &beat.Serialize() ? "yes" : "no");
 ```
 
-모든 필드가 고정이므로 setter가 프레임 버퍼를 직접 바꿉니다. 앞서 받은 `bytes`에도 11이 반영되며, 다시 `Serialize()`를 호출해도 같은 버퍼를 반환합니다. 복사나 추가 인코딩이 없습니다.
+<details>
+<summary>C#</summary>
+
+해당 없음. C# 프로그램에는 고정 버퍼 단계가 없으며, `Serialize()`는 매번 새 배열을 만듭니다.
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+beat = Heartbeat(node="oven-1", uptimeSec=10)
+print("Heartbeat: received uptime=%d" % protaco.ToObject(Heartbeat, beat.Serialize()).uptimeSec)
+```
+
+</details>
+
+C++의 고정 필드 setter는 프레임 버퍼를 직접 바꿉니다. 앞서 받은 `bytes`에도 11이 반영되고 `Serialize()`는 같은 버퍼를 반환합니다. Python은 고정 영역을 한 번의 struct pack/unpack으로 처리합니다.
 
 ### 4.3 확장 데이터
+
+**C++**
 
 ```cpp
 demo::PizzaOrder order;
 order.set_orderId("A-100");
 demo::Topping basil;
 basil.set_name("basil");
-order.get_mutable_toppings().push_back(basil);
-order.GetMutableExt().SetString("secretSauce", "yes please");
-order.GetMutableExt().SetInt("pineapple", 0);
+order.mutable_toppings().push_back(basil);
+order.GetMutableExt().SetValue("secretSauce", "yes please");   // key not in the yaml
+order.GetMutableExt().SetValue("pineapple", 0);
 
 const demo::PizzaOrder got = protaco::ToObject<demo::PizzaOrder>(order.Serialize());
 std::string sauce;
-got.GetExt().GetString("secretSauce", &sauce);
+got.GetExt().TryGetValue("secretSauce", &sauce);
+std::printf("PizzaOrder ext: secretSauce=%s, schema key in ext=%s\n",
+    sauce.c_str(), order.GetMutableExt().SetValue("orderId", 9) ? "accepted (bug)" : "rejected");
 ```
 
-수신 측도 YAML에 없는 `secretSauce`를 읽을 수 있습니다. `SetInt("orderId", 9)`는 스키마 키와 겹치므로 `false`입니다. 확장 데이터 접근자는 `GetExt()`, `GetMutableExt()`로 필드 접근자와 구분됩니다.
+<details>
+<summary>C#</summary>
+
+```csharp
+PizzaOrder order = new PizzaOrder { OrderId = "A-100" };
+order.Toppings.Add(new Topping { Name = "basil" });
+order.Ext.SetValue("secretSauce", "yes please");
+
+PizzaOrder got = Protaco.Codec.ToObject<PizzaOrder>(order.Serialize());
+string sauce;
+got.Ext.TryGetValue("secretSauce", out sauce);
+Console.WriteLine("PizzaOrder ext: secretSauce=" + sauce + ", schema key in ext=" + (order.Ext.SetValue("orderId", 9) ? "accepted (bug)" : "rejected"));
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+order = PizzaOrder(orderId="A-100")
+order.toppings.append(Topping(name="basil"))
+order.ext.SetValue("secretSauce", "yes please")   # key not in the yaml
+order.ext.SetValue("pineapple", 0, protaco.INT)   # an int needs its kind
+
+got = protaco.ToObject(PizzaOrder, order.Serialize())
+sauce = got.ext.TryGetValue("secretSauce", protaco.STRING)
+print("PizzaOrder ext: secretSauce=%s, schema key in ext=%s"
+      % (sauce.value, "accepted (bug)" if order.ext.SetValue("orderId", 9, protaco.INT) else "rejected"))
+```
+
+</details>
+
+`SetValue`와 `TryGetValue`로 YAML에 없는 값을 쓰고 읽습니다. 스키마 키 `orderId`를 ext에 쓰려는 호출은 거부됩니다. C++과 C#은 값 타입을 사용하고, Python의 정수 값에는 `protaco.INT`처럼 타입을 지정해야 합니다.
 
 ### 4.4 오류 처리
+
+**C++**
 
 ```cpp
 const std::vector<uint8_t> bytes = demo::Heartbeat().Serialize();
 demo::DeliveryRoute wrong;
-protaco::Error error;
+std::string error;
 if (!protaco::TryToObject(bytes.data(), bytes.size(), &wrong, &error))
-    std::printf("decode failed: path='%s' what='%s'\n", error.path.c_str(), error.what.c_str());
+    std::printf("decode failed: %s\n", error.c_str());
 ```
 
-`TryToObject`는 예외를 던지지 않으며 실패하면 `wrong`을 유지합니다. 이 경우는 이름 검사에서 실패하므로 `error.path`가 비어 있습니다. 필드 오류라면 `stops[2].orderId`처럼 위치가 표시됩니다.
+<details>
+<summary>C#</summary>
+
+```csharp
+byte[] bytes = new Heartbeat().Serialize();
+DeliveryRoute wrong;
+string error;
+if (!Protaco.Codec.TryToObject(bytes, out wrong, out error))
+    Console.WriteLine("decode failed: " + error);
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+ok, _, error = protaco.TryToObject(DeliveryRoute, Heartbeat().Serialize())
+if not ok:
+    print("decode failed: " + error)
+```
+
+</details>
+
+`TryToObject`는 예외 대신 성공 여부와 오류 문자열을 반환합니다. C++은 실패하면 출력 객체 `wrong`을 유지합니다. Python의 `Result`는 `ok, value, error`로 풀 수 있습니다. 이 예제는 이름 검사에서 실패하므로 필드 경로가 없습니다. 필드 오류에는 `delivery.doorCode`, `sections[0].name` 같은 경로가 붙습니다.
 
 ### 4.5 텍스트 출력
+
+**C++**
 
 ```cpp
 demo::DeliveryRoute route;
@@ -187,146 +397,360 @@ route.set_rider("rider-7");
 demo::RouteStop stop;
 stop.set_orderId("A-100");
 stop.set_address("1 Pizza St");
-route.get_mutable_stops().push_back(stop);
-route.GetMutableExt().SetInt("priority", 5);
+route.mutable_stops().push_back(stop);
+route.GetMutableExt().SetValue("priority", 5);
 std::printf("%s\n", route.ToString().c_str());
 std::printf("%s\n", route.ToString(protaco::TextStyle::Pretty()).c_str());
 ```
 
-전체 실행 출력의 마지막 부분이 이 코드의 결과입니다. 여기서는 `set_etaMin`을 호출하지 않아 기본값 15가 보입니다. 확장 항목은 `ext{...}`에 출력합니다.
+<details>
+<summary>C#</summary>
+
+```csharp
+DeliveryRoute route = new DeliveryRoute { Rider = "rider-7" };
+route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St" });
+route.Ext.SetValue("priority", 5);
+Console.WriteLine(route.ToString());
+Console.WriteLine(route.ToString(Protaco.TextStyle.Pretty()));
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+route = DeliveryRoute(rider="rider-7")
+route.stops.append(RouteStop(orderId="A-100", address="1 Pizza St"))
+route.ext.SetValue("priority", 5, protaco.INT)
+print(route)
+print(route.ToString(protaco.TextStyle.Pretty()))
+```
+
+</details>
+
+기본 출력은 한 줄이며 `Pretty()`는 봉투와 필드를 줄별로 보여 줍니다. `etaMin`을 설정하지 않아 기본값 15가 출력됩니다. 확장 항목은 `ext{...}`에 모입니다.
+
+### 4.6 enum·map·재귀
+
+**C++**
+
+```cpp
+demo::Menu menu;
+menu.set_store("NAPOLI-1");
+menu.mutable_prices()["margherita"] = 9.5;
+menu.mutable_prices()["marinara"] = 8.0;
+demo::Category pizza;
+pizza.set_name("pizza");
+pizza.mutable_dishes() = { "margherita", "marinara" };
+demo::Category white;
+white.set_name("white");
+white.mutable_dishes().push_back("bianca");
+pizza.mutable_subsections().push_back(white);
+menu.mutable_sections().push_back(pizza);
+
+const demo::Menu got = protaco::ToObject<demo::Menu>(menu.Serialize());
+std::printf("Menu: default size %s, margherita %.1f\n", demo::EnumName(got.get_defaultSize()), got.get_prices().at("margherita"));
+std::printf("%s\n", got.ToString().c_str());
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+Menu menu = new Menu { Store = "NAPOLI-1" };
+menu.Prices["margherita"] = 9.5;
+menu.Prices["marinara"] = 8.0;
+Category pizza = new Category { Name = "pizza" };
+pizza.Dishes.AddRange(new[] { "margherita", "marinara" });
+Category white = new Category { Name = "white" };
+white.Dishes.Add("bianca");
+pizza.Subsections.Add(white);
+menu.Sections.Add(pizza);
+
+Menu got = Protaco.Codec.ToObject<Menu>(menu.Serialize());
+Console.WriteLine("Menu: default size " + PizzaSizeNames.Name(got.DefaultSize) + ", margherita " + got.Prices["margherita"]);
+Console.WriteLine(got.ToString());
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+menu = Menu(store="NAPOLI-1", prices={"margherita": 9.5, "marinara": 8.0})
+pizza = Category(name="pizza", dishes=["margherita", "marinara"])
+pizza.subsections.append(Category(name="white", dishes=["bianca"]))
+menu.sections.append(pizza)
+
+got = protaco.ToObject(Menu, menu.Serialize())
+print("Menu: default size %s, margherita %.1f" % (PizzaSizeNames.Name(got.defaultSize), got.prices["margherita"]))
+print(got)
+```
+
+</details>
+
+`Menu.defaultSize`의 기본값은 `PizzaSize.Large`입니다. 가격 map과 재귀적인 `Category` 목록을 함께 직렬화합니다. `ToString()`은 enum을 `Large(3)`으로 표시하고 map 키를 정렬합니다. map의 직렬화 순서는 컨테이너 순회 순서이므로 같은 내용도 언어·구현에 따라 바이트 순서가 다를 수 있습니다.
+
+### 4.7 zero-copy
+
+**C++**
+
+```cpp
+demo::Heartbeat beat;
+beat.set_node("oven-1");
+beat.set_uptimeSec(42);
+const std::vector<uint8_t> received = beat.Serialize();
+demo::Heartbeat::View view;   // valid while received lives
+if (protaco::TryView<demo::Heartbeat>(received, &view))
+    std::printf("Heartbeat view: node=%s uptime=%d\n", view.get_node().c_str(), view.get_uptimeSec());
+
+std::vector<uint8_t> bytes = demo::DeliveryRoute().Serialize();
+const uint8_t* data = bytes.data();
+const demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(bytes));
+std::printf("DeliveryRoute adopted the buffer: %s\n", route.Serialize().data() == data ? "yes" : "no");
+```
+
+<details>
+<summary>C#</summary>
+
+C#은 View만 사용하며 C++식 버퍼 소유권 이전 단계는 없습니다.
+
+```csharp
+byte[] received = new Heartbeat { Node = "oven-1", UptimeSec = 42 }.Serialize();
+Heartbeat.View view;   // valid while received is unchanged
+if (Heartbeat.TryView(received, out view))
+    Console.WriteLine("Heartbeat view: node=" + view.Node + " uptime=" + view.UptimeSec);
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+해당 없음. Python에는 View와 C++식 버퍼 소유권 이전 API가 없습니다.
+
+</details>
+
+`TryView`는 고정 필드만 있는 메시지의 프레임을 검사한 뒤 받은 바이트에서 필드를 읽습니다. C++은 원본 바이트가 살아 있고 바뀌지 않는 동안, C#은 배열이 바뀌지 않는 동안 View가 유효합니다. C++의 `ToObject(std::move(bytes))`는 지원 version 범위와 지문이 수신 타입의 배치와 일치할 때 버퍼 소유권을 가져갑니다. 이후 가변 필드나 ext를 바꾸기 전까지 `Serialize()`가 그 버퍼를 재사용합니다.
+
+### 4.8 봉투
+
+**C++**
+
+```cpp
+demo::DeliveryRoute request;
+demo::DeliveryRoute reply;
+reply.SetCorr(request.GetId());
+std::string date;
+std::string time;
+if (reply.TryGetTimeFromTimestamp(&date, &time))
+    std::printf("Envelope: request id=%u, reply id=%u corr=%u at %s %s\n", request.GetId(), reply.GetId(), reply.GetCorr(),
+        date.c_str(), time.c_str());
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+DeliveryRoute request = new DeliveryRoute();
+DeliveryRoute reply = new DeliveryRoute();
+reply.SetCorr(request.GetId());
+string date;
+string time;
+if (reply.TryGetTimeFromTimestamp(out date, out time))
+    Console.WriteLine("Envelope: request id=" + request.GetId() + ", reply id=" + reply.GetId() + " corr=" + reply.GetCorr() + " at " + date + " " + time);
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+request = DeliveryRoute()
+reply = DeliveryRoute()
+reply.SetCorr(request.GetId())
+when = reply.TryGetTimeFromTimestamp()
+if when:
+    date, time_text = when.value
+    print("Envelope: request id=%d, reply id=%d corr=%d at %s %s" % (request.GetId(), reply.GetId(), reply.GetCorr(), date, time_text))
+```
+
+</details>
+
+새 메시지는 id와 현재 UTC 마이크로초 타임스탬프를 자동으로 받습니다. 응답의 `corr`는 요청의 id로 설정합니다. `TryGetTimeFromTimestamp`는 로컬 날짜·시각 문자열로 변환합니다. 디코딩과 중첩 필드 초기화는 새 id를 소비하지 않습니다.
 
 ## 5. 생성 코드
 
+아래는 [gen/](gen/)의 실제 생성 코드에서 필요한 부분만 발췌한 것입니다. 생략한 멤버는 주석으로 표시했습니다.
+
 ### 5.1 C++
 
-다음은 [gen/cpp/DeliveryRoute.g.h](gen/cpp/DeliveryRoute.g.h)에서 그대로 발췌한 필드 접근자입니다.
+[RouteStop.g.h](gen/cpp/RouteStop.g.h)의 고정 문자열 setter는 UTF-8 바이트 한도를 검사합니다. `orderId`는 16바이트, `address`는 48바이트입니다. 정수 setter는 버퍼의 고정 위치에 기록합니다.
+
+**C++**
 
 ```cpp
-    /// rider id
-    /// [type string; required, decoding fails if missing]
-    const std::string& get_rider() const
-    {
-        return rider_;
-    }
+std::string get_orderId() const
+{
+    return protaco::detail::LoadChars(buf_.data() + kFixedOffset + 0, 16);
+}
 
-    void set_rider(const std::string& value)
-    {
-        rider_ = value;
-        cache_.valid = false;
-    }
+bool set_orderId(const std::string& value, std::string* error = nullptr)
+{
+    return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 16, value, "orderId", error);
+}
 
-    /// Stops, visited in order.
-    /// stops
-    /// [type list<RouteStop>; required, decoding fails if missing]
-    const std::vector<RouteStop>& get_stops() const
-    {
-        return stops_;
-    }
+int32_t get_etaMin() const
+{
+    return protaco::detail::Load<int32_t>(buf_.data() + kFixedOffset + 64);
+}
 
-    std::vector<RouteStop>& get_mutable_stops()
-    {
-        cache_.exposed = true;
-        return stops_;
-    }
-
-    void set_stops(const std::vector<RouteStop>& value)
-    {
-        stops_ = value;
-        cache_.valid = false;
-    }
+void set_etaMin(int32_t value)
+{
+    protaco::detail::Store<int32_t>(buf_.data() + kFixedOffset + 64, value);
+}
 ```
 
-YAML의 `# Stops, visited in order.`와 `desc: stops`가 모두 docstring에 들어갑니다. 타입과 required 표시는 생성기가 붙입니다. setter는 재사용 상태를 무효화하고, mutable 참조는 이후 변경을 추적할 수 없음을 표시합니다.
+[Heartbeat.g.h](gen/cpp/Heartbeat.g.h)의 `View` 발췌입니다. 나머지 필드 접근자는 생략했습니다.
 
-확장 데이터 접근자 발췌입니다.
+**C++**
 
 ```cpp
-    /// Extra key-value data not in the yaml. Unknown keys of received messages are kept here.
-    const protaco::CExt& GetExt() const
+class View : public protaco::CView
+{
+public:
+    std::string get_node() const
     {
-        return ext_;
+        return protaco::detail::LoadChars(Fixed() + 0, 32);
     }
 
-    protaco::CExt& GetMutableExt()
+    // ...
+
+    int32_t get_uptimeSec() const
     {
-        return ext_;
+        return protaco::detail::Load<int32_t>(Fixed() + 49);
     }
+};
 ```
 
-직렬화와 텍스트 출력 발췌입니다.
+[PizzaSize.enum.h](gen/cpp/PizzaSize.enum.h)의 enum과 이름 변환입니다. 선언되지 않은 번호는 `nullptr`를 반환합니다.
+
+**C++**
 
 ```cpp
-    /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
-    /// Unchanged variable fields and ext reuse the last bytes. After a get_mutable_ call the variable block is rebuilt every time.
-    /// The returned reference is valid until this object is modified.
-    const std::vector<uint8_t>& Serialize() const
-    {
-        return protaco::detail::Access::Serialize(*this);
-    }
+enum class PizzaSize : int32_t
+{
+    /// 10 inch
+    Small = 1,
+    /// 12 inch
+    Medium = 2,
+    /// 14 inch
+    Large = 3,
+};
 
-    /// Text for logs: field names and values, ext entries under ext{...}. protaco::TextStyle::Pretty() for one field per line.
-    std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const
+/// Name of a value, removed values included. nullptr for a number never declared.
+inline const char* EnumName(PizzaSize value)
+{
+    switch (static_cast<int32_t>(value))
     {
-        return protaco::detail::Access::ToText(*this, style);
+    case 1:
+        return "Small";
+    case 2:
+        return "Medium";
+    case 3:
+        return "Large";
+    default:
+        return nullptr;
     }
+}
 ```
 
-생성 헤더에는 함수 본문이 모두 들어 있습니다. 버퍼와 필드 저장소, 런타임용 보조 멤버는 private입니다.
+[Menu.g.h](gen/cpp/Menu.g.h)의 map 접근자입니다. mutable 참조를 노출하면 이후 변경을 추적할 수 없다는 표시를 남깁니다.
+
+**C++**
+
+```cpp
+const std::unordered_map<std::string, double>& get_prices() const
+{
+    return prices_;
+}
+
+std::unordered_map<std::string, double>& mutable_prices()
+{
+    cache_.exposed = true;
+    return prices_;
+}
+
+void set_prices(const std::unordered_map<std::string, double>& value)
+{
+    prices_ = value;
+    cache_.valid = false;
+}
+```
 
 ### 5.2 C#
 
-다음은 [gen/cs/DeliveryRoute.g.cs](gen/cs/DeliveryRoute.g.cs)의 실제 속성입니다.
+<details>
+<summary>C#</summary>
+
+[Menu.g.cs](gen/cs/Menu.g.cs)의 속성과 직렬화 메서드입니다. C#은 PascalCase 속성을 사용하고 객체의 봉투를 직렬화합니다.
 
 ```csharp
-        /// <summary>
-        /// rider id
-        /// [type string; required, decoding fails if missing]
-        /// </summary>
-        public string Rider { get; set; } = "";
+public PizzaSize DefaultSize { get; set; } = PizzaSize.Large;
 
-        /// <summary>
-        /// Stops, visited in order.
-        /// stops
-        /// [type list&lt;RouteStop&gt;; required, decoding fails if missing]
-        /// </summary>
-        public List<RouteStop> Stops { get; set; } = new List<RouteStop>();
+public Dictionary<string, double> Prices { get; set; } = new Dictionary<string, double>();
 
-        /// <summary>
-        /// why this route
-        /// [type string; default ""]
-        /// </summary>
-        public string Note { get; set; } = "";
+public List<Category> Sections { get; set; } = new List<Category>();
 
-        /// <summary>Extra key-value data not in the yaml. Unknown keys of received messages are kept here.</summary>
-        public Protaco.Ext Ext => ext_;
+public byte[] Serialize()
+{
+    return Protaco.Codec.Serialize(this, GetEnvelope());
+}
 ```
 
-직렬화 함수도 실제 생성 파일에서 발췌했습니다.
+</details>
 
-```csharp
-        /// <summary>Frame bytes.</summary>
-        public byte[] Serialize()
-        {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
+### 5.3 Python
 
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
-        }
+<details>
+<summary>Python</summary>
+
+[Menu_g.py](gen/py/demo/Menu_g.py)의 클래스 선언 일부와 `_Bind` 호출입니다. 생성자 본문은 생략했습니다. `_Bind`는 생성 클래스의 고정·가변 필드 배치를 런타임에 등록합니다. `examples/gen/py`를 `sys.path`에 넣으면 `demo` 패키지를 import할 수 있습니다.
+
+```python
+class Menu(protaco.Message):
+    """A store menu: an enum field, a map and a tree of sections.
+    [version 1; schema 0x1A3924BC; source Menu.yaml]
+    """
+
+    __slots__ = ("store", "defaultSize", "prices", "sections")
+    MsgName = "Menu"
+    MsgVersion = 1
+    MsgMinVersion = 1
+    MsgSchemaHash = 0x1A3924BC
+
+    # ...
+
+Menu._Bind(
+    hashes=(0x1A3924BC,),
+    allow_extension=True,
+    schema_keys=("store", "defaultSize", "prices", "sections"),
+    fixed=(
+        ("store", "store", protaco.Items.Chars(16), None),
+        ("defaultSize", "defaultSize", protaco.Items.Enum(PizzaSize, PizzaSizeNames.Name), None),
+    ),
+    var=(
+        ("prices", "prices", protaco.Items.Map(protaco.Items.String, protaco.Items.Double), False, False),
+        ("sections", "sections", protaco.Items.List(protaco.Items.Message(Category)), False, False),
+    ),
+    text=("store", "defaultSize", "prices", "sections"),
+)
 ```
 
-4.1과 같은 값을 채우는 사용 예제입니다.
-
-```csharp
-var route = new demo.DeliveryRoute { Rider = "rider-7", Note = "closest-first" };
-route.Stops.Add(new demo.RouteStop { OrderId = "A-100", Address = "1 Pizza St", EtaMin = 10 });
-byte[] bytes = route.Serialize();
-demo.DeliveryRoute got = Protaco.Codec.ToObject<demo.DeliveryRoute>(bytes);
-```
-
-같은 값은 C++과 같은 바이트로 직렬화하며, C# 시험이 골든 파일과 비교합니다. `RouteStop.OrderId`는 16바이트, `RouteStop.Address`는 48바이트를 넘는 값에 `ArgumentException`을 던집니다. C# `Serialize()`는 매번 새 배열을 만듭니다.
+</details>
 
 ## 6. 버전 관리 예제
 
@@ -335,6 +759,8 @@ demo.DeliveryRoute got = Protaco.Codec.ToObject<demo.DeliveryRoute>(bytes);
 ### 6.1 개정 내용
 
 [version 1](../protaco_compiler/tests/schemas/build1/Order.yaml)의 정의입니다. 맨 위 설명 주석은 생략했습니다.
+
+**YAML**
 
 ```yaml
 message: Order
@@ -348,6 +774,8 @@ fields:
 ```
 
 [version 3](../protaco_compiler/tests/schemas/build3/Order.yaml)의 정의입니다.
+
+**YAML**
 
 ```yaml
 message: Order
@@ -371,7 +799,7 @@ fields:
 
 ### 6.2 생성 클래스
 
-| 빌드 | 클래스 | 지원 version |
+| 빌드 | C++ 클래스 | 지원 version |
 |---|---|---|
 | build1 | `build1::Order` (v1) | 1 |
 | build2 | `build2::Order` (v2), `build2::v1::Order` | 1..2 |
@@ -379,6 +807,20 @@ fields:
 | build4 | `build4::Order` (v4), `build4::v2::Order`, `build4::v3::Order` | 2..4 |
 
 옛 version 클래스의 지문은 그 version을 배포한 클래스와 같습니다. 예를 들어 `build3::v1::Order::MsgSchemaHash()`와 `build1::Order::MsgSchemaHash()`는 같은 값입니다.
+
+C#의 대응 이름은 `build3.Order`, `build3.v1.Order`입니다. Python은 `protaco_compiler/tests/gen/py`를 모듈 경로에 넣고 같은 모듈의 `Order`와 `v1.Order`를 사용합니다.
+
+<details>
+<summary>Python</summary>
+
+```python
+from build3.Order_g import Order, v1
+
+latest = Order()
+old = v1.Order()
+```
+
+</details>
 
 ### 6.3 고정 영역 배치
 
@@ -414,4 +856,4 @@ build2는 지원 범위 안이지만 필수 필드 `color`가 version 4에서 �
 color: missing required (frame version 4 read as 2)
 ```
 
-이 상대에게는 `color`를 채운 `build4::v3::Order`나 `build4::v2::Order`로 보냅니다. 각각의 송수신 그림은 [배포 경우별 그림](../README.ko.md#78-배포-경우별-그림)에 있습니다.
+이 상대에게는 `color`를 채운 `build4::v3::Order`나 `build4::v2::Order`로 보냅니다. 송수신 규칙은 [README](../README.ko.md)에서도 설명합니다.

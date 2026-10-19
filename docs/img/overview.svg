@@ -6,11 +6,12 @@
   </defs>
   <rect x="1" y="1" width="898" height="328" rx="16" fill="#f6f8fa" stroke="#d0d7de"/>
 
-  <rect x="30" y="85" width="230" height="160" rx="12" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
-  <text x="145" y="122" text-anchor="middle" font-size="21" font-weight="600" fill="#1f2328">YAML schema</text>
-  <text x="54" y="160" font-size="17" font-family="Consolas, Menlo, monospace" fill="#0550ae">DeliveryRoute.yaml</text>
-  <text x="54" y="188" font-size="17" font-family="Consolas, Menlo, monospace" fill="#0550ae">RouteStop.yaml</text>
-  <text x="145" y="226" text-anchor="middle" font-size="15" fill="#57606a">one message per file</text>
+  <rect x="30" y="75" width="230" height="180" rx="12" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="145" y="110" text-anchor="middle" font-size="21" font-weight="600" fill="#1f2328">YAML schema</text>
+  <text x="50" y="146" font-size="16" font-family="Consolas, Menlo, monospace" fill="#0550ae">DeliveryRoute.yaml</text>
+  <text x="50" y="172" font-size="16" font-family="Consolas, Menlo, monospace" fill="#0550ae">RouteStop.yaml</text>
+  <text x="50" y="198" font-size="16" font-family="Consolas, Menlo, monospace" fill="#0550ae">PizzaSize.enum.yaml</text>
+  <text x="145" y="235" text-anchor="middle" font-size="15" fill="#57606a">one message or enum per file</text>
 
   <line x1="262" y1="165" x2="318" y2="165" stroke="#57606a" stroke-width="2.5" marker-end="url(#arrow)"/>
 
@@ -19,21 +20,22 @@
 
   <path d="M474,158 C515,158 515,75 556,75" fill="none" stroke="#57606a" stroke-width="2.5" marker-end="url(#arrow)"/>
   <line x1="474" y1="165" x2="556" y2="165" stroke="#57606a" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <path d="M474,172 C515,172 515,255 556,255" fill="none" stroke="#8c959f" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+  <path d="M474,172 C515,172 515,255 556,255" fill="none" stroke="#57606a" stroke-width="2.5" marker-end="url(#arrow)"/>
 
   <rect x="560" y="38" width="315" height="76" rx="12" fill="#ffffff" stroke="#0969da" stroke-width="2"/>
   <text x="580" y="68" font-size="19" font-weight="600" fill="#1f2328">C++</text>
-  <text x="634" y="68" font-size="15" font-family="Consolas, Menlo, monospace" fill="#0550ae">*.g.h + Protaco.hpp</text>
+  <text x="650" y="68" font-size="15" font-family="Consolas, Menlo, monospace" fill="#0550ae">*.g.h + Protaco.hpp</text>
   <text x="580" y="96" font-size="15" fill="#57606a">header-only, nothing to link</text>
 
   <rect x="560" y="127" width="315" height="76" rx="12" fill="#ffffff" stroke="#8250df" stroke-width="2"/>
   <text x="580" y="157" font-size="19" font-weight="600" fill="#1f2328">C#</text>
-  <text x="634" y="157" font-size="15" font-family="Consolas, Menlo, monospace" fill="#0550ae">*.g.cs + Protaco.cs</text>
+  <text x="650" y="157" font-size="15" font-family="Consolas, Menlo, monospace" fill="#0550ae">*.g.cs + Protaco.cs</text>
   <text x="580" y="185" font-size="15" fill="#57606a">one runtime source file</text>
 
-  <rect x="560" y="216" width="315" height="76" rx="12" fill="#ffffff" stroke="#8c959f" stroke-width="2" stroke-dasharray="7 5"/>
-  <text x="580" y="246" font-size="19" font-weight="600" fill="#6e7781">Python</text>
-  <text x="580" y="274" font-size="15" fill="#6e7781">planned</text>
+  <rect x="560" y="216" width="315" height="76" rx="12" fill="#ffffff" stroke="#1a7f37" stroke-width="2"/>
+  <text x="580" y="246" font-size="19" font-weight="600" fill="#1f2328">Python</text>
+  <text x="650" y="246" font-size="15" font-family="Consolas, Menlo, monospace" fill="#0550ae">*_g.py + protaco.py</text>
+  <text x="580" y="274" font-size="15" fill="#57606a">standard library only</text>
 
-  <text x="450" y="312" text-anchor="middle" font-size="15" fill="#57606a">C++ and C# objects serialize to the same bytes</text>
+  <text x="450" y="315" text-anchor="middle" font-size="15" fill="#57606a">C++, C# and Python objects serialize to the same bytes, on Windows and Linux</text>
 </svg>

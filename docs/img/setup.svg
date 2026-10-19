@@ -20,13 +20,13 @@
   <text x="670" y="44" text-anchor="middle" font-size="21" font-weight="600" fill="#1f2328">Protaco</text>
   <g font-size="17" fill="#1f2328">
     <rect x="470" y="66" width="400" height="74" rx="10" fill="#ffffff" stroke="#0969da" stroke-width="2"/>
-    <text x="490" y="97"><tspan font-weight="600">1</tspan>  Run protacoc.exe</text>
-    <text x="512" y="124" font-size="15" fill="#57606a">one file, about 150 KB</text>
+    <text x="490" y="97"><tspan font-weight="600">1</tspan>  Run protacoc</text>
+    <text x="512" y="124" font-size="15" fill="#57606a">about 290 KB, nothing to install</text>
     <rect x="470" y="152" width="400" height="74" rx="10" fill="#ffffff" stroke="#0969da" stroke-width="2"/>
     <text x="490" y="183"><tspan font-weight="600">2</tspan>  <tspan font-family="Consolas, Menlo, monospace" font-size="16" fill="#0550ae">#include "DeliveryRoute.g.h"</tspan></text>
     <text x="512" y="210" font-size="15" fill="#57606a">Protaco.hpp is written right next to it</text>
   </g>
   <rect x="470" y="250" width="400" height="88" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
   <text x="670" y="287" text-anchor="middle" font-size="21" font-weight="600" fill="#1a7f37">Done ✓</text>
-  <text x="670" y="317" text-anchor="middle" font-size="15" fill="#1a7f37">nothing to install, build or link</text>
+  <text x="670" y="317" text-anchor="middle" font-size="15" fill="#1a7f37">no library to build or link</text>
 </svg>
