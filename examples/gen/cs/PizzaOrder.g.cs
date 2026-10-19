@@ -10,7 +10,7 @@ namespace demo
     /// pizza order
     /// [version 1; schema 0x9D0CF242; source PizzaOrder.yaml]
     /// </summary>
-    public sealed class PizzaOrder : Protaco.IMessage
+    public sealed class PizzaOrder : Protaco.Message, Protaco.IMessage
     {
         public const string MsgName = "PizzaOrder";
         public const ushort MsgVersion = 1;
@@ -20,6 +20,17 @@ namespace demo
         private static readonly uint[] SchemaHashes = { 0x9D0CF242u };
 
         private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);
+
+        /// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>
+        public PizzaOrder()
+        {
+        }
+
+        /// <summary>No envelope id or time (nested fields).</summary>
+        public PizzaOrder(Protaco.NoStamp noStamp)
+            : base(noStamp)
+        {
+        }
 
         /// <summary>
         /// Order number. Fixed length to fit the receipt column.
@@ -108,7 +119,7 @@ namespace demo
         /// delivery details
         /// [type Delivery]
         /// </summary>
-        public Delivery Delivery { get; set; } = new Delivery();
+        public Delivery Delivery { get; set; } = new Delivery(Protaco.NoStamp.Value);
 
         /// <summary>Extra key-value data not in the yaml. Unknown keys of received messages are kept here.</summary>
         public Protaco.Ext Ext => ext_;
@@ -119,16 +130,10 @@ namespace demo
         /// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>
         public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);
 
-        /// <summary>Frame bytes.</summary>
+        /// <summary>Frame bytes, envelope included. A new array on every call.</summary>
         public byte[] Serialize()
         {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
-
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
+            return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
         // Keys not allowed in ext: schema keys of every version

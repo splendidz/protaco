@@ -8,11 +8,18 @@ namespace deep
 {
 
 /// [version 1; schema 0x2D65EA08; source D7.yaml]
-class D7
+class D7 : public protaco::CMessage<D7>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     D7()
+        : D7(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit D7(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &D7::IsSchemaKey);
@@ -71,17 +78,6 @@ public:
         return ext_;
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
@@ -98,6 +94,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<D7>;
 
     enum : uint32_t
     {
@@ -135,7 +132,7 @@ private:
     }
 
     mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)
-    D6 d_;
+    D6 d_{protaco::detail::NoStampTag()};
     protaco::CExt ext_;
     mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };

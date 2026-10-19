@@ -9,7 +9,7 @@ namespace build2
     /// Version window test. Order at version 2: weight (fixed) and tags (variable) added.
     /// [version 2; schema 0x0E7D8E49; supports 1..2; source Order.yaml]
     /// </summary>
-    public sealed class Order : Protaco.IMessage
+    public sealed class Order : Protaco.Message, Protaco.IMessage
     {
         public const string MsgName = "Order";
         public const ushort MsgVersion = 2;
@@ -19,6 +19,17 @@ namespace build2
         private static readonly uint[] SchemaHashes = { 0xD05758A9u, 0x0E7D8E49u };
 
         private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);
+
+        /// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>
+        public Order()
+        {
+        }
+
+        /// <summary>No envelope id or time (nested fields).</summary>
+        public Order(Protaco.NoStamp noStamp)
+            : base(noStamp)
+        {
+        }
 
         /// <summary>
         /// [type string(8); fixed 8 bytes, set rejects longer values]
@@ -73,16 +84,10 @@ namespace build2
         /// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>
         public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);
 
-        /// <summary>Frame bytes.</summary>
+        /// <summary>Frame bytes, envelope included. A new array on every call.</summary>
         public byte[] Serialize()
         {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
-
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
+            return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
         // Keys not allowed in ext: schema keys of every version
@@ -163,7 +168,7 @@ namespace build2.v1
     /// Version 1 layout, for frames from peers on version 1.
     /// [version 1; schema 0xD05758A9; supports 1..2; source Order.yaml]
     /// </summary>
-    public sealed class Order : Protaco.IMessage
+    public sealed class Order : Protaco.Message, Protaco.IMessage
     {
         public const string MsgName = "Order";
         public const ushort MsgVersion = 1;
@@ -173,6 +178,17 @@ namespace build2.v1
         private static readonly uint[] SchemaHashes = { 0xD05758A9u };
 
         private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);
+
+        /// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>
+        public Order()
+        {
+        }
+
+        /// <summary>No envelope id or time (nested fields).</summary>
+        public Order(Protaco.NoStamp noStamp)
+            : base(noStamp)
+        {
+        }
 
         /// <summary>
         /// [type string(8); fixed 8 bytes, set rejects longer values]
@@ -216,16 +232,10 @@ namespace build2.v1
         /// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>
         public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);
 
-        /// <summary>Frame bytes.</summary>
+        /// <summary>Frame bytes, envelope included. A new array on every call.</summary>
         public byte[] Serialize()
         {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
-
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
+            return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
         // Keys not allowed in ext: schema keys of every version

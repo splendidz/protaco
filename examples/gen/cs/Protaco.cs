@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace Protaco
 {
@@ -25,12 +26,202 @@ namespace Protaco
         UInt64 = 10,
     }
 
-    /// <summary>Message envelope: request id, correlation id, time (us).</summary>
+    /// <summary>
+    /// Message envelope, stored in the frame header. Id: new id per message (Envelopes.NextId), Corr: id of the request this
+    /// answers (set by the user), Ts: UTC microseconds since 1970-01-01 (Envelopes.NowUs). Id and Ts are set when a message
+    /// object is created.
+    /// </summary>
     public struct Envelope
     {
         public uint Id;
         public uint Corr;
         public long Ts;
+    }
+
+    /// <summary>Constructor tag: no envelope id or time. Generated code uses it for nested fields.</summary>
+    public struct NoStamp
+    {
+        public static readonly NoStamp Value = default(NoStamp);
+    }
+
+    /// <summary>Envelope ids, the clock and timestamp conversion. Same rules as the C++ runtime.</summary>
+    public static class Envelopes
+    {
+        /// <summary>2000-01-01 00:00:00 UTC. Smaller timestamps are not treated as times.</summary>
+        public const long TimestampMin = 946684800000000L;
+
+        /// <summary>9999-12-31 23:59:59.999999 UTC.</summary>
+        public const long TimestampMax = 253402300799999999L;
+
+        private const long UnixEpochTicks = 621355968000000000L;
+        private static int lastId_;
+        private static Func<long> clock_ = SystemClockUs;
+
+        /// <summary>Next envelope id of this process: 1, 2, 3, ... and 0 is skipped after wrap-around. Thread-safe.</summary>
+        public static uint NextId()
+        {
+            uint id;
+            do
+                id = unchecked((uint)Interlocked.Increment(ref lastId_));
+            while (id == 0);
+            return id;
+        }
+
+        /// <summary>Current time in UTC microseconds since 1970-01-01 from the clock set by SetClock (default: the system clock).</summary>
+        public static long NowUs()
+        {
+            return clock_();
+        }
+
+        /// <summary>Replaces the time source of NowUs, for example with a simulated clock. null restores the system clock.</summary>
+        public static void SetClock(Func<long> nowUs)
+        {
+            clock_ = nowUs ?? SystemClockUs;
+        }
+
+        private static long SystemClockUs()
+        {
+            return (DateTime.UtcNow.Ticks - UnixEpochTicks) / 10;
+        }
+
+        /// <summary>Timestamp (UTC microseconds) to local time. Values outside 2000-01-01..9999-12-31 are not times: returns false.</summary>
+        public static bool TryGetTime(long timestampUs, out int year, out int month, out int day, out int hour, out int minute, out int second,
+                                      out int millisecond, out int microsecond, out string error)
+        {
+            year = month = day = hour = minute = second = millisecond = microsecond = 0;
+            if (timestampUs < TimestampMin || timestampUs > TimestampMax)
+            {
+                error = "timestamp " + timestampUs.ToString(CultureInfo.InvariantCulture) + " is not a time (2000-01-01 to 9999-12-31 in UTC microseconds)";
+                return false;
+            }
+            DateTime local = new DateTime(UnixEpochTicks + timestampUs * 10, DateTimeKind.Utc).ToLocalTime();
+            int fraction = (int)(timestampUs % 1000000);
+            year = local.Year;
+            month = local.Month;
+            day = local.Day;
+            hour = local.Hour;
+            minute = local.Minute;
+            second = local.Second;
+            millisecond = fraction / 1000;
+            microsecond = fraction % 1000;
+            error = null;
+            return true;
+        }
+
+        /// <summary>Timestamp to local "yyyy-MM-dd" and "HH:mm:ss.ffffff".</summary>
+        public static bool TryGetTime(long timestampUs, out string date, out string time, out string error)
+        {
+            int year;
+            int month;
+            int day;
+            int hour;
+            int minute;
+            int second;
+            int millisecond;
+            int microsecond;
+            date = null;
+            time = null;
+            if (!TryGetTime(timestampUs, out year, out month, out day, out hour, out minute, out second, out millisecond, out microsecond, out error))
+                return false;
+            date = year.ToString("D4", CultureInfo.InvariantCulture) + "-" + month.ToString("D2", CultureInfo.InvariantCulture) + "-"
+                + day.ToString("D2", CultureInfo.InvariantCulture);
+            time = hour.ToString("D2", CultureInfo.InvariantCulture) + ":" + minute.ToString("D2", CultureInfo.InvariantCulture) + ":"
+                + second.ToString("D2", CultureInfo.InvariantCulture) + "." + (millisecond * 1000 + microsecond).ToString("D6", CultureInfo.InvariantCulture);
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Base of every generated message: the envelope carried in the frame header. A new object gets Id = Envelopes.NextId()
+    /// and Ts = Envelopes.NowUs(); Corr starts at 0. Objects created by the decoder or as nested fields get none.
+    /// </summary>
+    public abstract class Message
+    {
+        private Envelope env_;
+
+        protected Message()
+        {
+            if (Codec.Decoding)
+                return;
+            env_.Id = Envelopes.NextId();
+            env_.Ts = Envelopes.NowUs();
+        }
+
+        protected Message(NoStamp noStamp)
+        {
+        }
+
+        public uint GetId()
+        {
+            return env_.Id;
+        }
+
+        public void SetId(uint id)
+        {
+            env_.Id = id;
+        }
+
+        /// <summary>Id of the message this one answers. Set by the user.</summary>
+        public uint GetCorr()
+        {
+            return env_.Corr;
+        }
+
+        public void SetCorr(uint corr)
+        {
+            env_.Corr = corr;
+        }
+
+        /// <summary>UTC microseconds since 1970-01-01.</summary>
+        public long GetTimestamp()
+        {
+            return env_.Ts;
+        }
+
+        public void SetTimestamp(long timestampUs)
+        {
+            env_.Ts = timestampUs;
+        }
+
+        public void SetTimestampAsNow()
+        {
+            env_.Ts = Envelopes.NowUs();
+        }
+
+        public Envelope GetEnvelope()
+        {
+            return env_;
+        }
+
+        public void SetEnvelope(Envelope env)
+        {
+            env_ = env;
+        }
+
+        /// <summary>Timestamp as local "yyyy-MM-dd" and "HH:mm:ss.ffffff". False if the timestamp is not a time.</summary>
+        public bool TryGetTimeFromTimestamp(out string date, out string time)
+        {
+            string error;
+            return Envelopes.TryGetTime(env_.Ts, out date, out time, out error);
+        }
+
+        public bool TryGetTimeFromTimestamp(out string date, out string time, out string error)
+        {
+            return Envelopes.TryGetTime(env_.Ts, out date, out time, out error);
+        }
+
+        public bool TryGetTimeFromTimestamp(out int year, out int month, out int day, out int hour, out int minute, out int second,
+                                            out int millisecond, out int microsecond)
+        {
+            string error;
+            return Envelopes.TryGetTime(env_.Ts, out year, out month, out day, out hour, out minute, out second, out millisecond, out microsecond, out error);
+        }
+
+        public bool TryGetTimeFromTimestamp(out int year, out int month, out int day, out int hour, out int minute, out int second,
+                                            out int millisecond, out int microsecond, out string error)
+        {
+            return Envelopes.TryGetTime(env_.Ts, out year, out month, out day, out hour, out minute, out second, out millisecond, out microsecond, out error);
+        }
     }
 
     /// <summary>Frame header.</summary>
@@ -144,13 +335,27 @@ namespace Protaco
             }
         }
 
-        /// <summary>Bytes to object. Throws ProtacoException on failure.</summary>
+        // Objects created while decoding take no envelope id or time (Message constructor).
+        [ThreadStatic]
+        private static int decoding_;
+
+        internal static bool Decoding => decoding_ > 0;
+
+        /// <summary>Bytes to object, envelope included. Throws ProtacoException on failure.</summary>
         public static T ToObject<T>(byte[] bytes) where T : IMessage, new()
         {
-            return ToObject<T>(bytes, out Envelope env);
+            ++decoding_;
+            try
+            {
+                return Decode<T>(bytes);
+            }
+            finally
+            {
+                --decoding_;
+            }
         }
 
-        public static T ToObject<T>(byte[] bytes, out Envelope env) where T : IMessage, new()
+        private static T Decode<T>(byte[] bytes) where T : IMessage, new()
         {
             if (bytes.Length > MaxFrameBytes)
                 throw new ProtacoException("", "frame too large");
@@ -174,7 +379,7 @@ namespace Protaco
             uint expected = message.SchemaHashes[message.SchemaHashes.Length - 1];
             if (hash != expected)
                 throw new ProtacoException("", "schema mismatch: " + name + " version " + mine + " expected " + Hex32(expected) + ", got " + Hex32(hash));
-            env = header.Env;
+            (message as Protaco.Message)?.SetEnvelope(header.Env);
             int headerSize = 28 + nameLength + 4 * (header.Version - header.MinVersion + 1);
             long left = bytes.Length - headerSize;
             if (left != header.BodySize)
@@ -1057,9 +1262,12 @@ namespace Protaco
         /// <summary>Longer strings are cut. Bytes show at most 8 bytes.</summary>
         public int MaxText { get; set; } = 64;
 
+        /// <summary>Show envelope{id, corr, ts} of the top-level message first.</summary>
+        public bool Envelope { get; set; }
+
         public static TextStyle Pretty(int indentWidth = 2)
         {
-            return new TextStyle { Indent = indentWidth };
+            return new TextStyle { Indent = indentWidth, Envelope = true };
         }
     }
 
@@ -1081,7 +1289,7 @@ namespace Protaco
         public static string Format(IMessage message, TextStyle style)
         {
             TextBuilder builder = new TextBuilder(style);
-            builder.Message(message);
+            builder.Message(message, true);
             return builder.out_.ToString();
         }
 
@@ -1205,8 +1413,8 @@ namespace Protaco
             Close(style_.Close);
         }
 
-        // Name{field=value, ...}
-        private void Message(IMessage message)
+        // Name{field=value, ...}. The top-level message shows its envelope first when TextStyle.Envelope is set.
+        private void Message(IMessage message, bool top = false)
         {
             if (message == null)
             {
@@ -1215,9 +1423,26 @@ namespace Protaco
             }
             out_.Append(message.Name);
             Open(style_.Open);
+            Protaco.Message envelopeOwner = message as Protaco.Message;
+            if (top && style_.Envelope && envelopeOwner != null)
+                EnvelopeItem(envelopeOwner.GetEnvelope());
             message.WriteText(this);
             message.Ext.WriteText(this);
             Close(style_.Close);
+        }
+
+        // envelope{id=7, corr=0, ts=2026-10-20 14:03:22.123456}. Ts outside the time range prints as the integer.
+        private void EnvelopeItem(Envelope env)
+        {
+            Item();
+            string date;
+            string time;
+            string error;
+            string ts = Envelopes.TryGetTime(env.Ts, out date, out time, out error) ? date + " " + time : env.Ts.ToString(CultureInfo.InvariantCulture);
+            out_.Append("envelope").Append(style_.Open)
+                .Append("id=").Append(env.Id.ToString(CultureInfo.InvariantCulture)).Append(style_.Separator)
+                .Append("corr=").Append(env.Corr.ToString(CultureInfo.InvariantCulture)).Append(style_.Separator)
+                .Append("ts=").Append(ts).Append(style_.Close);
         }
 
         private void Key(string key)

@@ -11,11 +11,18 @@ namespace demo
 /// Pizza order. One message for every store; fields used by one store only say so in their comment.
 /// pizza order
 /// [version 1; schema 0x9D0CF242; source PizzaOrder.yaml]
-class PizzaOrder
+class PizzaOrder : public protaco::CMessage<PizzaOrder>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     PizzaOrder()
+        : PizzaOrder(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit PizzaOrder(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &PizzaOrder::IsSchemaKey);
@@ -206,17 +213,6 @@ public:
         return ext_;
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
@@ -233,6 +229,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<PizzaOrder>;
 
     enum : uint32_t
     {
@@ -285,7 +282,7 @@ private:
     std::string customer_ = "anonymous";
     std::vector<Topping> toppings_;
     std::vector<std::string> notes_;
-    Delivery delivery_;
+    Delivery delivery_{protaco::detail::NoStampTag()};
     protaco::CExt ext_;
     mutable protaco::detail::VarCache cache_;   // Serialize() reuse of the variable block
 };

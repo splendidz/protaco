@@ -8,11 +8,18 @@ namespace build3
 
 /// Version window test. Order at version 3: qty (fixed) and note (variable) removed, label and rush added.
 /// [version 3; schema 0x7073B2E7; supports 1..3; source Order.yaml]
-class Order
+class Order : public protaco::CMessage<Order>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     Order()
+        : Order(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit Order(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &Order::IsSchemaKey);
@@ -131,17 +138,6 @@ public:
         return ext_;
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
@@ -158,6 +154,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<Order>;
 
     enum : uint32_t
     {
@@ -215,11 +212,18 @@ namespace v1
 /// Version window test. Order at version 3: qty (fixed) and note (variable) removed, label and rush added.
 /// Version 1 layout, for frames from peers on version 1.
 /// [version 1; schema 0xD05758A9; supports 1..3; source Order.yaml]
-class Order
+class Order : public protaco::CMessage<Order>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     Order()
+        : Order(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit Order(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &Order::IsSchemaKey);
@@ -308,17 +312,6 @@ public:
         return ext_;
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
@@ -335,6 +328,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<Order>;
 
     enum : uint32_t
     {
@@ -390,11 +384,18 @@ namespace v2
 /// Version window test. Order at version 3: qty (fixed) and note (variable) removed, label and rush added.
 /// Version 2 layout, for frames from peers on version 2.
 /// [version 2; schema 0x0E7D8E49; supports 1..3; source Order.yaml]
-class Order
+class Order : public protaco::CMessage<Order>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     Order()
+        : Order(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit Order(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &Order::IsSchemaKey);
@@ -513,17 +514,6 @@ public:
         return ext_;
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
@@ -540,6 +530,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<Order>;
 
     enum : uint32_t
     {

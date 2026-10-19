@@ -9,7 +9,7 @@ namespace demo
     /// One topping. Element of PizzaOrder.toppings.
     /// [version 1; schema 0xEB8A11D8; source Topping.yaml]
     /// </summary>
-    public sealed class Topping : Protaco.IMessage
+    public sealed class Topping : Protaco.Message, Protaco.IMessage
     {
         public const string MsgName = "Topping";
         public const ushort MsgVersion = 1;
@@ -19,6 +19,17 @@ namespace demo
         private static readonly uint[] SchemaHashes = { 0xEB8A11D8u };
 
         private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);
+
+        /// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>
+        public Topping()
+        {
+        }
+
+        /// <summary>No envelope id or time (nested fields).</summary>
+        public Topping(Protaco.NoStamp noStamp)
+            : base(noStamp)
+        {
+        }
 
         /// <summary>
         /// topping name
@@ -54,16 +65,10 @@ namespace demo
         /// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>
         public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);
 
-        /// <summary>Frame bytes.</summary>
+        /// <summary>Frame bytes, envelope included. A new array on every call.</summary>
         public byte[] Serialize()
         {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
-
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
+            return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
         // Keys not allowed in ext: schema keys of every version

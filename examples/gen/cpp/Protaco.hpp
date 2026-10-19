@@ -7,10 +7,13 @@
 #ifndef PROTACO_RUNTIME_0_6_0
 #define PROTACO_RUNTIME_0_6_0
 
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <new>
 #include <stdexcept>
 #include <string>
@@ -46,7 +49,8 @@ enum : uint32_t
     kMaxKeyLength = 255,
 };
 
-/// Message envelope: request id, correlation id (id of the original request), time (us).
+/// Message envelope, stored in the frame header. id: new id per message (NextId), corr: id of the request this answers
+/// (set by the user), ts: UTC microseconds since 1970-01-01 (NowUs). id and ts are set when a message object is created.
 struct Envelope
 {
     uint32_t id = 0;
@@ -73,11 +77,14 @@ struct TextStyle
     const char* close = "}";
     int indent = 0;                 // spaces per level; 0 = one line
     size_t maxText = 64;            // longer strings are cut; bytes show at most 8 bytes
+    bool envelope = false;          // show envelope{id, corr, ts} of the top-level message first
 
+    // One field per line, envelope included.
     static TextStyle Pretty(int indentWidth = 2)
     {
         TextStyle style;
         style.indent = indentWidth;
+        style.envelope = true;
         return style;
     }
 };
@@ -479,6 +486,124 @@ inline Envelope LoadEnvelope(const uint8_t* frame)
     return env;
 }
 
+// Envelope fields inside the frame header: id at +0, corr at +4, ts at +8.
+inline uint8_t* EnvelopeAt(std::vector<uint8_t>& buf)
+{
+    return buf.data() + 8 + buf[3];
+}
+
+// Constructor tag for objects that must not take an envelope id or time: decoded messages and nested fields.
+struct NoStampTag
+{
+};
+
+inline int64_t SystemClockUs()
+{
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+using ClockFn = int64_t (*)();
+
+// Per module (each DLL or executable has its own copy).
+inline ClockFn& ClockSource()
+{
+    static ClockFn source = &SystemClockUs;
+    return source;
+}
+
+inline std::atomic<uint32_t>& IdCounter()
+{
+    static std::atomic<uint32_t> counter(0);
+    return counter;
+}
+}  // namespace detail
+
+/// Next envelope id of this module (DLL or executable): 1, 2, 3, ... and 0 is skipped after wrap-around. Thread-safe.
+inline uint32_t NextId()
+{
+    uint32_t id = 0;
+    do
+        id = ++detail::IdCounter();
+    while (id == 0);
+    return id;
+}
+
+/// Current time in UTC microseconds since 1970-01-01 from the clock set by SetClock (default: the system clock).
+inline int64_t NowUs()
+{
+    return detail::ClockSource()();
+}
+
+/// Replaces the time source of NowUs, for example with an injected or simulated clock. nullptr restores the system clock.
+/// Set it before creating messages; it is not synchronized with other threads.
+inline void SetClock(int64_t (*nowUs)())
+{
+    detail::ClockSource() = nowUs != nullptr ? nowUs : &detail::SystemClockUs;
+}
+
+enum : int64_t
+{
+    kTimestampMin = 946684800000000LL,      // 2000-01-01 00:00:00 UTC; smaller values are not treated as times
+    kTimestampMax = 253402300799999999LL,   // 9999-12-31 23:59:59.999999 UTC
+};
+
+/// Timestamp (UTC microseconds) to local time. Values outside 2000-01-01..9999-12-31 are not times: returns false.
+inline bool TryGetTime(int64_t timestampUs, int* year, int* month, int* day, int* hour, int* minute, int* second, int* millisecond,
+                       int* microsecond, std::string* error = nullptr)
+{
+    if (timestampUs < kTimestampMin || timestampUs > kTimestampMax)
+        return detail::SetError(error, "timestamp " + std::to_string(timestampUs) + " is not a time (2000-01-01 to 9999-12-31 in UTC microseconds)");
+    const std::time_t seconds = static_cast<std::time_t>(timestampUs / 1000000);
+    std::tm local = std::tm();
+#ifdef _WIN32
+    if (localtime_s(&local, &seconds) != 0)
+#else
+    if (localtime_r(&seconds, &local) == nullptr)
+#endif
+        return detail::SetError(error, "timestamp " + std::to_string(timestampUs) + " has no local time");
+    const int fraction = static_cast<int>(timestampUs % 1000000);
+    *year = local.tm_year + 1900;
+    *month = local.tm_mon + 1;
+    *day = local.tm_mday;
+    *hour = local.tm_hour;
+    *minute = local.tm_min;
+    *second = local.tm_sec;
+    *millisecond = fraction / 1000;
+    *microsecond = fraction % 1000;
+    return true;
+}
+
+/// Timestamp to local "YYYY-MM-DD" and "hh:mm:ss.ffffff".
+inline bool TryGetTime(int64_t timestampUs, std::string* date, std::string* time, std::string* error = nullptr)
+{
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    int hour = 0;
+    int minute = 0;
+    int second = 0;
+    int millisecond = 0;
+    int microsecond = 0;
+    if (!TryGetTime(timestampUs, &year, &month, &day, &hour, &minute, &second, &millisecond, &microsecond, error))
+        return false;
+    char text[32];
+    std::snprintf(text, sizeof(text), "%04d-%02d-%02d", year, month, day);
+    *date = text;
+    std::snprintf(text, sizeof(text), "%02d:%02d:%02d.%06d", hour, minute, second, millisecond * 1000 + microsecond);
+    *time = text;
+    return true;
+}
+
+namespace detail
+{
+// New message objects: id from NextId, ts from NowUs.
+inline void StampEnvelope(std::vector<uint8_t>& buf)
+{
+    uint8_t* p = EnvelopeAt(buf);
+    Store<uint32_t>(p, NextId());
+    Store<int64_t>(p + 8, NowUs());
+}
+
 // Serialize() reuse of the variable block. set_ of a variable field clears valid. get_mutable_ sets exposed for
 // the object's lifetime: writes through the returned reference cannot be seen, so the block is rebuilt every time.
 // ext changes are seen through CExt::revision_. Fixed fields and the envelope live in the buffer and need no tracking.
@@ -760,6 +885,11 @@ struct Codec
         return TacoType::Message;
     }
 
+    static T Make()
+    {
+        return T(NoStampTag());
+    }
+
     static size_t Size(const T& value)
     {
         return Access::BodySize(value);
@@ -783,6 +913,11 @@ struct PodCodec
     static TacoType Type()
     {
         return kType;
+    }
+
+    static T Make()
+    {
+        return T();
     }
 
     static size_t Size(T)
@@ -837,6 +972,11 @@ struct Codec<std::string>
         return TacoType::String;
     }
 
+    static std::string Make()
+    {
+        return std::string();
+    }
+
     static size_t Size(const std::string& value)
     {
         return value.size();
@@ -861,6 +1001,11 @@ struct Codec<std::vector<uint8_t>>
     static TacoType Type()
     {
         return TacoType::Bytes;
+    }
+
+    static std::vector<uint8_t> Make()
+    {
+        return std::vector<uint8_t>();
     }
 
     static size_t Size(const std::vector<uint8_t>& value)
@@ -926,7 +1071,7 @@ struct Codec<std::vector<E>>
         {
             uint32_t itemSize = 0;
             const uint8_t* item = nullptr;
-            out->emplace_back();
+            out->push_back(Codec<E>::Make());
             if (!reader.Pod(&itemSize) || !reader.Take(itemSize, &item))
             {
                 PrependPath(error, "[" + std::to_string(i) + "]");
@@ -1175,6 +1320,34 @@ public:
         Close(style_.close);
     }
 
+    // Top-level message: Name{envelope{...}, field=value, ...} when TextStyle::envelope is set. Nested bodies have no envelope.
+    template <class T>
+    void TopMessage(const T& message)
+    {
+        out_ += T::MsgName();
+        Open(style_.open);
+        if (style_.envelope)
+            EnvelopeItem(message.GetEnvelope());
+        Access::WriteText(message, *this);
+        Close(style_.close);
+    }
+
+    // envelope{id=7, corr=0, ts=2026-10-20 14:03:22.123456}. ts outside the time range prints as the integer.
+    void EnvelopeItem(const Envelope& env)
+    {
+        Item();
+        out_ += "envelope";
+        out_ += style_.open;
+        out_ += "id=" + std::to_string(env.id) + style_.separator + "corr=" + std::to_string(env.corr) + style_.separator + "ts=";
+        std::string date;
+        std::string time;
+        if (TryGetTime(env.ts, &date, &time))
+            out_ += date + " " + time;
+        else
+            out_ += std::to_string(env.ts);
+        out_ += style_.close;
+    }
+
     template <class T>
     void Field(const char* key, const T& value)
     {
@@ -1421,7 +1594,7 @@ template <class T>
 std::string Access::ToText(const T& message, const TextStyle& style)
 {
     CTextWriter writer(style);
-    writer.Message(message);
+    writer.TopMessage(message);
     return writer.Text();
 }
 
@@ -1506,7 +1679,7 @@ bool Decode(const uint8_t* src, size_t size, T* out, Error* error)
         const size_t headerSize = HeaderSize(nameLength, static_cast<size_t>(header.version - header.minVersion) + 1);
         if (size - headerSize != header.bodySize)
             return Fail(error, size - headerSize < header.bodySize ? "frame truncated" : "trailing bytes after frame");
-        T decoded;
+        T decoded{NoStampTag()};
         decoded.SetEnvelope(header.env);
         const bool newer = header.version > mine;
         if (!Access::ReadBody(decoded, src + headerSize, header.bodySize, error, 0, newer))
@@ -1524,6 +1697,86 @@ bool Decode(const uint8_t* src, size_t size, T* out, Error* error)
     }
 }
 }  // namespace detail
+
+/// Envelope API shared by every generated message (CRTP base). The envelope lives in the frame header, so these calls
+/// read and write the frame bytes directly. A new object gets id = NextId() and ts = NowUs(); corr starts at 0.
+template <class T>
+class CMessage
+{
+public:
+    uint32_t GetId() const
+    {
+        return detail::LoadEnvelope(Frame()).id;
+    }
+
+    void SetId(uint32_t id)
+    {
+        detail::Store<uint32_t>(detail::EnvelopeAt(Buffer()), id);
+    }
+
+    /// Id of the message this one answers. Set by the user.
+    uint32_t GetCorr() const
+    {
+        return detail::LoadEnvelope(Frame()).corr;
+    }
+
+    void SetCorr(uint32_t corr)
+    {
+        detail::Store<uint32_t>(detail::EnvelopeAt(Buffer()) + 4, corr);
+    }
+
+    /// UTC microseconds since 1970-01-01.
+    int64_t GetTimestamp() const
+    {
+        return detail::LoadEnvelope(Frame()).ts;
+    }
+
+    void SetTimestamp(int64_t timestampUs)
+    {
+        detail::Store<int64_t>(detail::EnvelopeAt(Buffer()) + 8, timestampUs);
+    }
+
+    void SetTimestampAsNow()
+    {
+        SetTimestamp(NowUs());
+    }
+
+    Envelope GetEnvelope() const
+    {
+        return detail::LoadEnvelope(Frame());
+    }
+
+    void SetEnvelope(const Envelope& env)
+    {
+        detail::StoreEnvelope(Buffer(), env);
+    }
+
+    /// Timestamp as local "YYYY-MM-DD" and "hh:mm:ss.ffffff". False if the timestamp is not a time (see TryGetTime).
+    bool TryGetTimeFromTimestamp(std::string* date, std::string* time, std::string* error = nullptr) const
+    {
+        return TryGetTime(GetTimestamp(), date, time, error);
+    }
+
+    bool TryGetTimeFromTimestamp(int* year, int* month, int* day, int* hour, int* minute, int* second, int* millisecond,
+                                 int* microsecond, std::string* error = nullptr) const
+    {
+        return TryGetTime(GetTimestamp(), year, month, day, hour, minute, second, millisecond, microsecond, error);
+    }
+
+protected:
+    CMessage() = default;
+
+private:
+    const uint8_t* Frame() const
+    {
+        return static_cast<const T*>(this)->buf_.data();
+    }
+
+    std::vector<uint8_t>& Buffer()
+    {
+        return static_cast<T*>(this)->buf_;
+    }
+};
 
 /// Parses the frame header only, not the body (for dispatch). Returns false with the reason in error.
 inline bool PeekHeader(const uint8_t* src, size_t size, Header* out, std::string* error = nullptr)
@@ -1556,7 +1809,7 @@ bool TryToObject(const std::vector<uint8_t>& bytes, T* out, std::string* error =
 template <class T>
 T ToObject(const uint8_t* src, size_t size)
 {
-    T object;
+    T object{detail::NoStampTag()};
     Error error;
     if (!detail::Decode(src, size, &object, &error))
         throw CParseError(error);

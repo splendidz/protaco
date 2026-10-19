@@ -9,7 +9,7 @@ namespace demo
     /// Proof of delivery. Shows the bytes type: binary data carried as is, zeros and 0xFF included.
     /// [version 1; schema 0xF769024A; source DeliveryProof.yaml]
     /// </summary>
-    public sealed class DeliveryProof : Protaco.IMessage
+    public sealed class DeliveryProof : Protaco.Message, Protaco.IMessage
     {
         public const string MsgName = "DeliveryProof";
         public const ushort MsgVersion = 1;
@@ -19,6 +19,17 @@ namespace demo
         private static readonly uint[] SchemaHashes = { 0xF769024Au };
 
         private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);
+
+        /// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>
+        public DeliveryProof()
+        {
+        }
+
+        /// <summary>No envelope id or time (nested fields).</summary>
+        public DeliveryProof(Protaco.NoStamp noStamp)
+            : base(noStamp)
+        {
+        }
 
         /// <summary>
         /// order number
@@ -61,16 +72,10 @@ namespace demo
         /// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>
         public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);
 
-        /// <summary>Frame bytes.</summary>
+        /// <summary>Frame bytes, envelope included. A new array on every call.</summary>
         public byte[] Serialize()
         {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
-
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
+            return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
         // Keys not allowed in ext: schema keys of every version

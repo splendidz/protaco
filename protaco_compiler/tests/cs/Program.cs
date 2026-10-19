@@ -48,6 +48,8 @@ namespace Protacoc.Tests
             Run("C#: ext key rules", ExtRules);
             Run("C#: ToString matches C++", ToStringMatchesCpp);
             Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
+            Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
+            Run("C#: timestamp to local time, same text as C++", TimestampConvertsToLocalTime);
             Console.WriteLine();
             Console.WriteLine("passed " + passed_ + " / failed " + failures_.Count);
             foreach (string failure in failures_)
@@ -256,13 +258,11 @@ namespace Protacoc.Tests
             route.Stops.Add(new RouteStop { OrderId = "A-100", Address = "1 Pizza St", EtaMin = 10 });
             route.Stops.Add(new RouteStop { OrderId = "A-101", Address = "2 Pasta Ave", EtaMin = 25 });
             route.Ext.SetValue("priority", 5);
+            route.SetEnvelope(new Protaco.Envelope { Id = 7, Corr = 0, Ts = 1000 });
             return route;
         }
 
-        private static Protaco.Envelope RouteEnvelope()
-        {
-            return new Protaco.Envelope { Id = 7, Corr = 0, Ts = 1000 };
-        }
+
 
         // Same values as the C++ test MakePizzaOrder.
         private static PizzaOrder MakePizzaOrder()
@@ -282,12 +282,67 @@ namespace Protacoc.Tests
             order.Delivery.Floor = 3;
             order.Delivery.DoorCode.AddRange(new[] { 4, 2, 4, 2 });
             order.Delivery.Contacts.Add("010-0000-0000");
+            order.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
             return order;
         }
 
         private static Heartbeat MakeHeartbeat()
         {
-            return new Heartbeat { Node = "oven-1", Seq = 123456789, CpuLoad = 0.25, UptimeSec = 3600 };
+            Heartbeat beat = new Heartbeat { Node = "oven-1", Seq = 123456789, CpuLoad = 0.25, UptimeSec = 3600 };
+            beat.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
+            return beat;
+        }
+
+        private static void EnvelopeIsStampedOnCreation()
+        {
+            Protaco.Envelopes.SetClock(() => 1760000000123456L);
+            DeliveryRoute first = new DeliveryRoute();
+            DeliveryRoute second = new DeliveryRoute();
+            Equal(first.GetId() + 1, second.GetId(), "next id");
+            Equal(1760000000123456L, second.GetTimestamp(), "clock");
+            PizzaOrder order = new PizzaOrder();   // one id; its nested Delivery field takes none
+            DeliveryRoute decoded = Protaco.Codec.ToObject<DeliveryRoute>(first.Serialize());
+            DeliveryRoute third = new DeliveryRoute();
+            Equal(second.GetId() + 2, third.GetId(), "decoder and nested fields take no id");
+            Equal(first.GetId(), decoded.GetId(), "decoded id");
+            Protaco.Envelopes.SetClock(null);
+            DeliveryRoute reply = new DeliveryRoute();
+            reply.SetCorr(first.GetId());
+            reply.SetTimestampAsNow();
+            Check(reply.GetTimestamp() > Protaco.Envelopes.TimestampMin, "system clock");
+            Equal(first.GetId(), Protaco.Codec.ToObject<DeliveryRoute>(reply.Serialize()).GetCorr(), "corr");
+            Check(order.GetId() == second.GetId() + 1, "order id");
+        }
+
+        private static void TimestampConvertsToLocalTime()
+        {
+            DateTime local = new DateTime(2026, 10, 20, 14, 3, 22, DateTimeKind.Local);
+            long timestamp = (local.ToUniversalTime().Ticks - 621355968000000000L) / 10 + 123456;
+            DeliveryRoute route = new DeliveryRoute();
+            route.SetId(9);
+            route.SetTimestamp(timestamp);
+            string date;
+            string time;
+            Check(route.TryGetTimeFromTimestamp(out date, out time), "time");
+            Equal("2026-10-20", date, "date");
+            Equal("14:03:22.123456", time, "time text");
+            int year;
+            int month;
+            int day;
+            int hour;
+            int minute;
+            int second;
+            int millisecond;
+            int microsecond;
+            Check(route.TryGetTimeFromTimestamp(out year, out month, out day, out hour, out minute, out second, out millisecond, out microsecond), "parts");
+            Equal(123, millisecond, "ms");
+            Equal(456, microsecond, "us");
+            Equal("DeliveryRoute{\n  envelope{id=9, corr=0, ts=2026-10-20 14:03:22.123456},\n  rider=\"\",\n  stops=[],\n  note=\"\"\n}",
+                route.ToString(Protaco.TextStyle.Pretty()), "pretty");
+            route.SetTimestamp(1000);
+            string error;
+            Check(!route.TryGetTimeFromTimestamp(out date, out time, out error), "1000 is not a time");
+            Equal("timestamp 1000 is not a time (2000-01-01 to 9999-12-31 in UTC microseconds)", error, "error");
         }
 
         // Same values as the C++ test MakeNumbers.
@@ -296,6 +351,7 @@ namespace Protacoc.Tests
             types.Numbers numbers = new types.Numbers { U32 = 0, Name = "\uD55C\uAE00 \u2713", Text = "caf\u00E9 \u5BFF\u53F8" };
             numbers.Us.AddRange(new uint[] { 0, 1, 4294967295 });
             numbers.U64s.Add(18446744073709551615);
+            numbers.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
             return numbers;
         }
 
@@ -331,6 +387,7 @@ namespace Protacoc.Tests
             proof.Signatures.Add(new byte[] { 0x00 });
             proof.Signatures.Add(new byte[0]);
             proof.Signatures.Add(new byte[] { 0x01, 0x02 });
+            proof.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
             return proof;
         }
 
@@ -384,7 +441,7 @@ namespace Protacoc.Tests
 
         private static void RoundTrip()
         {
-            byte[] bytes = MakeDeliveryRoute().Serialize(RouteEnvelope());
+            byte[] bytes = MakeDeliveryRoute().Serialize();
             DeliveryRoute got = Protaco.Codec.ToObject<DeliveryRoute>(bytes);
             Equal("rider-7", got.Rider, "rider");
             Equal(2, got.Stops.Count, "stops");
@@ -392,12 +449,12 @@ namespace Protacoc.Tests
             Equal("closest-first", got.Note, "note");
             int priority;
             Check(got.Ext.TryGetValue("priority", out priority) && priority == 5, "ext priority");
-            Check(bytes.SequenceEqual(got.Serialize(RouteEnvelope())), "re-serialized bytes differ");
+            Check(bytes.SequenceEqual(got.Serialize()), "re-serialized bytes differ");
         }
 
         private static void GoldenEqualsCpp()
         {
-            Check(MakeDeliveryRoute().Serialize(RouteEnvelope()).SequenceEqual(Golden("DeliveryRoute.bin")), "DeliveryRoute");
+            Check(MakeDeliveryRoute().Serialize().SequenceEqual(Golden("DeliveryRoute.bin")), "DeliveryRoute");
             Check(MakePizzaOrder().Serialize().SequenceEqual(Golden("PizzaOrder.bin")), "PizzaOrder");
             Check(MakeHeartbeat().Serialize().SequenceEqual(Golden("Heartbeat.bin")), "Heartbeat");
             Check(MakeDeliveryProof().Serialize().SequenceEqual(Golden("DeliveryProof.bin")), "DeliveryProof");
@@ -405,9 +462,9 @@ namespace Protacoc.Tests
 
         private static void ReadsCppGolden()
         {
-            Protaco.Envelope env;
-            DeliveryRoute route = Protaco.Codec.ToObject<DeliveryRoute>(Golden("DeliveryRoute.bin"), out env);
-            Equal(7u, env.Id, "env.id");
+            DeliveryRoute route = Protaco.Codec.ToObject<DeliveryRoute>(Golden("DeliveryRoute.bin"));
+            Equal(7u, route.GetId(), "envelope id");
+            Equal(1000L, route.GetTimestamp(), "envelope ts");
             Equal("2 Pasta Ave", route.Stops[1].Address, "stops[1].address");
             PizzaOrder order = Protaco.Codec.ToObject<PizzaOrder>(Golden("PizzaOrder.bin"));
             Equal(5, order.Toppings[0].Grams, "toppings[0].grams");
@@ -584,6 +641,7 @@ namespace Protacoc.Tests
                 + "signatures=[<1 bytes: 00>, <0 bytes>, <2 bytes: 01 02>]}", MakeDeliveryProof().ToString(), "DeliveryProof");
             Equal("Recipe{name=\"\", temp=25.5, step=3, path=\"\", note=\"none\"}", new v2.Recipe().ToString(), "defaults");
             Equal("DeliveryRoute{\n"
+                + "  envelope{id=7, corr=0, ts=1000},\n"
                 + "  rider=\"rider-7\",\n"
                 + "  stops=[\n"
                 + "    RouteStop{\n"

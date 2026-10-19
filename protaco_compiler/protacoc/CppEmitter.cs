@@ -46,7 +46,7 @@ namespace Protacoc
         private static void Class(CodeWriter w, MessageDef message, VersionView view)
         {
             Doc(w, Naming.MessageDoc(message, view));
-            w.Line("class " + message.Name);
+            w.Line("class " + message.Name + " : public protaco::CMessage<" + message.Name + ">");
             w.Line("{");
             w.Line("public:");
             w.Indent();
@@ -105,8 +105,15 @@ namespace Protacoc
 
         private static void Constructor(CodeWriter w, MessageDef message, VersionView view)
         {
-            w.Line("/// Initialized to defaults. Fixed fields live in the frame buffer.");
+            w.Line("/// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).");
             w.Line(message.Name + "()");
+            w.Line("    : " + message.Name + "(protaco::detail::NoStampTag())");
+            w.Line("{");
+            w.Line("    protaco::detail::StampEnvelope(buf_);");
+            w.Line("}");
+            w.Line();
+            w.Line("/// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.");
+            w.Line("explicit " + message.Name + "(protaco::detail::NoStampTag)");
             w.Line("{");
             w.Indent();
             w.Line("protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);");
@@ -224,9 +231,6 @@ namespace Protacoc
                 Method(w, "const protaco::CExt& GetExt() const", "return ext_;");
                 Method(w, "protaco::CExt& GetMutableExt()", "return ext_;");
             }
-            w.Line("/// Writes the envelope (id, corr, ts) straight into the frame header.");
-            Method(w, "void SetEnvelope(const protaco::Envelope& env)", "protaco::detail::StoreEnvelope(buf_, env);");
-            Method(w, "protaco::Envelope GetEnvelope() const", "return protaco::detail::LoadEnvelope(buf_.data());");
             w.Line("/// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.");
             if (view.AliveVar.Count == 0)
                 w.Line("/// Fixed fields only. " + (message.AllowExtension ? "With an empty ext, serializing" : "Serializing") + " costs nothing.");
@@ -244,6 +248,7 @@ namespace Protacoc
         {
             int hashCount = view.Version - message.MinVersion + 1;
             w.Line("friend struct protaco::detail::Access;");
+            w.Line("friend class protaco::CMessage<" + message.Name + ">;");
             w.Line();
             w.Line("enum : uint32_t");
             w.Line("{");
@@ -314,7 +319,8 @@ namespace Protacoc
             w.Line("mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)");
             foreach (FieldDef field in view.AliveVar.OrderBy(f => f.Index))
             {
-                string init = field.Type.Kind == TypeKind.String && !string.IsNullOrEmpty(field.DefaultText) ? " = " + Naming.CppString(field.DefaultText) : "";
+                string init = field.Type.Kind == TypeKind.String && !string.IsNullOrEmpty(field.DefaultText) ? " = " + Naming.CppString(field.DefaultText)
+                    : field.Type.Kind == TypeKind.Message ? "{protaco::detail::NoStampTag()}" : "";
                 w.Line(CppType(field.Type) + " " + field.Key + "_" + init + ";");
             }
             w.Line("protaco::CExt ext_;" + (message.AllowExtension ? "" : "   // stays empty: allow_extension false"));

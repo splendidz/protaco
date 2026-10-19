@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <fstream>
 #include <iterator>
 #include <random>
@@ -85,6 +86,7 @@ PizzaOrder MakePizzaOrder()
     order.mutable_delivery().set_floor(3);
     order.mutable_delivery().mutable_doorCode() = { 4, 2, 4, 2 };
     order.mutable_delivery().mutable_contacts().push_back("010-0000-0000");
+    order.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return order;
 }
 
@@ -95,6 +97,7 @@ Heartbeat MakeHeartbeat()
     beat.set_seq(123456789);
     beat.set_cpuLoad(0.25);
     beat.set_uptimeSec(3600);
+    beat.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return beat;
 }
 
@@ -107,6 +110,7 @@ types::Numbers MakeNumbers()
     numbers.mutable_u64s().push_back(18446744073709551615ull);
     numbers.set_name(u8"한글 ✓");
     numbers.set_text(u8"café 寿司");
+    numbers.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return numbers;
 }
 
@@ -119,6 +123,7 @@ DeliveryProof MakeDeliveryProof()
     proof.mutable_signatures().push_back({0x00});
     proof.mutable_signatures().push_back({});
     proof.mutable_signatures().push_back({0x01, 0x02});
+    proof.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return proof;
 }
 
@@ -680,6 +685,83 @@ TEST(Protaco, ManyExtEntriesRoundTrip)
     EXPECT_EQ(sent.Serialize(), got.Serialize());
 }
 
+// New messages take the next id and the clock time; decoded messages and nested fields take neither.
+TEST(Protaco, EnvelopeIsStampedOnCreation)
+{
+    protaco::SetClock([]() -> int64_t { return 1760000000123456; });
+    const DeliveryRoute first;
+    const DeliveryRoute second;
+    EXPECT_EQ(first.GetId() + 1, second.GetId());
+    EXPECT_EQ(1760000000123456, second.GetTimestamp());
+    EXPECT_EQ(0u, second.GetCorr());
+
+    const PizzaOrder order;   // one id; its nested Delivery field takes none
+    const DeliveryRoute decoded = protaco::ToObject<DeliveryRoute>(first.Serialize());
+    const DeliveryRoute third;
+    EXPECT_EQ(second.GetId() + 2, third.GetId());
+    EXPECT_EQ(first.GetId(), decoded.GetId());
+    EXPECT_EQ(first.GetTimestamp(), decoded.GetTimestamp());
+    protaco::SetClock(nullptr);
+
+    DeliveryRoute reply;
+    reply.SetCorr(first.GetId());
+    reply.SetId(77);
+    reply.SetTimestampAsNow();
+    EXPECT_EQ(first.GetId(), reply.GetCorr());
+    EXPECT_EQ(77u, reply.GetId());
+    EXPECT_GT(reply.GetTimestamp(), protaco::kTimestampMin);
+    EXPECT_EQ(first.GetId(), protaco::ToObject<DeliveryRoute>(reply.Serialize()).GetCorr());
+}
+
+// Timestamps are UTC microseconds; TryGetTimeFromTimestamp and Pretty() show local time. Same as the C# test.
+TEST(Protaco, TimestampConvertsToLocalTime)
+{
+    std::tm local = std::tm();
+    local.tm_year = 2026 - 1900;
+    local.tm_mon = 9;
+    local.tm_mday = 20;
+    local.tm_hour = 14;
+    local.tm_min = 3;
+    local.tm_sec = 22;
+    local.tm_isdst = -1;
+    const int64_t timestamp = static_cast<int64_t>(std::mktime(&local)) * 1000000 + 123456;
+
+    DeliveryRoute route;
+    route.SetId(9);
+    route.SetTimestamp(timestamp);
+    std::string date;
+    std::string time;
+    ASSERT_TRUE(route.TryGetTimeFromTimestamp(&date, &time));
+    EXPECT_EQ("2026-10-20", date);
+    EXPECT_EQ("14:03:22.123456", time);
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    int hour = 0;
+    int minute = 0;
+    int second = 0;
+    int millisecond = 0;
+    int microsecond = 0;
+    ASSERT_TRUE(route.TryGetTimeFromTimestamp(&year, &month, &day, &hour, &minute, &second, &millisecond, &microsecond));
+    EXPECT_EQ(2026, year);
+    EXPECT_EQ(10, month);
+    EXPECT_EQ(20, day);
+    EXPECT_EQ(14, hour);
+    EXPECT_EQ(3, minute);
+    EXPECT_EQ(22, second);
+    EXPECT_EQ(123, millisecond);
+    EXPECT_EQ(456, microsecond);
+    EXPECT_EQ("DeliveryRoute{\n  envelope{id=9, corr=0, ts=2026-10-20 14:03:22.123456},\n  rider=\"\",\n  stops=[],\n  note=\"\"\n}",
+        route.ToString(protaco::TextStyle::Pretty()));
+
+    route.SetTimestamp(1000);
+    std::string error;
+    EXPECT_FALSE(route.TryGetTimeFromTimestamp(&date, &time, &error));
+    EXPECT_EQ("timestamp 1000 is not a time (2000-01-01 to 9999-12-31 in UTC microseconds)", error);
+    EXPECT_EQ("DeliveryRoute{\n  envelope{id=9, corr=0, ts=1000},\n  rider=\"\",\n  stops=[],\n  note=\"\"\n}",
+        route.ToString(protaco::TextStyle::Pretty()));
+}
+
 TEST(Protaco, PeekHeaderReadsEnvelopeWithoutBody)
 {
     const DeliveryRoute route = MakeDeliveryRoute();
@@ -714,6 +796,7 @@ TEST(Protaco, ToStringCompact)
 TEST(Protaco, ToStringPretty)
 {
     EXPECT_EQ("DeliveryRoute{\n"
+              "  envelope{id=7, corr=0, ts=1000},\n"
               "  rider=\"rider-7\",\n"
               "  stops=[\n"
               "    RouteStop{\n"

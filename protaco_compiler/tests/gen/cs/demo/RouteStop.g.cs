@@ -10,7 +10,7 @@ namespace demo
     /// Every field is fixed-length, so sending it alone costs nothing to serialize.
     /// [version 1; schema 0x9F1C87C1; source RouteStop.yaml]
     /// </summary>
-    public sealed class RouteStop : Protaco.IMessage
+    public sealed class RouteStop : Protaco.Message, Protaco.IMessage
     {
         public const string MsgName = "RouteStop";
         public const ushort MsgVersion = 1;
@@ -20,6 +20,17 @@ namespace demo
         private static readonly uint[] SchemaHashes = { 0x9F1C87C1u };
 
         private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);
+
+        /// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>
+        public RouteStop()
+        {
+        }
+
+        /// <summary>No envelope id or time (nested fields).</summary>
+        public RouteStop(Protaco.NoStamp noStamp)
+            : base(noStamp)
+        {
+        }
 
         /// <summary>
         /// Order delivered at this stop. Example: A-100
@@ -75,16 +86,10 @@ namespace demo
         /// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>
         public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);
 
-        /// <summary>Frame bytes.</summary>
+        /// <summary>Frame bytes, envelope included. A new array on every call.</summary>
         public byte[] Serialize()
         {
-            return Protaco.Codec.Serialize(this, default(Protaco.Envelope));
-        }
-
-        /// <summary>Frame bytes including the envelope (id, corr, ts).</summary>
-        public byte[] Serialize(Protaco.Envelope env)
-        {
-            return Protaco.Codec.Serialize(this, env);
+            return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
         // Keys not allowed in ext: schema keys of every version

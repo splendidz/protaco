@@ -32,7 +32,7 @@ namespace Protacoc
         private static void Class(CodeWriter w, MessageDef message, VersionView view)
         {
             Doc(w, Naming.MessageDoc(message, view));
-            w.Open("public sealed class " + message.Name + " : Protaco.IMessage");
+            w.Open("public sealed class " + message.Name + " : Protaco.Message, Protaco.IMessage");
             w.Line("public const string MsgName = \"" + message.Name + "\";");
             w.Line("public const ushort MsgVersion = " + view.Version + ";");
             w.Line("public const ushort MsgMinVersion = " + message.MinVersion + ";");
@@ -41,6 +41,16 @@ namespace Protacoc
             w.Line("private static readonly uint[] SchemaHashes = { " + string.Join(", ", message.Views.Where(v => v.Version <= view.Version).Select(v => SchemaFingerprint.Hex(v.SchemaHash) + "u")) + " };");
             w.Line();
             w.Line("private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);" + (message.AllowExtension ? "" : "   // stays empty: allow_extension false"));
+            w.Line();
+            w.Line("/// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>");
+            w.Open("public " + message.Name + "()");
+            w.Close();
+            w.Line();
+            w.Line("/// <summary>No envelope id or time (nested fields).</summary>");
+            w.Line("public " + message.Name + "(Protaco.NoStamp noStamp)");
+            w.Line("    : base(noStamp)");
+            w.Line("{");
+            w.Line("}");
             w.Line();
             foreach (FieldDef field in view.Alive)
                 Property(w, field);
@@ -56,14 +66,9 @@ namespace Protacoc
             w.Line("/// <summary>Text for logs with a style, for example Protaco.TextStyle.Pretty().</summary>");
             w.Line("public string ToString(Protaco.TextStyle style) => Protaco.TextBuilder.Format(this, style);");
             w.Line();
-            w.Line("/// <summary>Frame bytes.</summary>");
+            w.Line("/// <summary>Frame bytes, envelope included. A new array on every call.</summary>");
             w.Open("public byte[] Serialize()");
-            w.Line("return Protaco.Codec.Serialize(this, default(Protaco.Envelope));");
-            w.Close();
-            w.Line();
-            w.Line("/// <summary>Frame bytes including the envelope (id, corr, ts).</summary>");
-            w.Open("public byte[] Serialize(Protaco.Envelope env)");
-            w.Line("return Protaco.Codec.Serialize(this, env);");
+            w.Line("return Protaco.Codec.Serialize(this, GetEnvelope());");
             w.Close();
             w.Line();
             Hidden(w, message, view);
@@ -117,8 +122,9 @@ namespace Protacoc
                 case TypeKind.Bytes:
                     return "new byte[0]";
                 case TypeKind.List:
-                case TypeKind.Message:
                     return "new " + CsType(field.Type) + "()";
+                case TypeKind.Message:
+                    return "new " + CsType(field.Type) + "(Protaco.NoStamp.Value)";
                 case TypeKind.Bool:
                     return text ?? "false";
                 default:

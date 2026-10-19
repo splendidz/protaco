@@ -9,11 +9,18 @@ namespace demo
 /// Device liveness signal. Every field is fixed-length and ext is off, so Serialize() returns the buffer as is (zero cost).
 /// Recommended shape for messages sent very often.
 /// [version 1; schema 0x2BB85C55; allow_extension false; source Heartbeat.yaml]
-class Heartbeat
+class Heartbeat : public protaco::CMessage<Heartbeat>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     Heartbeat()
+        : Heartbeat(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit Heartbeat(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &Heartbeat::IsSchemaKey);
@@ -105,17 +112,6 @@ public:
         protaco::detail::Store<int32_t>(buf_.data() + kFixedOffset + 49, value);
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Fixed fields only. Serializing costs nothing.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
@@ -133,6 +129,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<Heartbeat>;
 
     enum : uint32_t
     {

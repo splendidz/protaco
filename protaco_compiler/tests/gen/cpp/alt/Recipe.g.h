@@ -9,11 +9,18 @@ namespace alt
 /// Fingerprint test. Same name, version and fixed block size as ver_v1/Recipe.yaml, fixed fields in another order.
 /// Without the fingerprint, name and step would be read from each other's bytes without an error.
 /// [version 1; schema 0xD1D83D6C; source Recipe.yaml]
-class Recipe
+class Recipe : public protaco::CMessage<Recipe>
 {
 public:
-    /// Initialized to defaults. Fixed fields live in the frame buffer.
+    /// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).
     Recipe()
+        : Recipe(protaco::detail::NoStampTag())
+    {
+        protaco::detail::StampEnvelope(buf_);
+    }
+
+    /// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.
+    explicit Recipe(protaco::detail::NoStampTag)
     {
         protaco::detail::InitFrame(buf_, MsgName(), MsgVersion(), MsgMinVersion(), SchemaHashes(), kFixedSize);
         protaco::detail::Access::BindExt(ext_, &Recipe::IsSchemaKey);
@@ -91,17 +98,6 @@ public:
         return ext_;
     }
 
-    /// Writes the envelope (id, corr, ts) straight into the frame header.
-    void SetEnvelope(const protaco::Envelope& env)
-    {
-        protaco::detail::StoreEnvelope(buf_, env);
-    }
-
-    protaco::Envelope GetEnvelope() const
-    {
-        return protaco::detail::LoadEnvelope(buf_.data());
-    }
-
     /// Frame bytes. Fixed fields are already written by their setters; only variable fields are appended here.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
@@ -118,6 +114,7 @@ public:
 
 private:
     friend struct protaco::detail::Access;
+    friend class protaco::CMessage<Recipe>;
 
     enum : uint32_t
     {

@@ -16,7 +16,8 @@ namespace Protacoc
         {
             "ext", "buf", "cache", "serialize", "msgname", "msgversion", "msgminversion", "msgschemahash", "schemahashes",
             "setenvelope", "getenvelope", "isschemakey", "visitvar", "visittext", "tostring", "kfixedoffset",
-            "kfixedsize", "kallowextension", "equals", "gethashcode", "gettype",
+            "kfixedsize", "kallowextension", "equals", "gethashcode", "gettype", "getid", "setid", "getcorr", "setcorr",
+            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp",
         };
 
         private static readonly System.Text.RegularExpressions.Regex VersionNamespace =
