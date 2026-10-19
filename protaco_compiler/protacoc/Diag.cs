@@ -58,6 +58,7 @@ namespace Protacoc
         public const string Reserved = "PC303";        // reserved word or generated member name
         public const string BadType = "PC304";         // malformed type
         public const string RequiredFixed = "PC305";   // required on a fixed field
+        public const string RequiredSelf = "PC306";    // required on a field of the message's own type
         public const string BadDefault = "PC308";      // malformed default
         public const string BadLength = "PC310";       // N of string(N)
         public const string NameClash = "PC311";       // C# name clash
@@ -67,7 +68,7 @@ namespace Protacoc
         public const string DupNumber = "PC318";       // two enum values with one number
         public const string DupMessage = "PC401";      // duplicate message name
         public const string UnknownRef = "PC402";      // unknown message reference
-        public const string Cycle = "PC403";           // reference cycle
+        public const string Cycle = "PC403";           // reference cycle, or a self reference other than list<Self> and Self
         public const string BadElement = "PC404";      // type not allowed as list element, map key or map value
         public const string NamespaceMismatch = "PC405"; // files of one run declare different namespaces
         public const string TooDeep = "PC406";         // message nesting deeper than the runtime limit

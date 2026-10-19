@@ -77,6 +77,8 @@ namespace Protacoc
                 tags.Add("fixed " + field.Type.FixedLength + " bytes, set rejects longer values");
             if (field.Required)
                 tags.Add("required, decoding fails if missing");
+            if (field.Optional)
+                tags.Add("optional, absent until set");
             if (field.DefaultText != null)
                 tags.Add("default " + (field.DefaultQuoted || field.Type.Kind == TypeKind.String || field.Type.Kind == TypeKind.FixedString ? "\"" + field.DefaultText + "\"" : field.DefaultText));
             if (field.Added != 1)

@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <string>
@@ -46,7 +47,7 @@ enum class TacoType : uint8_t
 enum : uint32_t
 {
     kFrameVersion = 4,
-    kMaxDepth = 8,                 // max nested message depth
+    kMaxDepth = 100,               // max nested message depth
     kMaxSchemaVersions = 255,      // max supported versions per frame (min version..version)
     kMaxFields = 1024,             // max variable fields per body
     kMaxFrameBytes = 0xFFFFFFFFu,  // max frame size (4 GiB - 1): every length in the format is u32
@@ -630,6 +631,65 @@ struct VarCache
         valid = false;
         return *this;
     }
+};
+
+// A field of the message's own type: absent until set, nothing in the serialized data while absent. Copies deep.
+template <class T>
+class Box
+{
+public:
+    Box() = default;
+
+    Box(const Box& other)
+        : value_(other.value_ ? new T(*other.value_) : nullptr)
+    {
+    }
+
+    Box(Box&&) noexcept = default;
+
+    Box& operator=(const Box& other)
+    {
+        if (this != &other)
+            value_.reset(other.value_ ? new T(*other.value_) : nullptr);
+        return *this;
+    }
+
+    Box& operator=(Box&&) noexcept = default;
+
+    bool Has() const
+    {
+        return value_ != nullptr;
+    }
+
+    // Absent: a shared empty object.
+    const T& Get() const
+    {
+        if (value_)
+            return *value_;
+        static const T kEmpty{ NoStampTag() };
+        return kEmpty;
+    }
+
+    T& Mutable()
+    {
+        if (!value_)
+            value_.reset(new T(NoStampTag()));
+        return *value_;
+    }
+
+    // Copies first, so setting a node into its own field works.
+    void Set(const T& value)
+    {
+        value_.reset(new T(value));
+    }
+
+    void Clear()
+    {
+        value_.reset();
+    }
+
+private:
+    std::unique_ptr<T> value_;
 };
 
 // Per-type flag as a runtime value. A constant condition is warning C4127, and C++14 has no if constexpr.
@@ -1261,6 +1321,13 @@ public:
         size_ += TlvSize(std::strlen(key), Codec<T>::Size(value));
     }
 
+    template <class T>
+    void Field(const char* key, const Box<T>& value, bool)
+    {
+        if (value.Has())
+            Field(key, value.Get(), false);
+    }
+
     size_t Size() const
     {
         return size_;
@@ -1287,6 +1354,13 @@ public:
         writer_.Pod<uint8_t>(static_cast<uint8_t>(Codec<T>::Type()));
         writer_.Pod<uint32_t>(static_cast<uint32_t>(Codec<T>::Size(value)));
         Codec<T>::Write(writer_, value);
+    }
+
+    template <class T>
+    void Field(const char* key, const Box<T>& value, bool)
+    {
+        if (value.Has())
+            Field(key, value.Get(), false);
     }
 
 private:
@@ -1327,6 +1401,14 @@ public:
             PrependPath(error_, key);
             failed_ = true;
         }
+    }
+
+    // Absent in the data: stays absent.
+    template <class T>
+    void Field(const char* key, Box<T>& value, bool)
+    {
+        if (!failed_ && FindRaw(fields_, key, std::strlen(key)) != nullptr)
+            Field(key, value.Mutable(), false);
     }
 
     bool Failed() const
@@ -1602,6 +1684,15 @@ private:
     void Value(const std::vector<uint8_t>& value)
     {
         Bytes(value.data(), value.size());
+    }
+
+    template <class T>
+    void Value(const Box<T>& box)
+    {
+        if (box.Has())
+            Value(box.Get());
+        else
+            out_ += "null";
     }
 
     template <class E>

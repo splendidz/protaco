@@ -23,7 +23,7 @@ namespace Protacoc.Tests
             Run("generator: expected error code per bad yaml", GeneratorErrors);
             Run("generator: reference cycle PC403", GeneratorCycle);
             Run("generator: two namespaces in one run PC405", GeneratorNamespaceMix);
-            Run("generator: nesting deeper than 8 PC406", GeneratorTooDeep);
+            Run("generator: nesting deeper than 100 PC406", GeneratorTooDeep);
             Run("generator: versions on a nested message PC407", GeneratorNestedVersion);
             Run("generator: --namespace option removed", GeneratorNamespaceOption);
             Run("generator: committed demo output is up to date (--check)", GeneratorCheckUpToDate);
@@ -51,6 +51,8 @@ namespace Protacoc.Tests
             Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
             Run("C#: enum fields match C++", EnumFields);
             Run("C#: map fields match C++", MapFields);
+            Run("C#: recursive messages match C++", RecursiveMessages);
+            Run("C#: recursion stops at 100 levels", RecursionDepthLimit);
             Run("generator: enum default must be a value PC308", GeneratorEnumDefault);
             Run("C#: timestamp to local time, same text as C++", TimestampConvertsToLocalTime);
             Console.WriteLine();
@@ -170,12 +172,19 @@ namespace Protacoc.Tests
             Check(result.Output.Contains("error PC405:") && result.Output.Contains("B.yaml"), "no PC405 on B.yaml: " + result.Output);
         }
 
+        // T0..T101, each Tn holding a T(n-1): Tn nests n levels.
         private static void GeneratorTooDeep()
         {
-            GenResult result = Protacoc("-I", TestSchemas("toodeep"), "--cpp_out", Path.Combine(TempDir(), "out"));
+            string dir = TempDir();
+            for (int n = 0; n <= 101; ++n)
+            {
+                string field = n == 0 ? "  - {key: v, type: int}" : "  - {key: inner, type: T" + (n - 1) + "}";
+                File.WriteAllText(Path.Combine(dir, "T" + n + ".yaml"), "message: T" + n + "\nversion: 1\nnamespace: toodeep\nfields:\n" + field + "\n");
+            }
+            GenResult result = Protacoc("-I", dir, "--cpp_out", Path.Combine(dir, "out"));
             Equal(2, result.Exit, "exit code");
-            Check(result.Output.Contains("error PC406:") && result.Output.Contains("'T9'"), "no PC406 on T9: " + result.Output);
-            Check(!result.Output.Contains("'T8'"), "T8 (8 levels) rejected: " + result.Output);
+            Check(result.Output.Contains("error PC406:") && result.Output.Contains("'T101'"), "no PC406 on T101: " + result.Output);
+            Check(!result.Output.Contains("'T100'"), "T100 (100 levels) rejected: " + result.Output);
         }
 
         private static void GeneratorNestedVersion()
@@ -364,6 +373,46 @@ namespace Protacoc.Tests
             bytes[at + 7] = (byte)'A';
             Protaco.ProtacoException e = Fails<maps.Menu>(bytes);
             Check(e.Path.StartsWith("prices[") && e.What == "duplicate map key", "duplicate key: " + e.Message);
+        }
+
+        // Same values as the C++ test MakeTree.
+        private static recursive.Node MakeTree()
+        {
+            recursive.Node root = new recursive.Node { Name = "root", Value = 1 };
+            root.Children.Add(new recursive.Node { Name = "a", Value = 2, Next = new recursive.Node { Name = "b", Value = 3 } });
+            root.Children.Add(new recursive.Node { Name = "c", Value = 4 });
+            root.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
+            return root;
+        }
+
+        private static void RecursiveMessages()
+        {
+            Check(MakeTree().Serialize().SequenceEqual(Golden("Node.bin")), "same bytes as C++");
+            recursive.Node got = Protaco.Codec.ToObject<recursive.Node>(Golden("Node.bin"));
+            Equal("Node{name=\"root\", value=1, children=[Node{name=\"a\", value=2, children=[], next=Node{name=\"b\", value=3, children=[], next=null}}, Node{name=\"c\", value=4, children=[], next=null}], next=null}", got.ToString(), "text");
+            Equal(null, got.Next, "absent");
+            Equal("b", got.Children[0].Next.Name, "next");
+        }
+
+        private static void RecursionDepthLimit()
+        {
+            foreach (int levels in new[] { 100, 101 })
+            {
+                recursive.Node root = new recursive.Node();
+                recursive.Node node = root;
+                for (int i = 0; i < levels; ++i)
+                {
+                    node.Next = new recursive.Node();
+                    node = node.Next;
+                }
+                recursive.Node got;
+                string error;
+                bool ok = Protaco.Codec.TryToObject(root.Serialize(), out got, out error);
+                if (levels == 100)
+                    Check(ok, "100 levels: " + error);
+                else
+                    Check(!ok && error.StartsWith("next.next.next.") && error.EndsWith(": nesting too deep"), "101 levels: " + error);
+            }
         }
 
         private static void GeneratorEnumDefault()

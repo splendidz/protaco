@@ -1,0 +1,6 @@
+# expect: PC403
+message: PC403_selfmap
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: "map<string, PC403_selfmap>"}

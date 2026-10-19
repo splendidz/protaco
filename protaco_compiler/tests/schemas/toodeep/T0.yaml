@@ -1,6 +1,0 @@
-# expect: PC406 (T9 nests 9 levels)
-message: T0
-version: 1
-namespace: toodeep
-fields:
-  - {key: v, type: int}

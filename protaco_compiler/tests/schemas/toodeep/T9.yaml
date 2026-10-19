@@ -1,5 +1,0 @@
-message: T9
-version: 1
-namespace: toodeep
-fields:
-  - {key: t, type: T8}

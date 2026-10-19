@@ -32,8 +32,9 @@ namespace Protacoc
         private static readonly System.Text.RegularExpressions.Regex VersionNamespace =
             new System.Text.RegularExpressions.Regex("^v[0-9]+$");
 
-        // Must equal the runtime limit (Protaco.hpp kMaxDepth, Protaco.cs Codec.MaxDepth).
-        public const int MaxDepth = 8;
+        // Must equal the runtime limit (Protaco.hpp kMaxDepth, Protaco.cs Codec.MaxDepth). Self references are not counted:
+        // the runtime checks their depth while decoding.
+        public const int MaxDepth = 100;
 
         // Must equal the runtime limit (Protaco.hpp kMaxSchemaVersions, Protaco.cs Codec.MaxSchemaVersions).
         public const int MaxVersions = 255;
@@ -226,7 +227,7 @@ namespace Protacoc
                 if (!keys.Add(field.Key))
                     diag.Error(pos, Codes.DupKey, "duplicate field key '" + field.Key + "'");
                 CheckName(message, field, csNames, diag);
-                if (!ResolveType(field.Type, field, byName, diag, Place.Field))
+                if (!ResolveType(field.Type, field, byName, diag, Place.Field) || !CheckSelf(message, field, diag))
                     continue;
                 if (field.Required && field.Type.IsFixed)
                     diag.Error(pos, Codes.RequiredFixed, "'" + field.Key + "' is a fixed field and is always present. required is not allowed (validate the value in receiving code)");
@@ -238,8 +239,9 @@ namespace Protacoc
         {
             if (field.Key.StartsWith("_"))
                 diag.Error(field.Pos, Codes.Reserved, "keys starting with '_' are reserved");
-            if (field.Key.StartsWith("get_") || field.Key.StartsWith("set_") || field.Key.StartsWith("mutable_"))
-                diag.Error(field.Pos, Codes.Reserved, "keys starting with 'get_', 'set_' or 'mutable_' clash with generated accessors");
+            if (field.Key.StartsWith("get_") || field.Key.StartsWith("set_") || field.Key.StartsWith("mutable_") || field.Key.StartsWith("has_")
+                || field.Key.StartsWith("clear_"))
+                diag.Error(field.Pos, Codes.Reserved, "keys starting with 'get_', 'set_', 'mutable_', 'has_' or 'clear_' clash with generated accessors");
             if (GeneratedNames.Contains(field.Key))
                 diag.Error(field.Pos, Codes.Reserved, "'" + field.Key + "' is reserved by generated code");
             if (CppKeywords.Contains(field.Key) || CsKeywords.Contains(field.Key))
@@ -251,6 +253,27 @@ namespace Protacoc
                 diag.Error(field.Pos, Codes.NameClash, "C# property name '" + csName + "' equals the message name");
             else if (!csNames.Add(csName))
                 diag.Error(field.Pos, Codes.NameClash, "C# property name '" + csName + "' clashes (keys differ only in case)");
+        }
+
+        // A message may refer to itself as list<Self> or as one Self field, which is optional (absent until set).
+        // Not inside a map: libstdc++ std::unordered_map needs a complete value type. Never required.
+        private static bool CheckSelf(MessageDef message, FieldDef field, Diag diag)
+        {
+            TypeRef type = field.Type;
+            bool single = type.Kind == TypeKind.Message && type.Resolved == message;
+            bool list = type.Kind == TypeKind.List && type.Element.Resolved == message;
+            if (!single && !list)
+            {
+                if (!type.Named().Any(t => t.Resolved == message))
+                    return true;
+                diag.Error(field.Pos, Codes.Cycle, "'" + message.Name + "' can refer to itself only as list<" + message.Name + "> or a single "
+                    + message.Name + " field, not " + type);
+                return false;
+            }
+            if (field.Required)
+                diag.Error(field.Pos, Codes.RequiredSelf, "'" + field.Key + "' has the type of its own message and cannot be required");
+            field.Optional = single;
+            return true;
         }
 
         // Named types become Message or Enum here. False if the type cannot be used.
@@ -406,7 +429,8 @@ namespace Protacoc
             {
                 int start = stack.IndexOf(message);
                 IEnumerable<string> path = stack.Skip(start).Select(m => m.Name).Concat(new[] { message.Name });
-                diag.Error(message.Pos, Codes.Cycle, "reference cycle: " + string.Join(" -> ", path) + ". Recursive messages are not supported");
+                diag.Error(message.Pos, Codes.Cycle, "reference cycle: " + string.Join(" -> ", path)
+                    + ". Only a message that refers to itself is supported (list<" + message.Name + "> or a single " + message.Name + " field)");
                 return false;
             }
             state[message] = 1;
@@ -435,7 +459,7 @@ namespace Protacoc
             {
                 foreach (TypeRef type in field.Type.Named())
                 {
-                    if (type.Resolved != null && seen.Add(type.Resolved))
+                    if (type.Resolved != null && type.Resolved != message && seen.Add(type.Resolved))
                         yield return type.Resolved;
                 }
             }

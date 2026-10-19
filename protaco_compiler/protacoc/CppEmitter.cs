@@ -288,6 +288,16 @@ namespace Protacoc
                 }
                 return;
             }
+            if (field.Optional)
+            {
+                w.Line("/// get_ returns an empty " + type + " while absent; mutable_ creates it.");
+                Method(w, "bool has_" + key + "() const", "return " + key + "_.Has();");
+                Method(w, "const " + type + "& get_" + key + "() const", "return " + key + "_.Get();");
+                Method(w, type + "& mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_.Mutable();");
+                Method(w, "void set_" + key + "(const " + type + "& value)", key + "_.Set(value);", "cache_.valid = false;");
+                Method(w, "void clear_" + key + "()", key + "_.Clear();", "cache_.valid = false;");
+                return;
+            }
             Method(w, "const " + type + "& get_" + key + "() const", "return " + key + "_;");
             if (field.Type.Kind != TypeKind.String)
                 Method(w, type + "& mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_;");
@@ -400,6 +410,11 @@ namespace Protacoc
             w.Line("mutable std::vector<uint8_t> buf_;   // frame: header + FixedLen + fixed block (+ variable block after Serialize)");
             foreach (FieldDef field in view.AliveVar.OrderBy(f => f.Index))
             {
+                if (field.Optional)
+                {
+                    w.Line("protaco::detail::Box<" + CppType(field.Type) + "> " + field.Key + "_;");
+                    continue;
+                }
                 string init = field.Type.Kind == TypeKind.String && !string.IsNullOrEmpty(field.DefaultText) ? " = " + Naming.CppString(field.DefaultText)
                     : field.Type.Kind == TypeKind.Message ? "{protaco::detail::NoStampTag()}" : "";
                 w.Line(CppType(field.Type) + " " + field.Key + "_" + init + ";");

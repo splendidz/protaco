@@ -1,0 +1,10 @@
+# A tree that refers to itself: children in a list, and one optional next node.
+message: Node
+version: 1
+namespace: recursive
+fields:
+  - {key: name, type: string}
+  - {key: value, type: int}
+  - {key: children, type: list<Node>}
+  # Absent until set. Nothing in the serialized data while absent.
+  - {key: next, type: Node}

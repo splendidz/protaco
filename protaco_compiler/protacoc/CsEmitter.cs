@@ -181,7 +181,7 @@ namespace Protacoc
                 case TypeKind.Map:
                     return "new " + CsType(field.Type) + "()";
                 case TypeKind.Message:
-                    return "new " + CsType(field.Type) + "(Protaco.NoStamp.Value)";
+                    return field.Optional ? "null" : "new " + CsType(field.Type) + "(Protaco.NoStamp.Value)";
                 case TypeKind.Enum:
                     return field.Type.TypeName + "." + (text ?? field.Type.ResolvedEnum.First.Key);
                 case TypeKind.Bool:
@@ -290,6 +290,8 @@ namespace Protacoc
                     w.Line("writer.ListInt(\"" + field.Key + "\", " + name + ".ConvertAll(item => (int)item));");
                 else if (field.Type.Kind == TypeKind.Map)
                     w.Line("writer.Value(\"" + field.Key + "\", " + name + ", " + ItemField(field) + ");");
+                else if (field.Optional)
+                    w.Line("if (" + name + " != null) writer.Message(\"" + field.Key + "\", " + name + ");");
                 else
                     w.Line("writer." + VarMethod(field.Type) + "(\"" + field.Key + "\", " + name + ");");
             }

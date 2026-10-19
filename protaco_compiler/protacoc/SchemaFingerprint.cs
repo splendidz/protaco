@@ -30,10 +30,10 @@ namespace Protacoc
                 if (!field.AliveAt(version))
                 {
                     if (field.Type.IsFixed)
-                        sb.Append('~').Append(field.Key).Append(':').Append(TypeText(field.Type)).Append(';');
+                        sb.Append('~').Append(field.Key).Append(':').Append(TypeText(field.Type, message)).Append(';');
                     continue;
                 }
-                sb.Append(field.Key).Append(':').Append(TypeText(field.Type));
+                sb.Append(field.Key).Append(':').Append(TypeText(field.Type, message));
                 if (field.Required)
                     sb.Append('!');
                 if (field.DefaultText != null)
@@ -43,15 +43,18 @@ namespace Protacoc
             return sb.ToString();
         }
 
-        private static string TypeText(TypeRef type)
+        // A reference to the message itself is <Name>@self: its own fingerprint is not known yet.
+        private static string TypeText(TypeRef type, MessageDef owner)
         {
             switch (type.Kind)
             {
                 case TypeKind.List:
-                    return "list<" + TypeText(type.Element) + ">";
+                    return "list<" + TypeText(type.Element, owner) + ">";
                 case TypeKind.Map:
-                    return "map<" + TypeText(type.Key) + "," + TypeText(type.Element) + ">";
+                    return "map<" + TypeText(type.Key, owner) + "," + TypeText(type.Element, owner) + ">";
                 case TypeKind.Message:
+                    if (type.Resolved == owner)
+                        return type.TypeName + "@self";
                     return type.TypeName + "@" + type.Resolved.SchemaHash.ToString("x8");
                 case TypeKind.Enum:
                     // Only the enum name: values are append-only and receivers keep unknown numbers.

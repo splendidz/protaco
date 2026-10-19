@@ -32,6 +32,7 @@
 #include "partial/DeliveryRoute.g.h"
 #include "enums/Pie.g.h"
 #include "maps/Menu.g.h"
+#include "recursive/Node.g.h"
 #include "types/Numbers.g.h"
 #include "ver_v1/Recipe.g.h"
 #include "ver_v2/Recipe.g.h"
@@ -146,6 +147,26 @@ maps::Menu MakeMenu()
     menu.set_title("lunch");
     menu.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return menu;
+}
+
+// Golden values. Same as the C# test MakeTree. root{children=[a{next=b}, c]}
+recursive::Node MakeTree()
+{
+    recursive::Node root;
+    root.set_name("root");
+    root.set_value(1);
+    recursive::Node a;
+    a.set_name("a");
+    a.set_value(2);
+    a.mutable_next().set_name("b");
+    a.mutable_next().set_value(3);
+    root.mutable_children().push_back(a);
+    recursive::Node c;
+    c.set_name("c");
+    c.set_value(4);
+    root.mutable_children().push_back(c);
+    root.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
+    return root;
 }
 
 // Golden values. Same as the C# test MakeDeliveryProof. Zeros, 0xFF and an empty element included.
@@ -765,6 +786,56 @@ TEST(Protaco, MapFields)
     EXPECT_FALSE(protaco::TryToObject(bytes, &bad, &error));
     EXPECT_EQ(0u, error.find("prices["));
     EXPECT_NE(std::string::npos, error.find("]: duplicate map key"));
+}
+
+// A message that refers to itself: list<Node> and an optional Node. Same as the C# test.
+TEST(Protaco, RecursiveMessages)
+{
+    const recursive::Node sent = MakeTree();
+    const recursive::Node got = protaco::ToObject<recursive::Node>(sent.Serialize());
+    EXPECT_EQ("Node{name=\"root\", value=1, children=[Node{name=\"a\", value=2, children=[], next=Node{name=\"b\", value=3, children=[], next=null}}, Node{name=\"c\", value=4, children=[], next=null}], next=null}", got.ToString());
+    ExpectGolden("Node.bin", sent.Serialize());
+    EXPECT_FALSE(got.has_next());
+    EXPECT_EQ("", got.get_next().get_name());   // absent: empty node
+    EXPECT_TRUE(got.get_children()[0].has_next());
+    EXPECT_EQ("b", got.get_children()[0].get_next().get_name());
+
+    recursive::Node copy = got;
+    copy.mutable_children()[0].mutable_next().set_name("changed");
+    EXPECT_EQ("b", got.get_children()[0].get_next().get_name());   // deep copy
+    copy.set_next(copy);   // a node into its own field
+    EXPECT_EQ("root", copy.get_next().get_name());
+    EXPECT_FALSE(copy.get_next().has_next());
+    copy.clear_next();
+    EXPECT_FALSE(copy.has_next());
+    EXPECT_EQ(sent.Serialize().size(), copy.Serialize().size() - std::string("changed").size() + 1);
+}
+
+// Self references have no static depth: the decoder stops at kMaxDepth (100) nested levels.
+TEST(Protaco, RecursionDepthLimit)
+{
+    static_assert(protaco::kMaxDepth == 100, "runtime nesting limit");
+    for (int levels : { 100, 101 })
+    {
+        recursive::Node root;
+        recursive::Node* node = &root;
+        for (int i = 0; i < levels; ++i)
+            node = &node->mutable_next();
+        node->set_value(levels);
+        recursive::Node got;
+        std::string error;
+        const bool ok = protaco::TryToObject(root.Serialize(), &got, &error);
+        if (levels == 100)
+        {
+            EXPECT_TRUE(ok) << error;
+        }
+        else
+        {
+            EXPECT_FALSE(ok);
+            EXPECT_NE(std::string::npos, error.find(": nesting too deep")) << error;
+            EXPECT_EQ(0u, error.find("next.next.next.")) << error;
+        }
+    }
 }
 
 // More TLVs than the decoder keeps on the stack (16): the rest goes to the heap, nothing is lost.

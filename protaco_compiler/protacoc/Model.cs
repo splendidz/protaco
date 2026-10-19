@@ -142,6 +142,7 @@ namespace Protacoc
         public int Added = 1;            // first version with this field
         public int Removed;              // first version without it; 0 = never removed
         public int Index;                // declaration index
+        public bool Optional;            // a single field of its own message type: absent until set (set by the linker)
 
         public int FixedOffset = -1;     // offset in the fixed block, same in every version (set by the linker)
 

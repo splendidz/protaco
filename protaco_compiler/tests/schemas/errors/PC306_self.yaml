@@ -1,0 +1,6 @@
+# expect: PC306
+message: PC306_self
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: list<PC306_self>, required: true}

@@ -296,7 +296,7 @@ namespace Protaco
     public static class Codec
     {
         public const int FrameVersion = 4;
-        public const int MaxDepth = 8;
+        public const int MaxDepth = 100;
         public const int MaxSchemaVersions = 255;
         public const int MaxFields = 1024;
         // The format allows 4 GiB - 1; a .NET byte array holds at most this many bytes.
