@@ -572,6 +572,8 @@ pizza.Subsections.Add(white);
 <summary>Python</summary>
 
 ```python
+from demo.Category_g import Category
+
 pizza = Category(name="pizza")
 pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 ```
@@ -877,8 +879,8 @@ if (protaco::TryView<demo::Heartbeat>(received, &view, &error))
 <summary>C#</summary>
 
 ```csharp
-Heartbeat.View view;   // valid while received stays unchanged
-if (Heartbeat.TryView(received, out view))
+demo.Heartbeat.View view;   // valid while received stays unchanged
+if (demo.Heartbeat.TryView(received, out view))
     Console.WriteLine("node=" + view.Node + " uptime=" + view.UptimeSec);
 ```
 
@@ -1090,7 +1092,7 @@ Fixed fields gather at the front of the body. When variable fields are added, th
 
 In C++, if no variable field and no ext entry has changed since the last `Serialize()`, the variable block is not rebuilt.
 
-- A `set_` call on a variable field, a change to ext, or decoding rebuilds it
+- A `set_` call on a variable field, a change to ext, or decoding with a copy rebuilds it. An adopted buffer follows the reuse conditions in [6.6](#66-zero-copy)
 - After any call to `mutable_<k>()`, changes through that reference cannot be tracked, so the variable block is rebuilt every time
 - To keep the reuse benefit, assign lists, maps, bytes, and messages with `set_` too
 - A copied object rebuilds on its first serialization
@@ -1148,7 +1150,7 @@ Reading the results:
 - Fixed-field setters write straight into the frame, so encoding costs little more than the setter calls
 - `TryView` only checks the frame and builds no object
 - Decoding with strings shows a smaller gap. protaco decodes into a fresh object, so every string longer than 15 bytes (the MSVC short-string limit) allocates, while protobuf reuses the string buffers of its reused message
-- Frames use fixed widths and carry the name, version, and fingerprint in the header, so data with many small integers can be larger than a varint format (Mixed256: 300 B vs 268 B)
+- Integers use fixed widths, and the header carries the name, version, and fingerprint, so data with many small integers can be larger than a varint format (Mixed256: 300 B vs 268 B)
 - These numbers are for these messages on this PC. They vary with the data and the hardware
 
 Schemas, measurement code, and how to reproduce the run are in [docs/benchmark/README.md](docs/benchmark/README.md).

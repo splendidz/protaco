@@ -1819,7 +1819,7 @@ The limits are the same as in [4.7](#47-constants-and-limits). The fixed block i
 
 ### 7.1 Running and environment
 
-Run from the repository root. Windows needs Visual Studio 2017 or later (MSBuild 15, v141), .NET Framework 4.6.1, and Python 3.8 or later. Linux needs .NET SDK 8 or later, g++, and Python 3.8 or later. build.sh also covers macOS; the verification record below is for Windows and Linux.
+Run from the repository root. Windows needs Visual Studio 2017 or later (MSBuild 15, v141), .NET Framework 4.6.1, and Python 3.8 or later. Linux needs .NET SDK 8 or later, g++, and Python 3.8 or later. build.sh is also intended for macOS, but macOS has not been verified; the verification record below is for Windows and Linux.
 
 **Windows command prompt**
 

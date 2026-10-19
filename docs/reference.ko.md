@@ -1819,7 +1819,7 @@ protaco.MAX_FRAME_BYTES      # 0xFFFFFFFF
 
 ### 7.1 실행과 환경
 
-저장소 루트에서 실행합니다. Windows는 Visual Studio 2017 이상(MSBuild 15, v141), .NET Framework 4.6.1, Python 3.8 이상이 필요합니다. Linux는 .NET SDK 8 이상, g++, Python 3.8 이상이 필요합니다. build.sh는 macOS에서도 쓰도록 만들었지만, 아래 검증 기록은 Windows와 Linux 기준입니다.
+저장소 루트에서 실행합니다. Windows는 Visual Studio 2017 이상(MSBuild 15, v141), .NET Framework 4.6.1, Python 3.8 이상이 필요합니다. Linux는 .NET SDK 8 이상, g++, Python 3.8 이상이 필요합니다. build.sh는 macOS에서도 쓰도록 만들었지만 macOS는 확인하지 않았습니다. 아래 검증 기록은 Windows와 Linux 기준입니다.
 
 **Windows 명령 프롬프트**
 

@@ -415,12 +415,12 @@ values:
 
 demo::Menu menu;
 menu.set_defaultSize(demo::PizzaSize::Medium);
-std::printf("%s\n", demo::EnumName(menu.get_defaultSize()));   // Medium
+std::printf("%s\n", demo::EnumName(menu.get_defaultSize()));   // 출력: Medium
 
 demo::PizzaSize size;
 std::string error;
 if (!demo::TryParseEnum("Kids", &size, &error))
-    std::printf("%s\n", error.c_str());   // unknown PizzaSize name: Kids
+    std::printf("%s\n", error.c_str());   // 오류: unknown PizzaSize name: Kids
 ```
 
 <details>
@@ -428,7 +428,7 @@ if (!demo::TryParseEnum("Kids", &size, &error))
 
 ```csharp
 var menu = new demo.Menu { DefaultSize = demo.PizzaSize.Medium };
-Console.WriteLine(demo.PizzaSizeNames.Name(menu.DefaultSize));   // Medium
+Console.WriteLine(demo.PizzaSizeNames.Name(menu.DefaultSize));   // 출력: Medium
 
 demo.PizzaSize size;
 if (!demo.PizzaSizeNames.TryParse("Kids", out size))
@@ -445,11 +445,11 @@ from demo.Menu_g import Menu
 from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
 
 menu = Menu(defaultSize=PizzaSize.Medium)
-print(PizzaSizeNames.Name(menu.defaultSize))   # Medium
+print(PizzaSizeNames.Name(menu.defaultSize))   # 출력: Medium
 
 size = PizzaSizeNames.TryParse("Kids")
 if not size:
-    print(size.error)   # unknown PizzaSize name: Kids
+    print(size.error)   # 오류: unknown PizzaSize name: Kids
 ```
 
 </details>
@@ -572,6 +572,8 @@ pizza.Subsections.Add(white);
 <summary>Python</summary>
 
 ```python
+from demo.Category_g import Category
+
 pizza = Category(name="pizza")
 pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 ```
@@ -777,7 +779,7 @@ from demo.RouteStop_g import RouteStop
 
 route = DeliveryRoute(rider="rider-7")   # 키워드 인자, 모르는 키는 TypeError
 route.stops.append(RouteStop(orderId="A-100", address="1 Pizza St"))
-data = route.Serialize()                 # bytes
+data = route.Serialize()                 # bytes 반환
 
 ok, back, error = protaco.TryToObject(DeliveryRoute, data)   # 예외 없음
 back = protaco.ToObject(DeliveryRoute, data)                 # 실패하면 protaco.ProtacoError
@@ -877,8 +879,8 @@ if (protaco::TryView<demo::Heartbeat>(received, &view, &error))
 <summary>C#</summary>
 
 ```csharp
-Heartbeat.View view;   // received가 바뀌지 않는 동안 유효
-if (Heartbeat.TryView(received, out view))
+demo.Heartbeat.View view;   // received가 바뀌지 않는 동안 유효
+if (demo.Heartbeat.TryView(received, out view))
     Console.WriteLine("node=" + view.Node + " uptime=" + view.UptimeSec);
 ```
 
@@ -1090,7 +1092,7 @@ beat.set_uptimeSec(11);                  // bytes에도 바로 11이 보임
 
 C++은 마지막 `Serialize()` 이후 가변 필드와 ext가 바뀌지 않았다면 가변 블록을 다시 만들지 않습니다.
 
-- 가변 필드의 `set_` 호출, ext의 변경, 디코딩으로 값이 바뀌면 다시 만듦
+- 가변 필드의 `set_` 호출, ext의 변경, 복사 디코딩 뒤 다시 만듦. 이동 버퍼를 그대로 넘겨받은 경우는 [6.6](#66-zero-copy)의 재사용 조건 적용
 - `mutable_<k>()`를 한 번이라도 부른 객체는 그 참조를 통한 수정을 추적할 수 없으므로 매번 가변 블록을 다시 만듦
 - 재사용 이득이 필요하면 목록, map, bytes, 메시지도 `set_`으로 넣음
 - 복사한 객체는 첫 직렬화 때 다시 만듦
@@ -1148,7 +1150,7 @@ Mixed256 결과입니다.
 - 고정 필드는 setter가 프레임에 바로 쓰므로 인코딩 비용이 거의 setter 호출뿐
 - `TryView`는 프레임만 검사하고 객체를 만들지 않음
 - 문자열이 있는 디코딩은 차이가 작음. protaco는 새 객체로 디코딩해서 15바이트(MSVC의 짧은 문자열 한도)를 넘는 문자열마다 할당이 생기고, protobuf는 재사용 메시지의 문자열 버퍼를 다시 씀
-- 프레임은 고정 폭이고 헤더에 이름, version, 지문이 실리므로 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음(Mixed256: 300 B 대 268 B)
+- 정수는 고정 폭이고 헤더에 이름, version, 지문이 실리므로 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음(Mixed256: 300 B 대 268 B)
 - 수치는 이 메시지와 이 PC의 결과. 데이터 구성과 하드웨어에 따라 달라짐
 
 스키마, 측정 코드, 재현 방법은 [docs/benchmark/README.ko.md](docs/benchmark/README.ko.md)에 있습니다.
