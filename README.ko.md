@@ -29,9 +29,9 @@ C++에서 구조체를 선언하듯 YAML 파일에 메시지를 적습니다. `p
 
 Protaco는 간단하면서 빠른 것을 원하는 사람을 위해 만들었습니다.
 
-- 🎮 게임: 클라이언트와 서버 사이 패킷, 세이브 데이터, 게임과 에디터 사이 데이터
-- 🛠️ 툴, 에디터, 시뮬레이터: C++ 코어, C# UI, Python 자동화가 한 데이터를 나눠 쓰는 구성
-- 🔌 PC와 장치 사이, 사내 서비스 사이 메시지: 정해진 필드를 자주, 빠르게 주고받는 곳
+- 게임: 클라이언트와 서버 사이 패킷, 세이브 데이터, 게임과 에디터 사이 데이터
+- 툴, 에디터, 시뮬레이터: C++ 코어, C# UI, Python 자동화가 한 데이터를 나눠 쓰는 구성
+- PC와 장치 사이, 사내 서비스 사이 메시지: 정해진 필드를 자주, 빠르게 주고받는 곳
 
 이런 곳은 프로그램을 자주 고치고 자주 배포합니다. 새 빌드와 옛 빌드가 섞여 도는 기간이 늘 있으므로, 어떤 version끼리 통신할 수 있는지를 규약으로 관리하면 얻는 것이 큽니다. 반면 Protocol Buffers가 가진 많은 기능까지는 필요 없고, 명시적인 데이터를 빠르게 주고받으면 충분합니다. Protaco는 그 범위에 맞췄습니다.
 
@@ -41,7 +41,7 @@ C++ 런타임은 헤더 하나, C# 런타임은 소스 파일 하나, Python 런
 
 ![Protocol Buffers와 Protaco의 도입 과정 비교](docs/img/setup.svg)
 
-빠른 이유도 단순합니다. 고정 길이 필드는 setter가 프레임 버퍼의 제자리에 바로 기록하므로, 고정 필드만 있는 메시지는 `Serialize()`에서 할 일이 없습니다. 받는 쪽은 `TryView`로 바이트를 복사하지 않고 제자리에서 읽을 수 있습니다(zero-copy). 측정에서 고정 필드 메시지의 인코딩은 Protocol Buffers보다 8.6배, `TryView` 읽기는 21배 빨랐습니다([1.2](#12-protocol-buffers와-비교)).
+빠른 이유도 단순합니다. C++에서는 고정 길이 필드의 setter가 프레임 버퍼의 제자리에 바로 기록하므로, 고정 필드만 있고 확장 데이터가 빈 메시지는 `Serialize()`에서 할 일이 없습니다. 받는 쪽은 `TryView`로 바이트를 복사하지 않고 제자리에서 읽을 수 있습니다(zero-copy). 측정에서 고정 필드 메시지의 인코딩은 Protocol Buffers보다 8.6배, `TryView` 읽기는 21배 빨랐습니다([1.2](#12-protocol-buffers와-비교)).
 
 ### 안정적이고 강건합니다
 
@@ -157,12 +157,12 @@ if not ok:
 - 📄 YAML이 곧 IDL입니다. 구조체를 선언하듯 필드를 적고, 다른 메시지, enum, 목록, map, 자기 자신까지 타입으로 씁니다. 메시지끼리는 이름으로 참조하므로 파일 순서는 신경 쓰지 않아도 됩니다.
 - C++은 header-only `*.g.h`, C#은 `*.g.cs`, Python은 `*_g.py`로 출력합니다. 따로 빌드하거나 링크할 lib/dll이 없습니다. 생성 파일을 프로젝트에 넣으면 끝입니다!
 - 생성할 때마다 코드 옆에 같은 버전의 런타임을 씁니다. 생성기와 런타임 버전이 어긋날 일이 없습니다.
-- ⚡ 고정 필드는 setter가 최종 바이트를 바로 기록합니다. 바뀐 것이 없으면 `Serialize()`가 마지막 바이트를 그대로 돌려주고, 받는 쪽은 `TryView`로 복사 없이 읽습니다.
+- ⚡ C++에서는 고정 필드의 setter가 최종 바이트를 바로 기록하고, 바뀐 것이 없으면 `Serialize()`가 마지막 바이트를 그대로 돌려줍니다. 받는 쪽은 `TryView`로 복사 없이 읽습니다(C++, C#).
 - 🛡️ 받을 때 이름, version, 스키마 지문을 모두 확인합니다. 깨진 데이터가 조용히 읽히는 일이 없습니다.
 - 버전 관리가 필드 단위입니다. 필드마다 `added`와 `removed`로 이력을 남기고, 아직 지원하는 옛 version의 클래스도 함께 생성합니다.
 - 스키마에 없는 키-값도 확장 데이터(ext)로 실어 보낼 수 있습니다. 필요 없으면 `allow_extension: false`로 끕니다.
 - 예외 없는 API가 기본입니다. `Try*` 함수는 성공 여부를 돌려주고 실패 이유를 `경로: 이유` 형태의 문자열로 알려 줍니다.
-- 메시지마다 봉투(id, 상관 id, 마이크로초 시각)가 있습니다. 객체를 만들면 id와 현재 시각이 자동으로 찍힙니다.
+- 메시지마다 봉투(id, 상관 id, 마이크로초 시각)가 있습니다. 객체를 만들면 1씩 늘어나는 id와 현재 시각이 자동으로 찍히고, 응답에는 요청의 id를 상관 id로 담습니다.
 - 📝 `ToString()` 한 줄로 필드, enum 이름, 확장 데이터를 로그에 남깁니다.
 - 🐧 Windows와 Linux를 정식으로 지원합니다. 문자열은 어디서나 UTF-8입니다.
 
@@ -180,7 +180,7 @@ Protaco는 Protocol Buffers보다 좁은 범위를 다룹니다. 지원 언어�
 | 메시지 식별 | 이름, version, 스키마 지문 검사 | 데이터에 이름과 스키마가 없음, 없는 필드는 기본값 |
 | 버전 관리 | YAML 하나에 필드별 이력, 옛 version별 클래스 | 필드 번호로 관리, 메시지당 클래스 하나 |
 | 스키마 문법 | YAML, 구조체를 선언하듯 | `.proto` 언어 |
-| 언어 | C++, C#, Python | 다수 |
+| 언어 | C++, C#, Python(Windows, Linux) | 다수 |
 
 성능은 같은 PC에서 같은 메시지를 인코딩·디코딩한 호출당 시간으로 비교했습니다. 막대는 평균, 수염은 표준편차이고 짧을수록 좋습니다.
 
@@ -189,11 +189,11 @@ Protaco는 Protocol Buffers보다 좁은 범위를 다룹니다. 지원 언어�
 - Fixed512(고정 필드만): 인코딩 23.3 ns 대 200.1 ns(8.6배), 디코딩 55.4 ns 대 252.3 ns(4.6배), `TryView` 11.9 ns(21.2배)
 - Mixed256(고정 필드와 문자열 2개): 인코딩 20.7 ns 대 93.3 ns(4.5배), 디코딩 126.9 ns 대 164.5 ns(1.3배)
 
-측정 조건과 해석은 [8.4](#84-protocol-buffers와-측정-비교)에 있습니다.
+측정 조건과 해석은 [8.4](#84-protocol-buffers와-측정-비교)에, 측정 코드와 재현 방법은 [벤치마크 문서](docs/benchmark/README.ko.md)에 있습니다.
 
 ## 2. 동작 구조
 
-`protacoc`는 빌드 시점에 YAML을 읽어 메시지 클래스와 런타임을 씁니다. C++ 프로젝트는 헤더를 include하고, C# 프로젝트는 소스를 함께 컴파일하고, Python은 생성 패키지를 import합니다. 실행 중에는 생성 코드와 런타임만 쓰고 protacoc는 필요 없습니다. 세 언어의 메시지가 같은 프레임 바이트를 쓰므로 TCP, 파이프, 파일, 공유 메모리 등 어떤 전송 수단에도 실을 수 있습니다.
+`protacoc`는 빌드 시점에 YAML을 읽어 메시지 클래스와 런타임을 씁니다. C++ 프로젝트는 헤더를 include하고, C# 프로젝트는 소스를 함께 컴파일하고, Python은 생성 패키지를 import합니다. 실행 중에는 생성 코드와 런타임만 쓰고 protacoc는 필요 없습니다. 세 언어의 메시지가 같은 직렬화 형식을 쓰므로 TCP, 파이프, 파일, 공유 메모리 등 어떤 전송 수단에도 실을 수 있습니다.
 
 ![스키마에서 생성 코드와 런타임을 거쳐 C++, C#, Python이 통신하는 흐름](docs/img/flow.svg)
 
@@ -221,7 +221,7 @@ Linux:
 - C#: C# 7.3, .NET Framework 4.6.1 또는 .NET 8
 - Python: Python 3.8 이상, 표준 라이브러리만
 
-시험용 googletest는 저장소(`protaco_compiler/tests/googletest`)에 들어 있어 따로 설치하지 않습니다. `build.sh`는 POSIX sh라 macOS에서도 같은 도구로 실행할 수 있지만, 확인은 Windows와 Linux(WSL Ubuntu 22.04)에서 했습니다.
+시험용 googletest는 저장소(`protaco_compiler/tests/googletest`)에 들어 있어 따로 설치하지 않습니다. 빌드와 시험은 Windows와 Linux(WSL Ubuntu 22.04)에서 확인했습니다. macOS는 확인하지 않았습니다.
 
 ### 3.2 protacoc 빌드
 
@@ -464,7 +464,7 @@ if not size:
 ```
 
 - 키: `int`, `int64`, `uint`, `uint64`, `string`, enum
-- 값: `string(N)`을 뺀 모든 타입. 메시지, enum, bytes, 목록, map 중첩도 가능(예: `map<string, list<string>>`, `map<int64, map<string, int>>`)
+- 값: `string(N)`을 뺀 모든 타입. 메시지, enum, bytes, 목록, map 중첩도 가능(예: `map<string, list<string>>`, `map<int64, map<string, int>>`). 목록 값은 목록 원소 규칙을 따름
 - map을 목록 원소로 쓸 수는 없음(`list<map<...>>`는 PC404)
 - YAML의 `{...}` 안에서는 따옴표로 감쌈. 따옴표가 없으면 PC102와 함께 안내 문구가 나옴
 - 바이트에 실리는 항목 순서는 컨테이너 순회 순서. 같은 내용이라도 언어와 구현에 따라 바이트가 다를 수 있고, 디코딩한 내용은 같음
@@ -539,7 +539,7 @@ fields:
 
 규칙입니다.
 
-- 재귀 필드는 `required` 불가(PC306). 구조에 끝이 있어야 하기 때문
+- 재귀 필드(`list<Self>`, 단일 `Self`)는 `required` 불가(PC306)
 - map 값으로 자기 자신을 쓸 수 없음(PC403). libstdc++의 `std::unordered_map`이 완전한 타입을 요구하기 때문
 - 두 메시지가 서로 참조하는 순환(A → B → A)은 PC403
 - 재귀 메시지는 자기 필드의 타입으로 쓰이므로 version 기능(`min_version`, `added`, `removed`)을 쓸 수 없음(PC407, [7.9](#79-배치-규칙))
@@ -634,8 +634,8 @@ if not channel:
 </details>
 
 - `SetValue`: 성공 여부를 돌려줌. 실패 이유는 마지막 인자로 받음(C++ `std::string*`, nullptr 가능, C# `out string`). Python은 `Result`
-- `TryGetValue`: 키가 없거나 저장된 타입이 다르면 실패, 출력 값은 그대로. 예: `ext key channel holds string, not int`
-- 값 타입: `bool`, int32, int64, uint32, uint64, `double`, 문자열, bytes. C++에서 그 밖의 타입(`long`, `float` 등)은 컴파일 오류이므로 캐스트해서 넣음
+- `TryGetValue`: 키가 없거나 저장된 타입이 다르면 실패. 출력 값은 C++에서 그대로, C#에서 `default(T)`. 예: `ext key channel holds string, not int`
+- 값 타입: `bool`, int32, int64, uint32, uint64, `double`, 문자열, bytes. C++에서 위 타입과 정확히 같지 않은 타입(`float`, `char`, Windows의 `long`, Linux의 `long long` 등)은 컴파일 오류이므로 캐스트해서 넣음
 - Python 정수는 크기가 정해져 있지 않으므로 `protaco.INT`, `INT64`, `UINT`, `UINT64` 중 하나를 kind로 줌
 - 존재 확인 `Has`, 삭제 `Remove`, 항목 수 `Count`, 키 목록 `Keys`. C++은 `Count()`·`Keys()` 함수, C#은 `Count`·`Keys` 속성, Python은 `Count` 속성과 `Keys()` 함수
 
@@ -653,7 +653,7 @@ if not channel:
 
 ### 5.4 닫힌 메시지
 
-`allow_extension: false`이면 확장 API가 생성되지 않습니다(Python은 `ext` 호출이 `ext is off for this message (allow_extension false)` 오류). 같은 version 프레임에 모르는 키가 있으면 `unknown key (allow_extension false)`로 실패합니다. 더 새 version의 프레임은 수신 측 version의 지문을 확인한 뒤 새 필드를 버립니다.
+`allow_extension: false`이면 확장 API가 생성되지 않습니다(Python은 `ext` 속성이 남아 있지만 `SetValue`가 `ext is off for this message (allow_extension false)`로 실패). 같은 version 프레임에 모르는 키가 있으면 `unknown key (allow_extension false)`로 실패합니다. 더 새 version의 프레임은 수신 측 version의 지문을 확인한 뒤 새 필드를 버립니다.
 
 이 설정도 스키마 지문에 들어갑니다. 배포한 계약에서 값을 바꾸면 호환되지 않으므로 처음부터 메시지의 확장 정책을 정합니다.
 
@@ -690,6 +690,8 @@ if not channel:
 
 - `TryToObject`: 바이트를 객체로. 예외 없음, 실패하면 출력 객체는 그대로
 
+  **C++**
+
   ```cpp
   demo::DeliveryRoute back;
   std::string error;
@@ -698,12 +700,16 @@ if not channel:
 
 - `ToObject<T>`: 실패하면 `protaco::CParseError`를 던짐. `what()`은 `경로: 이유`
 
+  **C++**
+
   ```cpp
   try { auto back = protaco::ToObject<demo::DeliveryRoute>(bytes); }
   catch (const protaco::CParseError& e) { std::printf("%s\n", e.what()); }
   ```
 
 - `PeekHeader`: 본문을 디코딩하지 않고 헤더만 읽음. `Header{name, version, minVersion, schemaHash, env, bodySize}`
+
+  **C++**
 
   ```cpp
   protaco::Header header;
@@ -712,6 +718,8 @@ if not channel:
   ```
 
 - `TextStyle`: 구분자, 괄호, 들여쓰기, 문자열 길이
+
+  **C++**
 
   ```cpp
   protaco::TextStyle style = protaco::TextStyle::Pretty();
@@ -727,7 +735,8 @@ if not channel:
 
 클래스는 `<ns>.<Name>`, 런타임은 `Protaco.cs`의 `Protaco` namespace입니다.
 
-**C#**
+<details>
+<summary>C#</summary>
 
 ```csharp
 var route = new demo.DeliveryRoute { Rider = "rider-7" };
@@ -744,7 +753,9 @@ Protaco.Codec.PeekHeader(bytes, out header);
 string pretty = route.ToString(Protaco.TextStyle.Pretty());
 ```
 
-- 필드는 PascalCase 속성. 고정 문자열은 길이를 넘기면 `ArgumentException`
+</details>
+
+- 필드는 키의 첫 글자만 대문자로 바꾼 속성(`orderId` → `OrderId`). 고정 문자열은 길이를 넘기면 `ArgumentException`
 - 열린 메시지는 `Ext` 속성. API는 [5.2](#52-쓰기와-읽기)
 - 봉투는 C++과 같은 이름의 메서드(`GetId()`, `SetCorr()`, `SetTimestampAsNow()` 등)
 - `MsgName`, `MsgVersion`, `MsgMinVersion`, `MsgSchemaHash`는 상수: `demo.DeliveryRoute.MsgName`
@@ -756,7 +767,8 @@ string pretty = route.ToString(Protaco.TextStyle.Pretty());
 
 `--py_out` 폴더를 `sys.path`에 넣고 생성 모듈을 import합니다. 런타임은 `protaco` 모듈입니다.
 
-**Python**
+<details>
+<summary>Python</summary>
 
 ```python
 import protaco
@@ -773,6 +785,8 @@ header = protaco.PeekHeader(data).value
 print(route.ToString(protaco.TextStyle.Pretty()))
 ```
 
+</details>
+
 - 속성 이름은 YAML 키 그대로. Python 예약어는 끝에 `_`(`from` → `from_`)
 - `Result`: 실패면 거짓. `.ok`, `.value`, `.error`, `ok, value, error = ...`로 풀기
 - 범위를 넘는 값은 `Serialize()`에서 `protaco.ProtacoError`(예: `orderId: 17 bytes, longer than string(16)`)
@@ -787,7 +801,7 @@ print(route.ToString(protaco.TextStyle.Pretty()))
 - id(u32): 메시지마다 새 번호. 모듈 전역 카운터라서 여러 메시지 종류가 섞인 로그에서도 id 하나로 메시지를 찾음. 1부터 시작, 0은 건너뜀, 스레드 안전
 - corr(u32): 응답이 가리키는 요청의 id
 - ts(i64): 1970-01-01 기준 UTC 마이크로초
-- 디코딩한 객체와 중첩 필드는 새 id를 쓰지 않음(받은 값 그대로)
+- 디코딩한 객체는 새 id를 쓰지 않고 받은 봉투를 그대로 가짐. 생성 코드가 만드는 중첩 필드 객체도 id를 쓰지 않음(중첩 본문에는 봉투가 없음)
 
 **C++**
 
@@ -843,6 +857,7 @@ reply.SetTimestampAsNow()
 - `TryGetTimeFromTimestamp`: 로컬 시각을 날짜·시각 문자열로, 또는 연·월·일·시·분·초·밀리초·마이크로초로 받음(Python은 `TryGetTimeFromTimestampParts()`)
 - 2000-01-01부터 9999-12-31(UTC) 밖의 ts는 시각으로 보지 않음. `TryGetTimeFromTimestamp`는 실패하고 `ToString`은 정수 그대로 출력
 - `protaco::SetClock(fn)`: 시계 교체(시험, 시뮬레이션 시간). nullptr이면 시스템 시계. 메시지를 만들기 전에 설정(C# `Protaco.Envelopes.SetClock`, Python `protaco.SetClock`)
+- 모듈 함수: `protaco::NextId()`(다음 id), `protaco::NowUs()`(현재 UTC 마이크로초), `protaco::TryGetTime(ts, &date, &time, &error)`(ts를 로컬 날짜·시각 문자열로). C# `Protaco.Envelopes`, Python `protaco` 모듈에도 같은 이름
 
 ### 6.6 zero-copy
 
@@ -870,12 +885,14 @@ if (Heartbeat.TryView(received, out view))
 </details>
 
 - `View`는 그 version에 가변 필드가 없는 메시지에만 생성됨. 필드 getter와 봉투 getter만 있음
-- 할당·복사 없음. view는 바이트를 가리킬 뿐이라 바이트가 살아 있고 바뀌지 않는 동안만 유효
+- `TryView` 호출에는 할당·복사가 없음. view는 바이트를 가리킬 뿐이라 바이트가 살아 있고 바뀌지 않는 동안만 유효. 고정 문자열 getter는 읽을 때 `std::string`(C# `string`)을 새로 만듦
 - C++에 임시 vector(`std::vector&&`)를 넘기면 컴파일 오류. 바로 사라질 바이트를 가리키지 않게 막는 장치
 - 확장 데이터(ext)는 view로 볼 수 없음
 - Python에는 View가 없음([6.4](#64-python))
 
 C++에서는 받은 버퍼를 객체에 넘겨줄 수도 있습니다. `ToObject`나 `TryToObject`에 `std::move`로 vector를 주면, 프레임이 그 클래스의 version 배치와 정확히 같을 때(같은 지원 version 범위와 지문) 그 버퍼가 그대로 객체의 프레임 버퍼가 됩니다. 이후 `Serialize()`는 가변 필드나 ext를 바꾸기 전까지 그 버퍼를 돌려줍니다. 더 새 version 등 다른 프레임은 보통처럼 복사합니다.
+
+**C++**
 
 ```cpp
 std::vector<uint8_t> bytes = Receive();
@@ -892,7 +909,7 @@ demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(byt
 - 오류 문자열은 `경로: 이유`. 예: `delivery.doorCode: list element type mismatch`, `sections[0].name: type mismatch: expected string, got int`. 경로가 없으면 이유만: `message name mismatch: expected DeliveryRoute, got Heartbeat`
 - 세 언어가 같은 문구. 전체 목록은 [디코딩 오류](docs/reference.ko.md#32-디코딩-오류)
 
-값을 넣을 때의 검사도 같은 방식입니다. C++ `string(N)` setter, `CExt::SetValue`, `TryParseEnum`, `TryGetTime`은 `bool`과 오류 문자열을 돌려줍니다.
+값을 넣을 때의 검사는 언어마다 다릅니다. C++ `string(N)` setter, `CExt::SetValue`, `TryParseEnum`, `TryGetTime`은 `bool`과 오류 문자열을 돌려줍니다. C# 고정 문자열 setter는 `ArgumentException`을 던지고, Python은 범위를 넘는 값에 `Serialize()`에서 `protaco.ProtacoError`를 냅니다([4.4](#44-타입)).
 
 ## 7. 버전 관리
 
@@ -1056,7 +1073,7 @@ sequenceDiagram
 
 ### 8.2 고정 필드 직접 기록
 
-고정 필드는 프레임 버퍼 안에 자리가 정해져 있습니다. setter가 최종 바이트를 바로 기록하므로, 고정 필드만 있고 ext가 비어 있으면 `Serialize()`에서 더할 일이 없습니다.
+C++에서 고정 필드는 프레임 버퍼 안에 자리가 정해져 있습니다. setter가 최종 바이트를 바로 기록하므로, 고정 필드만 있고 ext가 비어 있으면 `Serialize()`에서 더할 일이 없습니다. C#과 Python은 필드를 객체에 두고 `Serialize()`할 때 바이트를 만듭니다.
 
 **C++**
 
@@ -1078,6 +1095,8 @@ C++은 마지막 `Serialize()` 이후 가변 필드와 ext가 바뀌지 않았�
 - 재사용 이득이 필요하면 목록, map, bytes, 메시지도 `set_`으로 넣음
 - 복사한 객체는 첫 직렬화 때 다시 만듦
 - C#은 호출마다 새 `byte[]`를, Python은 새 `bytes`를 만들며 이 재사용을 하지 않음
+
+**C++**
 
 ```cpp
 route.set_stops(std::vector<demo::RouteStop>{stop});
@@ -1165,7 +1184,7 @@ pretty = route.ToString(protaco.TextStyle.Pretty())
 
 </details>
 
-예제 프로그램의 실제 출력입니다(봉투 시각은 실행마다 다름).
+C++ 예제 프로그램의 실제 출력입니다(봉투 시각은 실행마다 다르고, C#·Python 예제는 다른 봉투 id를 출력).
 
 ```text
 DeliveryRoute{rider="rider-7", stops=[RouteStop{orderId="A-100", address="1 Pizza St", etaMin=15}], note="", ext{priority=5}}
@@ -1219,7 +1238,7 @@ Frame
   Body
 
 Body (중첩 메시지도 같은 모양)
-  FixedLen u32     같은 version이면 수신 측 고정 영역과 같고, 새 version이면 더 큼
+  FixedLen u32     같은 version이면 수신 측 고정 영역과 같고, 새 version이면 같거나 더 큼
   Fixed            고정 필드, 직렬화 순서, padding 없음
   Var*             가변 필드 TLV, 직렬화 순서
   Ext*             확장 항목 TLV, 추가 순서

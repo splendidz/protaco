@@ -29,9 +29,9 @@ Write a message in a YAML file the way you would declare a struct in C++. `prota
 
 Protaco is for people who want something simple and fast.
 
-- 🎮 Games: client and server packets, save data, data between the game and its editor
-- 🛠️ Tools, editors, and simulators: a C++ core, a C# UI, and Python automation sharing the same data
-- 🔌 Messages between a PC and a device, or between in-house services: fixed fields sent often and fast
+- Games: client and server packets, save data, data between the game and its editor
+- Tools, editors, and simulators: a C++ core, a C# UI, and Python automation sharing the same data
+- Messages between a PC and a device, or between in-house services: fixed fields sent often and fast
 
 Programs like these change and ship often. New and old builds always run side by side for a while, so it pays to manage which versions can talk to each other as part of the contract. On the other hand, they do not need everything Protocol Buffers offers. Exchanging explicit data quickly is enough. Protaco is built for exactly that scope.
 
@@ -41,7 +41,7 @@ The C++ runtime is one header, the C# runtime is one source file, and the Python
 
 ![Getting started with Protocol Buffers compared with Protaco](docs/img/setup.svg)
 
-The reason it is fast is simple, too. Fixed-length setters write straight into their place in the frame buffer, so a message with only fixed fields has nothing left to do in `Serialize()`. The receiver can read the bytes in place with `TryView`, without copying (zero copy). In our measurements, encoding a fixed-field message was 8.6 times faster than with Protocol Buffers, and reading it with `TryView` was 21 times faster ([1.2](#12-compared-with-protocol-buffers)).
+The reason it is fast is simple, too. In C++, fixed-length setters write straight into their place in the frame buffer, so a message with only fixed fields and empty extension data has nothing left to do in `Serialize()`. The receiver can read the bytes in place with `TryView`, without copying (zero-copy). In our measurements, encoding a fixed-field message was 8.6 times faster than with Protocol Buffers, and reading it with `TryView` was 21 times faster ([1.2](#12-compared-with-protocol-buffers)).
 
 ### Stable and robust
 
@@ -155,14 +155,14 @@ if not ok:
 ### 1.1 Features
 
 - 📄 YAML is the IDL. You list fields the way you declare a struct, and a type can be another message, an enum, a list, a map, or the message itself. Messages refer to each other by name, so file order never matters.
-- Output is header-only C++ (`*.g.h`), C# (`*.g.cs`), and Python (`*_g.py`). There is no lib/dll to build or link. Drop the generated files into your project and you are done!
+- C++ output is header-only (`*.g.h`), C# output is `*.g.cs`, and Python output is `*_g.py`. There is no lib/dll to build or link. Drop the generated files into your project and you are done!
 - Every run writes the matching runtime next to the generated code, so the generator and runtime versions can never drift apart.
-- ⚡ Fixed-field setters write the final bytes directly. When nothing has changed, `Serialize()` hands back the last bytes as they are, and the receiver reads them without a copy through `TryView`.
+- ⚡ In C++, fixed-field setters write the final bytes directly, and when nothing has changed, `Serialize()` hands back the last bytes as they are. Receivers read them without a copy through `TryView` (C++ and C#).
 - 🛡️ Receivers check the name, version, and schema fingerprint. Broken data is never read silently.
 - Versioning works per field. Each field records its history with `added` and `removed`, and the generator also produces classes for the older versions you still support.
 - Extension data (ext) carries key-value pairs that are not in the schema. Turn it off with `allow_extension: false` when you do not need it.
 - The API is exception-free by default. `Try*` functions return success or failure and report the reason as a `path: reason` string.
-- Every message has an envelope: an id, a correlation id, and a microsecond timestamp. A new object gets its id and the current time automatically.
+- Every message has an envelope: an id, a correlation id, and a microsecond timestamp. A new object gets the next id and the current time automatically, and a reply carries the request's id as its correlation id.
 - 📝 One `ToString()` call puts fields, enum names, and extension data in your logs.
 - 🐧 Windows and Linux are officially supported. Strings are UTF-8 everywhere.
 
@@ -176,11 +176,11 @@ Protaco covers a narrower scope than Protocol Buffers. It supports fewer languag
 | Dependencies | C++ standard library | Runtime library to link; version 22 adds Abseil |
 | Generator and runtime | Matching runtime written next to the generated code | Installed runtime and generated code must match; a mismatch is a compile error in the generated header |
 | Encoding | Fixed-field setters write directly into the frame | Each field encoded at serialization, integers as varints |
-| Decoding | Fixed-field messages read in place with `TryView` (zero copy) | Parsed into a message object |
+| Decoding | Fixed-field messages read in place with `TryView` (zero-copy) | Parsed into a message object |
 | Message identity | Name, version, and schema fingerprint checked | No name or schema in the data; absent fields take defaults |
 | Versioning | Per-field history in one YAML file, a class per older version | Field numbers, one class per message |
 | Schema syntax | YAML, like declaring a struct | The `.proto` language |
-| Languages | C++, C#, Python | Many |
+| Languages | C++, C#, Python (Windows, Linux) | Many |
 
 Performance was compared as time per call to encode and decode the same messages on the same PC. Bars are means, whiskers are standard deviations, and shorter is better.
 
@@ -189,11 +189,11 @@ Performance was compared as time per call to encode and decode the same messages
 - Fixed512 (fixed fields only): encode 23.3 ns vs 200.1 ns (8.6x), decode 55.4 ns vs 252.3 ns (4.6x), `TryView` 11.9 ns (21.2x)
 - Mixed256 (fixed fields and two strings): encode 20.7 ns vs 93.3 ns (4.5x), decode 126.9 ns vs 164.5 ns (1.3x)
 
-Measurement conditions and notes are in [8.4](#84-measured-against-protocol-buffers).
+Measurement conditions and notes are in [8.4](#84-measured-against-protocol-buffers); the benchmark code and how to reproduce it are in the [benchmark guide](docs/benchmark/README.md).
 
 ## 2. How it works
 
-At build time, `protacoc` reads the YAML and writes the message classes and the runtime. C++ projects include the headers, C# projects compile the sources along with their own, and Python imports the generated package. At run time only the generated code and the runtime are needed, not protacoc. Messages in all three languages use the same frame bytes, so any transport works: TCP, pipes, files, shared memory.
+At build time, `protacoc` reads the YAML and writes the message classes and the runtime. C++ projects include the headers, C# projects compile the sources along with their own, and Python imports the generated package. At run time only the generated code and the runtime are needed, not protacoc. Messages in all three languages use the same serialization format, so any transport works: TCP, pipes, files, shared memory.
 
 ![Schemas become generated code and runtimes for C++, C#, and Python](docs/img/flow.svg)
 
@@ -221,7 +221,7 @@ Projects that use the generated code:
 - C#: C# 7.3, .NET Framework 4.6.1 or .NET 8
 - Python: Python 3.8 or later, standard library only
 
-googletest for the tests ships in the repository (`protaco_compiler/tests/googletest`), so there is nothing to install. `build.sh` is POSIX sh and runs with the same tools on macOS, but it has been verified on Windows and Linux (WSL Ubuntu 22.04).
+googletest for the tests ships in the repository (`protaco_compiler/tests/googletest`), so there is nothing to install. The build and tests have been verified on Windows and Linux (WSL Ubuntu 22.04). macOS has not been checked.
 
 ### 3.2 Building protacoc
 
@@ -464,7 +464,7 @@ if not size:
 ```
 
 - Keys: `int`, `int64`, `uint`, `uint64`, `string`, enums
-- Values: every type except `string(N)`, including messages, enums, bytes, lists, and nested maps (for example `map<string, list<string>>`, `map<int64, map<string, int>>`)
+- Values: every type except `string(N)`, including messages, enums, bytes, lists, and nested maps (for example `map<string, list<string>>`, `map<int64, map<string, int>>`). A list value follows the list element rules
 - A map cannot be a list element (`list<map<...>>` is PC404)
 - Quote the type inside `{...}` in YAML. Without quotes you get PC102 with a hint
 - Entries go into the bytes in the container's iteration order. The same contents can produce different bytes in different languages or implementations, and they decode to the same contents
@@ -539,7 +539,7 @@ Accessors for a single `Self` field:
 
 Rules:
 
-- A recursive field cannot be `required` (PC306), because the structure has to end somewhere
+- A recursive field (`list<Self>` or a single `Self`) cannot be `required` (PC306)
 - A map value cannot be the message itself (PC403), because libstdc++'s `std::unordered_map` needs a complete type
 - Two messages that refer to each other (A → B → A) are PC403
 - A recursive message is the type of its own field, so it cannot use version features (`min_version`, `added`, `removed`) (PC407, [7.9](#79-layout-rules))
@@ -582,7 +582,7 @@ pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 
 ### 5.1 When to use it
 
-Extension data is key-value entries that are not in the YAML. Some senders use it to attach extras such as a delivery channel, a priority, or a receipt without changing the YAML or the version. Receivers keep entries they do not know, so data passes through relay programs even before they are updated.
+Extension data holds key-value entries that are not in the YAML. Some senders use it to attach extras such as a delivery channel, a priority, or a receipt without changing the YAML or the version. Receivers keep entries they do not know, so data passes through relay programs even before they are updated.
 
 Data that becomes part of the contract belongs in a proper field with `added`. Key-value data with fixed types belongs in a [map](#46-maps). Use extension data for experiments, optional extras, and relay information. For a fixed-field message sent very often, `allow_extension: false` makes the intent clear.
 
@@ -634,8 +634,8 @@ if not channel:
 </details>
 
 - `SetValue`: returns success or failure. The reason comes back through the last argument (C++ `std::string*`, may be nullptr; C# `out string`). Python returns a `Result`
-- `TryGetValue`: fails when the key is missing or holds another type, and leaves the output untouched. Example: `ext key channel holds string, not int`
-- Value types: `bool`, int32, int64, uint32, uint64, `double`, strings, bytes. In C++, other types (`long`, `float`, and so on) do not compile; cast them first
+- `TryGetValue`: fails when the key is missing or holds another type. C++ leaves the output untouched; C# sets it to `default(T)`. Example: `ext key channel holds string, not int`
+- Value types: `bool`, int32, int64, uint32, uint64, `double`, strings, bytes. In C++, a type that is not exactly one of these (`float`, `char`, `long` on Windows, `long long` on Linux, and so on) does not compile; cast it first
 - A Python integer has no fixed size, so pass one of `protaco.INT`, `INT64`, `UINT`, `UINT64` as its kind
 - `Has` checks a key, `Remove` deletes one, `Count` gives the number of entries, `Keys` lists them. C++ has `Count()` and `Keys()` functions, C# has `Count` and `Keys` properties, Python has a `Count` property and a `Keys()` function
 
@@ -653,7 +653,7 @@ There is no schema check as there is for proper fields, so the reading code chec
 
 ### 5.4 Closed messages
 
-With `allow_extension: false`, no extension API is generated (in Python, `ext` calls return the error `ext is off for this message (allow_extension false)`). A frame of the same version with an unknown key fails with `unknown key (allow_extension false)`. A frame from a newer version passes the fingerprint check for the receiver's version, and its new fields are dropped.
+With `allow_extension: false`, no extension API is generated (in Python, the `ext` attribute still exists, but `SetValue` fails with `ext is off for this message (allow_extension false)`). A frame of the same version with an unknown key fails with `unknown key (allow_extension false)`. A frame from a newer version passes the fingerprint check for the receiver's version, and its new fields are dropped.
 
 This setting is part of the schema fingerprint. Changing it in a shipped contract breaks compatibility, so decide on the extension policy of each message from the start.
 
@@ -690,6 +690,8 @@ The runtime is `Protaco.hpp` in namespace `protaco`.
 
 - `TryToObject`: bytes to object. Never throws; on failure the output object is unchanged
 
+  **C++**
+
   ```cpp
   demo::DeliveryRoute back;
   std::string error;
@@ -698,12 +700,16 @@ The runtime is `Protaco.hpp` in namespace `protaco`.
 
 - `ToObject<T>`: throws `protaco::CParseError` on failure. `what()` is `path: reason`
 
+  **C++**
+
   ```cpp
   try { auto back = protaco::ToObject<demo::DeliveryRoute>(bytes); }
   catch (const protaco::CParseError& e) { std::printf("%s\n", e.what()); }
   ```
 
 - `PeekHeader`: reads only the header, without decoding the body. `Header{name, version, minVersion, schemaHash, env, bodySize}`
+
+  **C++**
 
   ```cpp
   protaco::Header header;
@@ -713,13 +719,15 @@ The runtime is `Protaco.hpp` in namespace `protaco`.
 
 - `TextStyle`: separator, brackets, indentation, string length
 
+  **C++**
+
   ```cpp
   protaco::TextStyle style = protaco::TextStyle::Pretty();
   style.maxText = 32;
   std::string log = route.ToString(style);
   ```
 
-- `TryView<T>`: [6.6 Zero copy](#66-zero-copy). `CExt`: [5.2](#52-writing-and-reading). `NextId()`, `NowUs()`, `SetClock()`, `TryGetTime()`: [6.5 Envelope](#65-envelope)
+- `TryView<T>`: [6.6 Zero-copy](#66-zero-copy). `CExt`: [5.2](#52-writing-and-reading). `NextId()`, `NowUs()`, `SetClock()`, `TryGetTime()`: [6.5 Envelope](#65-envelope)
 
 Catch `CParseError` in the module that throws it and never let it cross a DLL boundary. Use `TryToObject` at DLL boundaries.
 
@@ -727,7 +735,8 @@ Catch `CParseError` in the module that throws it and never let it cross a DLL bo
 
 Classes are `<ns>.<Name>`, and the runtime is the `Protaco` namespace in `Protaco.cs`.
 
-**C#**
+<details>
+<summary>C#</summary>
 
 ```csharp
 var route = new demo.DeliveryRoute { Rider = "rider-7" };
@@ -744,7 +753,9 @@ Protaco.Codec.PeekHeader(bytes, out header);
 string pretty = route.ToString(Protaco.TextStyle.Pretty());
 ```
 
-- Fields are PascalCase properties. A fixed string that is too long throws `ArgumentException`
+</details>
+
+- Fields are properties named by the key with its first letter capitalized (`orderId` → `OrderId`). A fixed string that is too long throws `ArgumentException`
 - Open messages have an `Ext` property. API in [5.2](#52-writing-and-reading)
 - Envelope methods have the same names as in C++ (`GetId()`, `SetCorr()`, `SetTimestampAsNow()`, and more)
 - `MsgName`, `MsgVersion`, `MsgMinVersion`, and `MsgSchemaHash` are constants: `demo.DeliveryRoute.MsgName`
@@ -756,7 +767,8 @@ string pretty = route.ToString(Protaco.TextStyle.Pretty());
 
 Put the `--py_out` folder on `sys.path` and import the generated modules. The runtime is the `protaco` module.
 
-**Python**
+<details>
+<summary>Python</summary>
 
 ```python
 import protaco
@@ -773,6 +785,8 @@ header = protaco.PeekHeader(data).value
 print(route.ToString(protaco.TextStyle.Pretty()))
 ```
 
+</details>
+
 - Attribute names are the YAML keys. A Python keyword gets a trailing `_` (`from` → `from_`)
 - `Result`: false on failure. `.ok`, `.value`, `.error`, or unpack with `ok, value, error = ...`
 - A value out of range raises `protaco.ProtacoError` from `Serialize()` (for example `orderId: 17 bytes, longer than string(16)`)
@@ -787,7 +801,7 @@ The frame header carries three envelope values. Creating an object stamps the id
 - id (u32): a new number per message. A module-wide counter, so one id finds a message even in logs that mix many message types. Starts at 1, skips 0, thread-safe
 - corr (u32): the id of the request a reply answers
 - ts (i64): UTC microseconds since 1970-01-01
-- Decoded objects and nested fields do not take a new id; they keep what was received
+- Decoded objects take no new id; they keep the received envelope. Nested field objects made by the generated code take no id either (nested bodies carry no envelope)
 
 **C++**
 
@@ -843,8 +857,9 @@ reply.SetTimestampAsNow()
 - `TryGetTimeFromTimestamp`: local time as date and time strings, or as year, month, day, hour, minute, second, millisecond, and microsecond (Python: `TryGetTimeFromTimestampParts()`)
 - A ts outside 2000-01-01 to 9999-12-31 (UTC) is not treated as a time. `TryGetTimeFromTimestamp` fails, and `ToString` prints the integer as is
 - `protaco::SetClock(fn)`: replaces the clock (tests, simulated time). nullptr restores the system clock. Set it before creating messages (C# `Protaco.Envelopes.SetClock`, Python `protaco.SetClock`)
+- Module functions: `protaco::NextId()` (next id), `protaco::NowUs()` (current UTC microseconds), `protaco::TryGetTime(ts, &date, &time, &error)` (ts as local date and time strings). C# has the same names in `Protaco.Envelopes`, Python in the `protaco` module
 
-### 6.6 Zero copy
+### 6.6 Zero-copy
 
 For a message with only fixed fields, `TryView` reads received bytes without copying them. It runs the same frame checks as `TryToObject` (name, version, fingerprint, length), and on success the view points into the bytes.
 
@@ -870,12 +885,14 @@ if (Heartbeat.TryView(received, out view))
 </details>
 
 - `View` is generated only for a message whose version has no variable fields. It has field getters and envelope getters only
-- No allocation, no copy. The view only points at the bytes, so it is valid only while the bytes live and stay unchanged
+- `TryView` itself allocates and copies nothing. The view only points at the bytes, so it is valid only while the bytes live and stay unchanged. A fixed-string getter builds a new `std::string` (C# `string`) when called
 - In C++, passing a temporary vector (`std::vector&&`) is a compile error. This keeps a view from pointing at bytes that are about to disappear
 - Extension data (ext) is not visible through a view
 - Python has no View ([6.4](#64-python))
 
 In C++ you can also hand the received buffer to the object. Pass a vector to `ToObject` or `TryToObject` with `std::move`. When the frame matches the layout of the class version exactly (same supported version range and fingerprints), that buffer becomes the object's frame buffer as is. From then on, `Serialize()` returns that buffer until a variable field or ext changes. Other frames, such as ones from a newer version, are copied as usual.
+
+**C++**
 
 ```cpp
 std::vector<uint8_t> bytes = Receive();
@@ -892,7 +909,7 @@ In decoding, only the three `ToObject` functions throw: C++ `protaco::ToObject` 
 - The error string is `path: reason`. Examples: `delivery.doorCode: list element type mismatch`, `sections[0].name: type mismatch: expected string, got int`. Without a path, just the reason: `message name mismatch: expected DeliveryRoute, got Heartbeat`
 - All three languages use the same wording. The full list is in [Decode errors](docs/reference.md#32-decode-errors)
 
-Checks on input values follow the same pattern. The C++ `string(N)` setters, `CExt::SetValue`, `TryParseEnum`, and `TryGetTime` return a `bool` and an error string.
+Checks on input values differ by language. The C++ `string(N)` setters, `CExt::SetValue`, `TryParseEnum`, and `TryGetTime` return a `bool` and an error string. C# fixed-string setters throw `ArgumentException`, and Python raises `protaco.ProtacoError` from `Serialize()` for an out-of-range value ([4.4](#44-types)).
 
 ## 7. Version management
 
@@ -1056,7 +1073,7 @@ Generated C++ classes have no reflection, no descriptor tables, and no virtual f
 
 ### 8.2 Fixed fields written in place
 
-Each fixed field has its own place in the frame buffer. Setters write the final bytes directly, so with only fixed fields and an empty ext, `Serialize()` has nothing to add.
+In C++, each fixed field has its own place in the frame buffer. Setters write the final bytes directly, so with only fixed fields and an empty ext, `Serialize()` has nothing to add. C# and Python keep fields in the object and build the bytes in `Serialize()`.
 
 **C++**
 
@@ -1078,6 +1095,8 @@ In C++, if no variable field and no ext entry has changed since the last `Serial
 - To keep the reuse benefit, assign lists, maps, bytes, and messages with `set_` too
 - A copied object rebuilds on its first serialization
 - C# makes a new `byte[]` and Python a new `bytes` on every call; they do not reuse
+
+**C++**
 
 ```cpp
 route.set_stops(std::vector<demo::RouteStop>{stop});
@@ -1165,7 +1184,7 @@ pretty = route.ToString(protaco.TextStyle.Pretty())
 
 </details>
 
-Actual output of the example program (the envelope time changes on every run):
+Actual output of the C++ example program (the envelope time changes on every run; the C# and Python examples print other envelope ids):
 
 ```text
 DeliveryRoute{rider="rider-7", stops=[RouteStop{orderId="A-100", address="1 Pizza St", etaMin=15}], note="", ext{priority=5}}
@@ -1219,7 +1238,7 @@ Frame
   Body
 
 Body (nested messages have the same shape)
-  FixedLen u32     equal to the receiver's fixed block for the same version, larger for a newer one
+  FixedLen u32     equal to the receiver's fixed block for the same version, equal or larger for a newer one
   Fixed            fixed fields in serialized order, no padding
   Var*             variable field TLVs in serialized order
   Ext*             extension TLVs in insertion order

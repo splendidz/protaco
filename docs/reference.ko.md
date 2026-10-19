@@ -1439,7 +1439,7 @@ public static bool TryView(byte[] bytes, out View view);
 
 - 매개변수: bytes는 프레임, out은 결과, error는 오류 문자열
 - ToObject: 성공하면 T, 디코딩 실패 시 ProtacoException. Message는 `path: reason`
-- TryToObject: 성공이면 true. 실패이면 false와 default(T), error에 이유. 기존 out 값 보존 규칙 없음
+- TryToObject: 성공이면 true. 실패이면 false와 default(T), error에 이유. out 인자는 항상 새로 씀
 - PeekHeader: 성공이면 true와 Header. 실패이면 header=null. 본문 검사는 하지 않음
 - TryView: 고정 필드 version만 제공. 성공이면 View, 실패이면 default(View)
 - View 수명: 내부 참조가 배열을 유지하며 배열이 변경되지 않는 동안 유효. 필드는 읽기 전용 속성, 봉투는 GetEnvelope()
@@ -1797,7 +1797,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 
 디코더는 모르는 번호를 일반 int로 보존합니다. Python 예약어인 enum 멤버는 `None_`처럼 바뀌지만 Name·TryParse는 원래 YAML 이름을 사용합니다.
 
-### 6.8 상수와 한계
+### 6.8 상수와 한도
 
 <details>
 <summary>Python — 상수</summary>
@@ -1819,7 +1819,7 @@ protaco.MAX_FRAME_BYTES      # 0xFFFFFFFF
 
 ### 7.1 실행과 환경
 
-저장소 루트에서 실행합니다. Windows는 Visual Studio 2017 이상(MSBuild 15, v141), .NET Framework 4.6.1, Python 3.8 이상이 필요합니다. Linux는 .NET SDK 8 이상, g++, Python 3.8 이상이 필요합니다. build.sh는 macOS용 경로도 제공하며 아래 검증 기록은 Windows와 Linux 기준입니다.
+저장소 루트에서 실행합니다. Windows는 Visual Studio 2017 이상(MSBuild 15, v141), .NET Framework 4.6.1, Python 3.8 이상이 필요합니다. Linux는 .NET SDK 8 이상, g++, Python 3.8 이상이 필요합니다. build.sh는 macOS에서도 쓰도록 만들었지만, 아래 검증 기록은 Windows와 Linux 기준입니다.
 
 **Windows 명령 프롬프트**
 

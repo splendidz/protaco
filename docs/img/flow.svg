@@ -44,5 +44,5 @@
   <line x1="450" y1="345" x2="450" y2="385" stroke="#57606a" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
   <line x1="745" y1="345" x2="745" y2="385" stroke="#57606a" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
   <rect x="30" y="389" width="840" height="50" rx="12" fill="#ffffff" stroke="#d0d7de" stroke-width="1.5"/>
-  <text x="450" y="420" text-anchor="middle" font-size="16" fill="#1f2328"><tspan font-weight="600">same frame bytes</tspan><tspan fill="#57606a">  over any transport: TCP, pipe, file, shared memory</tspan></text>
+  <text x="450" y="420" text-anchor="middle" font-size="16" fill="#1f2328"><tspan font-weight="600">same serialization format</tspan><tspan fill="#57606a">  over any transport: TCP, pipe, file, shared memory</tspan></text>
 </svg>

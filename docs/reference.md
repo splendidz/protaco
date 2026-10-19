@@ -1439,7 +1439,7 @@ public static bool TryView(byte[] bytes, out View view);
 
 - Parameters: bytes is the frame, out receives the result, error receives the reason
 - ToObject: returns T on success and throws ProtacoException when decoding fails. Message is `path: reason`
-- TryToObject: true on success. On failure, false with default(T) and the reason in error. No rule keeps an earlier out value
+- TryToObject: true on success. On failure, false with default(T) and the reason in error. The out argument is always overwritten
 - PeekHeader: true and the Header on success. On failure, header is null. The body is not checked
 - TryView: only for versions with only fixed fields. A View on success, default(View) on failure
 - View lifetime: an internal reference keeps the array, and the view is valid while the array stays unchanged. Fields are read-only properties; the envelope is GetEnvelope()
