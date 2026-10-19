@@ -78,7 +78,8 @@ namespace Protacoc
             SchemaDef def = enumFile ? (SchemaDef)new EnumDef() : new MessageDef();
             def.FilePath = path;
             def.FileName = Path.GetFileName(path);
-            def.Sha1 = Sha1Hex(bytes);
+            // Without BOM and with LF line ends, so every checkout (autocrlf or not) writes the same header.
+            def.Sha1 = Sha1Hex(new UTF8Encoding(false).GetBytes(text.TrimStart('﻿').Replace("\r\n", "\n")));
             def.Pos = filePos;
             def.Doc.AddRange(doc.HeaderDoc);
             ReadTop(doc, def, diag);

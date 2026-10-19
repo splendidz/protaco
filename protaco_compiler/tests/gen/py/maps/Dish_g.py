@@ -1,4 +1,4 @@
-﻿# Dish_g.py. protacoc 0.6.0, source Dish.yaml (sha1 7f274cbd1668). Do not edit.
+﻿# Dish_g.py. protacoc 0.6.0, source Dish.yaml (sha1 9cd1ea163ac5). Do not edit.
 import protaco
 
 

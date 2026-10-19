@@ -1,4 +1,4 @@
-﻿// Node.g.h. protacoc 0.6.0, source Node.yaml (sha1 0d8cdfcb64fd). Do not edit.
+﻿// Node.g.h. protacoc 0.6.0, source Node.yaml (sha1 215949a4f507). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
