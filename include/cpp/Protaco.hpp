@@ -614,7 +614,7 @@ inline void StampEnvelope(std::vector<uint8_t>& buf)
     Store<int64_t>(p + 8, NowUs());
 }
 
-// Serialize() reuse of the variable block. set_ of a variable field clears valid. get_mutable_ sets exposed for
+// Serialize() reuse of the variable block. set_ of a variable field clears valid. mutable_ sets exposed for
 // the object's lifetime: writes through the returned reference cannot be seen, so the block is rebuilt every time.
 // ext changes are seen through CExt::revision_. Fixed fields and the envelope live in the buffer and need no tracking.
 struct VarCache
