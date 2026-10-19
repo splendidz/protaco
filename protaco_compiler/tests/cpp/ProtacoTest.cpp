@@ -317,7 +317,7 @@ std::vector<uint8_t> ReadFile(const std::string& path)
 void ExpectGolden(const std::string& name, const std::vector<uint8_t>& bytes)
 {
     const std::string path = GoldenDir() + "/" + name;
-    if (!GetEnv("PROTACO_UPDATE_GOLDEN").empty())
+    if (GetEnv("PROTACO_UPDATE_GOLDEN") == "1")
     {
         std::ofstream out(path, std::ios::binary);
         out.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
