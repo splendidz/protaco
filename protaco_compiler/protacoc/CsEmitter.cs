@@ -71,6 +71,8 @@ namespace Protacoc
             w.Line("return Protaco.Codec.Serialize(this, GetEnvelope());");
             w.Close();
             w.Line();
+            if (view.AliveVar.Count == 0)
+                View(w, message, view);
             Hidden(w, message, view);
             w.Close();
         }
@@ -407,6 +409,70 @@ namespace Protacoc
                 default:
                     return name + " = reader.Chars(" + at + ", " + field.Type.FixedLength + ");";
             }
+        }
+
+        // Read of a fixed field straight from the frame array, for View.
+        private static string ViewRead(FieldDef field)
+        {
+            string at = "at_ + " + field.FixedOffset;
+            switch (field.Type.Kind)
+            {
+                case TypeKind.Enum:
+                    return "(" + field.Type.TypeName + ")global::System.BitConverter.ToInt32(src_, " + at + ")";
+                case TypeKind.Bool:
+                    return "src_[" + at + "] != 0";
+                case TypeKind.Int:
+                    return "global::System.BitConverter.ToInt32(src_, " + at + ")";
+                case TypeKind.Int64:
+                    return "global::System.BitConverter.ToInt64(src_, " + at + ")";
+                case TypeKind.UInt:
+                    return "global::System.BitConverter.ToUInt32(src_, " + at + ")";
+                case TypeKind.UInt64:
+                    return "global::System.BitConverter.ToUInt64(src_, " + at + ")";
+                case TypeKind.Double:
+                    return "global::System.BitConverter.ToDouble(src_, " + at + ")";
+                default:
+                    return "Protaco.Codec.Chars(src_, " + at + ", " + field.Type.FixedLength + ")";
+            }
+        }
+
+        // Fixed-only versions: struct View over received bytes and TryView.
+        private static void View(CodeWriter w, MessageDef message, VersionView view)
+        {
+            w.Line("/// <summary>Fixed fields read in place from received bytes (TryView): no allocation, no copy.");
+            w.Line("/// Valid while the array is unchanged. ext entries are not visible.</summary>");
+            w.Open("public struct View");
+            w.Line("private readonly byte[] src_;");
+            w.Line("private readonly int at_;");
+            w.Line();
+            w.Open("internal View(byte[] src, int at)");
+            w.Line("src_ = src;");
+            w.Line("at_ = at;");
+            w.Close();
+            w.Line();
+            w.Line("public Protaco.Envelope GetEnvelope() => Protaco.Codec.EnvelopeOf(src_);");
+            foreach (FieldDef field in view.Alive)
+            {
+                w.Line();
+                Doc(w, Naming.FieldDoc(field));
+                w.Line("public " + CsType(field.Type) + " " + Naming.CsProperty(field.Key) + " => " + ViewRead(field) + ";");
+            }
+            w.Close();
+            w.Line();
+            w.Line("/// <summary>Reads bytes in place as a View, with the checks of Codec.ToObject. False and the reason in error on failure.</summary>");
+            w.Open("public static bool TryView(byte[] bytes, out View view, out string error)");
+            w.Line("int at;");
+            w.Line("bool ok = Protaco.Codec.TryFixedBlock(bytes, MsgName, MsgVersion, MsgMinVersion, MsgSchemaHash, " + view.FixedSize + ", "
+                + (message.AllowExtension ? "true" : "false") + ", out at, out error);");
+            w.Line("view = ok ? new View(bytes, at) : default(View);");
+            w.Line("return ok;");
+            w.Close();
+            w.Line();
+            w.Open("public static bool TryView(byte[] bytes, out View view)");
+            w.Line("string error;");
+            w.Line("return TryView(bytes, out view, out error);");
+            w.Close();
+            w.Line();
         }
 
         private static string VarMethod(TypeRef type)

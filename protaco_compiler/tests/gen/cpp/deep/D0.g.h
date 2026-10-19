@@ -86,9 +86,28 @@ public:
         return protaco::detail::Access::ToText(*this, style);
     }
 
+    /// Fixed fields read in place from received bytes (protaco::TryView<D0>): no allocation, no copy.
+    /// Valid after a successful TryView while the bytes live and stay unchanged.
+    class View : public protaco::CView
+    {
+    public:
+        /// [type int]
+        int32_t get_v() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 0);
+        }
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<D0>;
+
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    D0(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &D0::IsSchemaKey);
+    }
 
     enum : uint32_t
     {

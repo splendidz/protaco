@@ -53,6 +53,7 @@ namespace Protacoc.Tests
             Run("C#: map fields match C++", MapFields);
             Run("C#: recursive messages match C++", RecursiveMessages);
             Run("C#: recursion stops at 100 levels", RecursionDepthLimit);
+            Run("C#: TryView reads fixed fields in place", ViewReadsFixedFieldsInPlace);
             Run("generator: enum default must be a value PC308", GeneratorEnumDefault);
             Run("C#: timestamp to local time, same text as C++", TimestampConvertsToLocalTime);
             Console.WriteLine();
@@ -413,6 +414,36 @@ namespace Protacoc.Tests
                 else
                     Check(!ok && error.StartsWith("next.next.next.") && error.EndsWith(": nesting too deep"), "101 levels: " + error);
             }
+        }
+
+        private static void ViewReadsFixedFieldsInPlace()
+        {
+            Heartbeat sent = MakeHeartbeat();
+            sent.SetCorr(77);
+            byte[] bytes = sent.Serialize();
+            Heartbeat.View view;
+            Check(Heartbeat.TryView(bytes, out view), "view");
+            Equal("oven-1", view.Node, "node");
+            Equal(123456789L, view.Seq, "seq");
+            Equal(true, view.Healthy, "healthy");
+            Equal(0.25, view.CpuLoad, "cpuLoad");
+            Equal(3600, view.UptimeSec, "uptimeSec");
+            Equal(77u, view.GetEnvelope().Corr, "corr");
+            for (int length = 0; length < bytes.Length; ++length)
+            {
+                byte[] cut = bytes.Take(length).ToArray();
+                string viewError;
+                string objectError;
+                Heartbeat object_;
+                Check(!Heartbeat.TryView(cut, out view, out viewError), "view accepted at length " + length);
+                Check(!Protaco.Codec.TryToObject(cut, out object_, out objectError), "object accepted at length " + length);
+                Equal(objectError, viewError, "error at length " + length);
+            }
+            string error;
+            Check(!Heartbeat.TryView(WithExtraTlv(bytes, "abc", 7), out view, out error), "unknown key accepted");
+            Equal("abc: unknown key (allow_extension false)", error, "unknown key");
+            Check(!Heartbeat.TryView(MakeDeliveryRoute().Serialize(), out view, out error), "other message accepted");
+            Equal("message name mismatch: expected Heartbeat, got DeliveryRoute", error, "name");
         }
 
         private static void GeneratorEnumDefault()

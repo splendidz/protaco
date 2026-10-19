@@ -116,6 +116,13 @@ private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Recipe>;
 
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    Recipe(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &Recipe::IsSchemaKey);
+    }
+
     enum : uint32_t
     {
         kFixedOffset = 42,   // frame header (28 + name 6 + fingerprints 4 x 1) + FixedLen (4)

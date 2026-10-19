@@ -92,6 +92,56 @@ namespace demo
             return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
+        /// <summary>Fixed fields read in place from received bytes (TryView): no allocation, no copy.
+        /// Valid while the array is unchanged. ext entries are not visible.</summary>
+        public struct View
+        {
+            private readonly byte[] src_;
+            private readonly int at_;
+
+            internal View(byte[] src, int at)
+            {
+                src_ = src;
+                at_ = at;
+            }
+
+            public Protaco.Envelope GetEnvelope() => Protaco.Codec.EnvelopeOf(src_);
+
+            /// <summary>
+            /// Order delivered at this stop. Example: A-100
+            /// order number
+            /// [type string(16); fixed 16 bytes, set rejects longer values]
+            /// </summary>
+            public string OrderId => Protaco.Codec.Chars(src_, at_ + 0, 16);
+
+            /// <summary>
+            /// street address
+            /// [type string(48); fixed 48 bytes, set rejects longer values]
+            /// </summary>
+            public string Address => Protaco.Codec.Chars(src_, at_ + 16, 48);
+
+            /// <summary>
+            /// minutes until arrival
+            /// [type int; default 15]
+            /// </summary>
+            public int EtaMin => global::System.BitConverter.ToInt32(src_, at_ + 64);
+        }
+
+        /// <summary>Reads bytes in place as a View, with the checks of Codec.ToObject. False and the reason in error on failure.</summary>
+        public static bool TryView(byte[] bytes, out View view, out string error)
+        {
+            int at;
+            bool ok = Protaco.Codec.TryFixedBlock(bytes, MsgName, MsgVersion, MsgMinVersion, MsgSchemaHash, 68, true, out at, out error);
+            view = ok ? new View(bytes, at) : default(View);
+            return ok;
+        }
+
+        public static bool TryView(byte[] bytes, out View view)
+        {
+            string error;
+            return TryView(bytes, out view, out error);
+        }
+
         // Keys not allowed in ext: schema keys of every version
         private static bool IsSchemaKey(string key)
         {

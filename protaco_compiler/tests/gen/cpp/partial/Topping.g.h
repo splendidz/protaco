@@ -101,9 +101,36 @@ public:
         return protaco::detail::Access::ToText(*this, style);
     }
 
+    /// Fixed fields read in place from received bytes (protaco::TryView<Topping>): no allocation, no copy.
+    /// Valid after a successful TryView while the bytes live and stay unchanged.
+    class View : public protaco::CView
+    {
+    public:
+        /// topping name
+        /// [type string(24); fixed 24 bytes, set rejects longer values]
+        std::string get_name() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 24);
+        }
+
+        /// weight in grams
+        /// [type int; default 30]
+        int32_t get_grams() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 24);
+        }
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Topping>;
+
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    Topping(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &Topping::IsSchemaKey);
+    }
 
     enum : uint32_t
     {

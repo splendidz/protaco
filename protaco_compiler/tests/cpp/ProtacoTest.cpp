@@ -838,6 +838,71 @@ TEST(Protaco, RecursionDepthLimit)
     }
 }
 
+// Fixed-only messages: TryView reads the frame in place. Same acceptance and error text as TryToObject.
+TEST(Protaco, ViewReadsFixedFieldsInPlace)
+{
+    Heartbeat sent = MakeHeartbeat();
+    sent.SetCorr(77);
+    const std::vector<uint8_t> bytes = sent.Serialize();
+    Heartbeat::View view;
+    ASSERT_TRUE(protaco::TryView<Heartbeat>(bytes, &view));
+    EXPECT_EQ("oven-1", view.get_node());
+    EXPECT_EQ(123456789, view.get_seq());
+    EXPECT_TRUE(view.get_healthy());
+    EXPECT_DOUBLE_EQ(0.25, view.get_cpuLoad());
+    EXPECT_EQ(3600, view.get_uptimeSec());
+    EXPECT_EQ(77u, view.GetCorr());
+
+    std::string viewError;
+    std::string objectError;
+    Heartbeat object;
+    for (size_t length = 0; length < bytes.size(); ++length)
+    {
+        EXPECT_FALSE(protaco::TryView<Heartbeat>(bytes.data(), length, &view, &viewError)) << length;
+        EXPECT_FALSE(protaco::TryToObject(bytes.data(), length, &object, &objectError)) << length;
+        EXPECT_EQ(objectError, viewError) << length;
+    }
+    const std::vector<uint8_t> extra = WithExtraTlv(bytes, "abc", 7);
+    EXPECT_FALSE(protaco::TryView<Heartbeat>(extra, &view, &viewError));
+    EXPECT_EQ("abc: unknown key (allow_extension false)", viewError);
+    EXPECT_FALSE(protaco::TryView<Heartbeat>(MakeDeliveryRoute().Serialize(), &view, &viewError));
+    EXPECT_EQ("message name mismatch: expected Heartbeat, got DeliveryRoute", viewError);
+}
+
+// ToObject with std::vector&&: a frame of the type's own layout becomes the object's buffer, Serialize() returns it.
+TEST(Protaco, ToObjectAdoptsOwnFrame)
+{
+    std::vector<uint8_t> bytes = MakeDeliveryRoute().Serialize();
+    const std::vector<uint8_t> copy = bytes;
+    const uint8_t* data = bytes.data();
+    DeliveryRoute got = protaco::ToObject<DeliveryRoute>(std::move(bytes));
+    EXPECT_EQ(data, got.Serialize().data());   // no copy, no re-encode
+    EXPECT_EQ(copy, got.Serialize());
+    EXPECT_EQ("rider-7", got.get_rider());
+    EXPECT_EQ(7u, got.GetId());
+    got.set_note("changed");
+    EXPECT_EQ("changed", protaco::ToObject<DeliveryRoute>(got.Serialize()).get_note());
+
+    std::vector<uint8_t> again = copy;
+    data = again.data();
+    DeliveryRoute out;
+    std::string error;
+    ASSERT_TRUE(protaco::TryToObject(std::move(again), &out, &error)) << error;
+    EXPECT_EQ(data, out.Serialize().data());
+    EXPECT_EQ(copy, out.Serialize());
+
+    // A newer frame is copied and read as the older type.
+    std::vector<uint8_t> newer = MakeOrderV3().Serialize();
+    const build1::Order older = protaco::ToObject<build1::Order>(std::move(newer));
+    EXPECT_EQ("A1", older.get_id());
+    EXPECT_EQ("red", older.get_color());
+
+    std::vector<uint8_t> broken = copy;
+    broken.pop_back();
+    EXPECT_FALSE(protaco::TryToObject(std::move(broken), &out, &error));
+    EXPECT_EQ("frame truncated", error);
+}
+
 // More TLVs than the decoder keeps on the stack (16): the rest goes to the heap, nothing is lost.
 TEST(Protaco, ManyExtEntriesRoundTrip)
 {

@@ -120,6 +120,8 @@ namespace Protacoc
             foreach (FieldDef field in view.Alive)
                 Accessors(w, field);
             Common(w, message, view);
+            if (view.AliveVar.Count == 0)
+                View(w, message, view);
             w.Outdent();
             w.Line();
             w.Line("private:");
@@ -264,25 +266,23 @@ namespace Protacoc
             if (field.Type.IsFixed)
             {
                 string at = FixedAt(field);
+                if (field.Type.Kind == TypeKind.Enum)
+                    w.Line("/// Numbers this build does not know are kept as they are (ToString shows ?(n)).");
+                Method(w, type + " get_" + key + "() const", "return " + FixedGet(field, at) + ";");
                 switch (field.Type.Kind)
                 {
                     case TypeKind.Bool:
-                        Method(w, "bool get_" + key + "() const", "return protaco::detail::LoadBool(" + at + ");");
                         Method(w, "void set_" + key + "(bool value)", "protaco::detail::StoreBool(" + at + ", value);");
                         break;
                     case TypeKind.Enum:
-                        w.Line("/// Numbers this build does not know are kept as they are (ToString shows ?(n)).");
-                        Method(w, type + " get_" + key + "() const", "return static_cast<" + type + ">(protaco::detail::Load<int32_t>(" + at + "));");
                         Method(w, "void set_" + key + "(" + type + " value)", "protaco::detail::Store<int32_t>(" + at + ", static_cast<int32_t>(value));");
                         break;
                     case TypeKind.FixedString:
-                        Method(w, "std::string get_" + key + "() const", "return protaco::detail::LoadChars(" + at + ", " + field.Type.FixedLength + ");");
                         w.Line("/// Returns false, keeps the old value and writes the reason to error if longer than " + field.Type.FixedLength + " bytes.");
                         Method(w, "bool set_" + key + "(const std::string& value, std::string* error = nullptr)",
                             "return protaco::detail::StoreChars(" + at + ", " + field.Type.FixedLength + ", value, \"" + key + "\", error);");
                         break;
                     default:
-                        Method(w, type + " get_" + key + "() const", "return protaco::detail::Load<" + type + ">(" + at + ");");
                         Method(w, "void set_" + key + "(" + type + " value)", "protaco::detail::Store<" + type + ">(" + at + ", value);");
                         break;
                 }
@@ -302,6 +302,47 @@ namespace Protacoc
             if (field.Type.Kind != TypeKind.String)
                 Method(w, type + "& mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_;");
             Method(w, "void set_" + key + "(const " + type + "& value)", key + "_ = value;", "cache_.valid = false;");
+        }
+
+        // Read of a fixed field at a pointer expression. Shared by the message and its View.
+        private static string FixedGet(FieldDef field, string at)
+        {
+            switch (field.Type.Kind)
+            {
+                case TypeKind.Bool:
+                    return "protaco::detail::LoadBool(" + at + ")";
+                case TypeKind.Enum:
+                    return "static_cast<" + CppType(field.Type) + ">(protaco::detail::Load<int32_t>(" + at + "))";
+                case TypeKind.FixedString:
+                    return "protaco::detail::LoadChars(" + at + ", " + field.Type.FixedLength + ")";
+                default:
+                    return "protaco::detail::Load<" + CppType(field.Type) + ">(" + at + ")";
+            }
+        }
+
+        // Fixed-only versions: read-only access to received bytes (protaco::TryView).
+        private static void View(CodeWriter w, MessageDef message, VersionView view)
+        {
+            w.Line();
+            w.Line("/// Fixed fields read in place from received bytes (protaco::TryView<" + message.Name + ">): no allocation, no copy.");
+            w.Line("/// Valid after a successful TryView while the bytes live and stay unchanged.");
+            w.Line("class View : public protaco::CView");
+            w.Line("{");
+            w.Line("public:");
+            w.Indent();
+            for (int i = 0; i < view.Alive.Count; ++i)
+            {
+                FieldDef field = view.Alive[i];
+                Doc(w, Naming.FieldDoc(field));
+                w.Line(CppType(field.Type) + " get_" + field.Key + "() const");
+                w.Line("{");
+                w.Line("    return " + FixedGet(field, "Fixed() + " + field.FixedOffset) + ";");
+                w.Line("}");
+                if (i + 1 < view.Alive.Count)
+                    w.Line();
+            }
+            w.Outdent();
+            w.Line("};");
         }
 
         private static void Method(CodeWriter w, string signature, params string[] body)
@@ -340,6 +381,13 @@ namespace Protacoc
             int hashCount = view.Version - message.MinVersion + 1;
             w.Line("friend struct protaco::detail::Access;");
             w.Line("friend class protaco::CMessage<" + message.Name + ">;");
+            w.Line();
+            w.Line("// Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).");
+            w.Line(message.Name + "(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)");
+            w.Line("    : buf_(std::move(frame))");
+            w.Line("{");
+            w.Line("    protaco::detail::Access::BindExt(ext_, &" + message.Name + "::IsSchemaKey);");
+            w.Line("}");
             w.Line();
             w.Line("enum : uint32_t");
             w.Line("{");

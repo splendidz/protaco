@@ -116,9 +116,44 @@ public:
         return protaco::detail::Access::ToText(*this, style);
     }
 
+    /// Fixed fields read in place from received bytes (protaco::TryView<RouteStop>): no allocation, no copy.
+    /// Valid after a successful TryView while the bytes live and stay unchanged.
+    class View : public protaco::CView
+    {
+    public:
+        /// Order delivered at this stop. Example: A-100
+        /// order number
+        /// [type string(16); fixed 16 bytes, set rejects longer values]
+        std::string get_orderId() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 16);
+        }
+
+        /// street address
+        /// [type string(48); fixed 48 bytes, set rejects longer values]
+        std::string get_address() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 16, 48);
+        }
+
+        /// minutes until arrival
+        /// [type int; default 15]
+        int32_t get_etaMin() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 64);
+        }
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<RouteStop>;
+
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    RouteStop(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &RouteStop::IsSchemaKey);
+    }
 
     enum : uint32_t
     {

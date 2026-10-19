@@ -96,6 +96,13 @@ private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<D7>;
 
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    D7(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &D7::IsSchemaKey);
+    }
+
     enum : uint32_t
     {
         kFixedOffset = 38,   // frame header (28 + name 2 + fingerprints 4 x 1) + FixedLen (4)

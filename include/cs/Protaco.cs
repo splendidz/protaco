@@ -358,33 +358,11 @@ namespace Protaco
 
         private static T Decode<T>(byte[] bytes) where T : IMessage, new()
         {
-            if (bytes.Length > MaxFrameBytes)
-                throw new ProtacoException("", "frame too large");
-            Header header = ReadHeader(bytes);
             T message = new T();
-            string name = message.Name;
             ushort mine = message.Version;
-            if (header.Name != name)
-                throw new ProtacoException("", "message name mismatch: expected " + name + ", got " + header.Name);
-            if (header.Version < mine)
-            {
-                string what = "message version too old: " + name + " reads version " + mine + " or newer, got " + header.Version;
-                if (header.Version >= message.MinVersion)
-                    what += ". Use the v" + header.Version + " type";
-                throw new ProtacoException("", what);
-            }
-            if (header.MinVersion > mine)
-                throw new ProtacoException("", "message version too new: " + name + " reads version " + mine + ", sender supports " + header.MinVersion + ".." + header.Version);
-            int nameLength = bytes[3];
-            uint hash = BitConverter.ToUInt32(bytes, 28 + nameLength + 4 * (mine - header.MinVersion));
-            uint expected = message.SchemaHashes[message.SchemaHashes.Length - 1];
-            if (hash != expected)
-                throw new ProtacoException("", "schema mismatch: " + name + " version " + mine + " expected " + Hex32(expected) + ", got " + Hex32(hash));
+            int headerSize;
+            Header header = CheckFrame(bytes, message.Name, mine, message.MinVersion, message.SchemaHashes[message.SchemaHashes.Length - 1], out headerSize);
             (message as Protaco.Message)?.SetEnvelope(header.Env);
-            int headerSize = 28 + nameLength + 4 * (header.Version - header.MinVersion + 1);
-            long left = bytes.Length - headerSize;
-            if (left != header.BodySize)
-                throw new ProtacoException("", left < header.BodySize ? "frame truncated" : "trailing bytes after frame");
             bool newer = header.Version > mine;
             try
             {
@@ -395,6 +373,93 @@ namespace Protaco
                 throw new ProtacoException(e.Path, e.What + " (frame version " + header.Version + " read as " + mine + ")");
             }
             return message;
+        }
+
+        // Checks shared by ToObject and TryFixedBlock: header, name, supported versions, own fingerprint, body length.
+        private static Header CheckFrame(byte[] bytes, string name, ushort mine, ushort minVersion, uint expected, out int headerSize)
+        {
+            if (bytes.Length > MaxFrameBytes)
+                throw new ProtacoException("", "frame too large");
+            Header header = ReadHeader(bytes);
+            if (header.Name != name)
+                throw new ProtacoException("", "message name mismatch: expected " + name + ", got " + header.Name);
+            if (header.Version < mine)
+            {
+                string what = "message version too old: " + name + " reads version " + mine + " or newer, got " + header.Version;
+                if (header.Version >= minVersion)
+                    what += ". Use the v" + header.Version + " type";
+                throw new ProtacoException("", what);
+            }
+            if (header.MinVersion > mine)
+                throw new ProtacoException("", "message version too new: " + name + " reads version " + mine + ", sender supports " + header.MinVersion + ".." + header.Version);
+            int nameLength = bytes[3];
+            uint hash = BitConverter.ToUInt32(bytes, 28 + nameLength + 4 * (mine - header.MinVersion));
+            if (hash != expected)
+                throw new ProtacoException("", "schema mismatch: " + name + " version " + mine + " expected " + Hex32(expected) + ", got " + Hex32(hash));
+            headerSize = 28 + nameLength + 4 * (header.Version - header.MinVersion + 1);
+            long left = bytes.Length - headerSize;
+            if (left != header.BodySize)
+                throw new ProtacoException("", left < header.BodySize ? "frame truncated" : "trailing bytes after frame");
+            return header;
+        }
+
+        /// <summary>Generated TryView methods call this. Checks the frame like ToObject; fixedAt is where the fixed block starts.</summary>
+        public static bool TryFixedBlock(byte[] bytes, string name, ushort version, ushort minVersion, uint schemaHash, int fixedSize,
+            bool allowExtension, out int fixedAt, out string error)
+        {
+            fixedAt = 0;
+            try
+            {
+                int headerSize;
+                Header header = CheckFrame(bytes, name, version, minVersion, schemaHash, out headerSize);
+                bool newer = header.Version > version;
+                try
+                {
+                    int count = (int)header.BodySize;
+                    uint fixedLength = TakeFixed(bytes, headerSize, count, (uint)fixedSize, newer);
+                    int varStart = headerSize + 4 + (int)fixedLength;
+                    int varCount = headerSize + count - varStart;
+                    // ext entries or fields of a newer version: checked like ToObject, not visible through the view.
+                    if (varCount != 0)
+                    {
+                        VarReader reader = new VarReader(bytes, varStart, varCount, 0);
+                        if (!allowExtension && !newer)
+                            reader.MoveUnusedTo(null, false, false);
+                    }
+                    fixedAt = headerSize + 4;
+                }
+                catch (ProtacoException e) when (newer)
+                {
+                    throw new ProtacoException(e.Path, e.What + " (frame version " + header.Version + " read as " + version + ")");
+                }
+                error = null;
+                return true;
+            }
+            catch (ProtacoException e)
+            {
+                error = e.Message;
+                return false;
+            }
+        }
+
+        /// <summary>Envelope of a frame (generated View).</summary>
+        public static Envelope EnvelopeOf(byte[] frame)
+        {
+            int p = 8 + frame[3];
+            Envelope env;
+            env.Id = BitConverter.ToUInt32(frame, p);
+            env.Corr = BitConverter.ToUInt32(frame, p + 4);
+            env.Ts = BitConverter.ToInt64(frame, p + 8);
+            return env;
+        }
+
+        /// <summary>A string(N) value: UTF-8 bytes up to the first 0 (generated View).</summary>
+        public static string Chars(byte[] src, int at, int capacity)
+        {
+            int length = 0;
+            while (length < capacity && src[at + length] != 0)
+                ++length;
+            return Text.GetString(src, at, length);
         }
 
         internal static string Hex32(uint value)
@@ -519,6 +584,20 @@ namespace Protaco
             return header;
         }
 
+        // FixedLen u32 | fixed block. Same version means same size; a newer version only appends. Also guards nested bodies,
+        // which carry no fingerprint of their own.
+        private static uint TakeFixed(byte[] src, int offset, int count, uint expected, bool newer)
+        {
+            if (count < 4)
+                throw new ProtacoException("", "fixed block truncated");
+            uint fixedLength = BitConverter.ToUInt32(src, offset);
+            if (fixedLength > (uint)(count - 4))
+                throw new ProtacoException("", "fixed block truncated");
+            if (newer ? fixedLength < expected : fixedLength != expected)
+                throw new ProtacoException("", "fixed block size mismatch: expected " + expected + ", got " + fixedLength);
+            return fixedLength;
+        }
+
         // body: FixedLen u32 | fixed block | variable TLV... | ext TLV...
         internal static void WriteBody(IMessage message, BinaryWriter writer)
         {
@@ -536,16 +615,7 @@ namespace Protaco
         {
             if (depth > MaxDepth)
                 throw new ProtacoException("", "nesting too deep");
-            if (count < 4)
-                throw new ProtacoException("", "fixed block truncated");
-            uint fixedLength = BitConverter.ToUInt32(src, offset);
-            if (fixedLength > (uint)(count - 4))
-                throw new ProtacoException("", "fixed block truncated");
-            // Same version means same fixed block size; a newer version only appends. Also guards nested bodies,
-            // which carry no fingerprint of their own.
-            uint expected = (uint)message.FixedSize;
-            if (newer ? fixedLength < expected : fixedLength != expected)
-                throw new ProtacoException("", "fixed block size mismatch: expected " + expected + ", got " + fixedLength);
+            uint fixedLength = TakeFixed(src, offset, count, (uint)message.FixedSize, newer);
             message.ReadFixed(new FixedReader(src, offset + 4));
             int varStart = offset + 4 + (int)fixedLength;
             VarReader reader = new VarReader(src, varStart, offset + count - varStart, depth);
@@ -652,11 +722,7 @@ namespace Protaco
 
         public string Chars(int offset, int capacity)
         {
-            int at = start_ + offset;
-            int length = 0;
-            while (length < capacity && src_[at + length] != 0)
-                ++length;
-            return Codec.Text.GetString(src_, at, length);
+            return Codec.Chars(src_, start_ + offset, capacity);
         }
     }
 

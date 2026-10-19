@@ -90,6 +90,13 @@ private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<DeliveryRoute>;
 
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    DeliveryRoute(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &DeliveryRoute::IsSchemaKey);
+    }
+
     enum : uint32_t
     {
         kFixedOffset = 49,   // frame header (28 + name 13 + fingerprints 4 x 1) + FixedLen (4)

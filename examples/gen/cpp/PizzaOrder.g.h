@@ -231,6 +231,13 @@ private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<PizzaOrder>;
 
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    PizzaOrder(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &PizzaOrder::IsSchemaKey);
+    }
+
     enum : uint32_t
     {
         kFixedOffset = 46,   // frame header (28 + name 10 + fingerprints 4 x 1) + FixedLen (4)

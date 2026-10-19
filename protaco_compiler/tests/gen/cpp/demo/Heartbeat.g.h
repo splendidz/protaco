@@ -127,9 +127,57 @@ public:
         return protaco::detail::Access::ToText(*this, style);
     }
 
+    /// Fixed fields read in place from received bytes (protaco::TryView<Heartbeat>): no allocation, no copy.
+    /// Valid after a successful TryView while the bytes live and stay unchanged.
+    class View : public protaco::CView
+    {
+    public:
+        /// device name
+        /// [type string(32); fixed 32 bytes, set rejects longer values]
+        std::string get_node() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 32);
+        }
+
+        /// sequence number
+        /// [type int64]
+        int64_t get_seq() const
+        {
+            return protaco::detail::Load<int64_t>(Fixed() + 32);
+        }
+
+        /// device is healthy
+        /// [type bool; default true]
+        bool get_healthy() const
+        {
+            return protaco::detail::LoadBool(Fixed() + 40);
+        }
+
+        /// CPU load (0.0..1.0)
+        /// [type double]
+        double get_cpuLoad() const
+        {
+            return protaco::detail::Load<double>(Fixed() + 41);
+        }
+
+        /// uptime in seconds
+        /// [type int]
+        int32_t get_uptimeSec() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 49);
+        }
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Heartbeat>;
+
+    // Runtime use: a received frame of exactly this version becomes the buffer (protaco::ToObject with std::vector&&).
+    Heartbeat(protaco::detail::AdoptTag, std::vector<uint8_t>&& frame)
+        : buf_(std::move(frame))
+    {
+        protaco::detail::Access::BindExt(ext_, &Heartbeat::IsSchemaKey);
+    }
 
     enum : uint32_t
     {

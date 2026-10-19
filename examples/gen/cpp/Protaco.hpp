@@ -502,6 +502,11 @@ struct NoStampTag
 {
 };
 
+// Constructor tag: a received frame of exactly the type's layout becomes the object's buffer.
+struct AdoptTag
+{
+};
+
 inline int64_t SystemClockUs()
 {
     return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -901,6 +906,30 @@ inline bool ParseVar(CReader& reader, CRawFields* fields, Error* error)
     return true;
 }
 
+// FixedLen u32 | fixed block. Same version means same size; a newer version only appends. Also guards nested bodies,
+// which carry no fingerprint of their own.
+inline bool TakeFixed(CReader& reader, uint32_t expected, bool newer, const uint8_t** fixed, Error* error)
+{
+    uint32_t fixedLength = 0;
+    if (!reader.Pod(&fixedLength) || !reader.Take(fixedLength, fixed))
+        return Fail(error, "fixed block truncated");
+    if (newer ? fixedLength < expected : fixedLength != expected)
+        return Fail(error, "fixed block size mismatch: expected " + std::to_string(expected) + ", got " + std::to_string(fixedLength));
+    return true;
+}
+
+// Frame header read in place. name points into the frame.
+struct FrameInfo
+{
+    const char* name = nullptr;
+    size_t nameLength = 0;
+    uint16_t version = 0;
+    uint16_t minVersion = 0;
+    size_t hashCount = 0;
+    size_t headerSize = 0;
+    uint32_t bodySize = 0;
+};
+
 // Size, write and read per value kind. The primary template handles generated message types.
 template <class T, class Enable = void>
 struct Codec;
@@ -932,6 +961,30 @@ struct Access
     {
         ext.isSchemaKey_ = isSchemaKey;
     }
+
+    // Same version range and fingerprints as T: the frame header is the one T would write, envelope aside.
+    template <class T>
+    static bool SameLayout(const uint8_t* frame, const FrameInfo& info);
+
+    template <class T>
+    static T Adopted(std::vector<uint8_t>&& frame)
+    {
+        return T(AdoptTag(), std::move(frame));
+    }
+
+    // Reads the variable fields of an adopted frame. The frame then is the serialized form: Serialize() returns it.
+    template <class T>
+    static bool ReadAdopted(T& message, const FrameInfo& info, Error* error);
+
+    template <class T>
+    static void MarkSerialized(const T& message)
+    {
+        message.cache_.valid = true;
+        message.cache_.extRevision = message.ext_.revision_;
+    }
+
+    template <class T>
+    static bool ViewOf(const uint8_t* src, size_t size, typename T::View* out, Error* error);
 
 private:
     template <class T>
@@ -1477,17 +1530,12 @@ bool Access::ReadBody(T& message, const uint8_t* src, size_t size, Error* error,
     if (depth > static_cast<int>(kMaxDepth))
         return Fail(error, "nesting too deep");
     CReader reader(src, size);
-    uint32_t fixedLength = 0;
     const uint8_t* fixed = nullptr;
-    if (!reader.Pod(&fixedLength) || !reader.Take(fixedLength, &fixed))
-        return Fail(error, "fixed block truncated");
-    // Same version means same fixed block size; a newer version only appends. Also guards nested bodies,
-    // which carry no fingerprint of their own.
-    const uint32_t expected = static_cast<uint32_t>(T::kFixedSize);
-    if (newer ? fixedLength < expected : fixedLength != expected)
-        return Fail(error, "fixed block size mismatch: expected " + std::to_string(expected) + ", got " + std::to_string(fixedLength));
-    if (IsOn(expected))
-        std::memcpy(message.buf_.data() + T::kFixedOffset, fixed, expected);
+    if (!TakeFixed(reader, T::kFixedSize, newer, &fixed, error))
+        return false;
+    // An adopted frame already is the buffer.
+    if (IsOn(T::kFixedSize) && fixed != message.buf_.data() + T::kFixedOffset)
+        std::memcpy(message.buf_.data() + T::kFixedOffset, fixed, T::kFixedSize);
     CRawFields fields;
     if (!ParseVar(reader, &fields, error))
         return false;
@@ -1906,7 +1954,7 @@ void Access::WriteText(const T& message, CTextWriter& writer)
 
 namespace detail
 {
-inline bool ReadHeader(const uint8_t* src, size_t size, Header* out, Error* error)
+inline bool ReadFrameInfo(const uint8_t* src, size_t size, FrameInfo* out, Error* error)
 {
     if (size < HeaderSize(0, 0))
         return Fail(error, "frame too short");
@@ -1924,12 +1972,27 @@ inline bool ReadHeader(const uint8_t* src, size_t size, Header* out, Error* erro
     const size_t hashCount = static_cast<size_t>(version - minVersion) + 1;
     if (size < HeaderSize(nameLength, hashCount))
         return Fail(error, "frame too short");
-    out->name.assign(reinterpret_cast<const char*>(src + 4), nameLength);
+    out->name = reinterpret_cast<const char*>(src + 4);
+    out->nameLength = nameLength;
     out->version = version;
     out->minVersion = minVersion;
-    out->env = LoadEnvelope(src);
+    out->hashCount = hashCount;
+    out->headerSize = HeaderSize(nameLength, hashCount);
     out->bodySize = Load<uint32_t>(src + 24 + nameLength);
-    out->schemaHash = Load<uint32_t>(src + 28 + nameLength + 4 * (hashCount - 1));
+    return true;
+}
+
+inline bool ReadHeader(const uint8_t* src, size_t size, Header* out, Error* error)
+{
+    FrameInfo info;
+    if (!ReadFrameInfo(src, size, &info, error))
+        return false;
+    out->name.assign(info.name, info.nameLength);
+    out->version = info.version;
+    out->minVersion = info.minVersion;
+    out->env = LoadEnvelope(src);
+    out->bodySize = info.bodySize;
+    out->schemaHash = Load<uint32_t>(src + 28 + info.nameLength + 4 * (info.hashCount - 1));
     return true;
 }
 
@@ -1938,49 +2001,205 @@ inline std::string ErrorText(const Error& error)
     return error.path.empty() ? error.what : error.path + ": " + error.what;
 }
 
+// Checks shared by ToObject and TryView: header, name, supported versions, own fingerprint, body length.
+// Nothing is allocated unless the frame is rejected.
+template <class T>
+bool CheckFrame(const uint8_t* src, size_t size, FrameInfo* info, Error* error)
+{
+    if (size > kMaxFrameBytes)
+        return Fail(error, "frame too large");
+    if (!ReadFrameInfo(src, size, info, error))
+        return false;
+    const char* name = T::MsgName();
+    const size_t nameLength = std::strlen(name);
+    const uint16_t mine = T::MsgVersion();
+    if (info->nameLength != nameLength || std::memcmp(info->name, name, nameLength) != 0)
+        return Fail(error, std::string("message name mismatch: expected ") + name + ", got " + std::string(info->name, info->nameLength));
+    if (info->version < mine)
+    {
+        std::string what = std::string("message version too old: ") + name + " reads version " + std::to_string(mine) + " or newer, got "
+            + std::to_string(info->version);
+        if (info->version >= T::MsgMinVersion())
+            what += ". Use the v" + std::to_string(info->version) + " type";
+        return Fail(error, what);
+    }
+    if (info->minVersion > mine)
+        return Fail(error, std::string("message version too new: ") + name + " reads version " + std::to_string(mine) + ", sender supports "
+            + std::to_string(info->minVersion) + ".." + std::to_string(info->version));
+    const uint32_t hash = Load<uint32_t>(src + 28 + nameLength + 4 * static_cast<size_t>(mine - info->minVersion));
+    if (hash != T::MsgSchemaHash())
+        return Fail(error, std::string("schema mismatch: ") + name + " version " + std::to_string(mine) + " expected " + Hex32(T::MsgSchemaHash())
+            + ", got " + Hex32(hash));
+    if (size - info->headerSize != info->bodySize)
+        return Fail(error, size - info->headerSize < info->bodySize ? "frame truncated" : "trailing bytes after frame");
+    return true;
+}
+
+// Body errors of a newer frame name both versions.
+template <class T>
+bool FailNewer(Error* error, const FrameInfo& info)
+{
+    if (info.version > T::MsgVersion() && error != nullptr)
+        error->what += " (frame version " + std::to_string(info.version) + " read as " + std::to_string(T::MsgVersion()) + ")";
+    return false;
+}
+
+// Decodes into decoded, a new object (NoStampTag).
+template <class T>
+bool DecodeInto(const uint8_t* src, size_t size, T& decoded, Error* error)
+{
+    try
+    {
+        FrameInfo info;
+        if (!CheckFrame<T>(src, size, &info, error))
+            return false;
+        decoded.SetEnvelope(LoadEnvelope(src));
+        if (!Access::ReadBody(decoded, src + info.headerSize, info.bodySize, error, 0, info.version > T::MsgVersion()))
+            return FailNewer<T>(error, info);
+        return true;
+    }
+    catch (const std::bad_alloc&)
+    {
+        return Fail(error, "out of memory");
+    }
+}
+
 // Decodes into a temporary and then moves it, so src may point into out's own buffer. out is unchanged on failure.
 template <class T>
 bool Decode(const uint8_t* src, size_t size, T* out, Error* error)
 {
     try
     {
-        if (size > kMaxFrameBytes)
-            return Fail(error, "frame too large");
-        Header header;
-        if (!ReadHeader(src, size, &header, error))
-            return false;
-        const std::string name = T::MsgName();
-        const uint16_t mine = T::MsgVersion();
-        if (header.name != name)
-            return Fail(error, "message name mismatch: expected " + name + ", got " + header.name);
-        if (header.version < mine)
-        {
-            std::string what = "message version too old: " + name + " reads version " + std::to_string(mine) + " or newer, got " + std::to_string(header.version);
-            if (header.version >= T::MsgMinVersion())
-                what += ". Use the v" + std::to_string(header.version) + " type";
-            return Fail(error, what);
-        }
-        if (header.minVersion > mine)
-            return Fail(error, "message version too new: " + name + " reads version " + std::to_string(mine) + ", sender supports "
-                + std::to_string(header.minVersion) + ".." + std::to_string(header.version));
-        const size_t nameLength = header.name.size();
-        const uint32_t hash = Load<uint32_t>(src + 28 + nameLength + 4 * static_cast<size_t>(mine - header.minVersion));
-        if (hash != T::MsgSchemaHash())
-            return Fail(error, "schema mismatch: " + name + " version " + std::to_string(mine) + " expected " + Hex32(T::MsgSchemaHash())
-                + ", got " + Hex32(hash));
-        const size_t headerSize = HeaderSize(nameLength, static_cast<size_t>(header.version - header.minVersion) + 1);
-        if (size - headerSize != header.bodySize)
-            return Fail(error, size - headerSize < header.bodySize ? "frame truncated" : "trailing bytes after frame");
         T decoded{NoStampTag()};
-        decoded.SetEnvelope(header.env);
-        const bool newer = header.version > mine;
-        if (!Access::ReadBody(decoded, src + headerSize, header.bodySize, error, 0, newer))
-        {
-            if (newer && error != nullptr)
-                error->what += " (frame version " + std::to_string(header.version) + " read as " + std::to_string(mine) + ")";
+        if (!DecodeInto(src, size, decoded, error))
             return false;
-        }
         *out = std::move(decoded);
+        return true;
+    }
+    catch (const std::bad_alloc&)
+    {
+        return Fail(error, "out of memory");
+    }
+}
+
+// Takes the bytes. A frame of exactly T's layout becomes the object's buffer; any other frame is copied like Decode.
+template <class T>
+bool DecodeAdopt(std::vector<uint8_t>&& bytes, T* out, Error* error)
+{
+    try
+    {
+        FrameInfo info;
+        if (!CheckFrame<T>(bytes.data(), bytes.size(), &info, error))
+            return false;
+        if (!Access::SameLayout<T>(bytes.data(), info))
+            return Decode(bytes.data(), bytes.size(), out, error);
+        T decoded = Access::Adopted<T>(std::move(bytes));
+        if (!Access::ReadAdopted(decoded, info, error))
+            return false;
+        *out = std::move(decoded);
+        Access::MarkSerialized(*out);
+        return true;
+    }
+    catch (const std::bad_alloc&)
+    {
+        return Fail(error, "out of memory");
+    }
+}
+
+template <class T>
+bool Access::SameLayout(const uint8_t* frame, const FrameInfo& info)
+{
+    if (info.version != T::MsgVersion() || info.minVersion != T::MsgMinVersion())
+        return false;
+    const uint32_t* hashes = T::SchemaHashes();
+    for (size_t i = 0; i < info.hashCount; ++i)
+    {
+        if (Load<uint32_t>(frame + 28 + info.nameLength + 4 * i) != hashes[i])
+            return false;
+    }
+    return true;
+}
+
+template <class T>
+bool Access::ReadAdopted(T& message, const FrameInfo& info, Error* error)
+{
+    if (!ReadBody(message, message.buf_.data() + info.headerSize, info.bodySize, error, 0, false))
+        return false;
+    MarkSerialized(message);
+    return true;
+}
+}  // namespace detail
+
+/// Base of the generated <Message>::View: fixed fields read in place from received bytes (TryView).
+/// Valid after a successful TryView while the bytes live and stay unchanged. ext entries are not visible.
+class CView
+{
+public:
+    Envelope GetEnvelope() const
+    {
+        return detail::LoadEnvelope(frame_);
+    }
+
+    uint32_t GetId() const
+    {
+        return GetEnvelope().id;
+    }
+
+    uint32_t GetCorr() const
+    {
+        return GetEnvelope().corr;
+    }
+
+    /// UTC microseconds since 1970-01-01.
+    int64_t GetTimestamp() const
+    {
+        return GetEnvelope().ts;
+    }
+
+protected:
+    const uint8_t* Fixed() const
+    {
+        return fixed_;
+    }
+
+private:
+    friend struct detail::Access;
+
+    const uint8_t* frame_ = nullptr;
+    const uint8_t* fixed_ = nullptr;
+};
+
+namespace detail
+{
+template <class T>
+bool Access::ViewOf(const uint8_t* src, size_t size, typename T::View* out, Error* error)
+{
+    try
+    {
+        FrameInfo info;
+        if (!CheckFrame<T>(src, size, &info, error))
+            return false;
+        const bool newer = info.version > T::MsgVersion();
+        CReader reader(src + info.headerSize, info.bodySize);
+        const uint8_t* fixed = nullptr;
+        if (!TakeFixed(reader, T::kFixedSize, newer, &fixed, error))
+            return FailNewer<T>(error, info);
+        if (reader.Left() != 0)
+        {
+            // ext entries or fields of a newer version: checked like ToObject, not visible through the view.
+            CRawFields fields;
+            if (!ParseVar(reader, &fields, error))
+                return FailNewer<T>(error, info);
+            if (!IsOn(T::kAllowExtension) && !newer)
+            {
+                const RawField& raw = *fields.begin();
+                Fail(error, "unknown key (allow_extension false)");
+                PrependPath(error, std::string(raw.key, raw.keyLength));
+                return false;
+            }
+        }
+        out->frame_ = src;
+        out->fixed_ = fixed;
         return true;
     }
     catch (const std::bad_alloc&)
@@ -2097,13 +2316,25 @@ bool TryToObject(const std::vector<uint8_t>& bytes, T* out, std::string* error =
     return TryToObject(bytes.data(), bytes.size(), out, error);
 }
 
+/// Takes the bytes. A frame of exactly T's version (same supported versions and fingerprints) becomes the object's
+/// buffer without a copy, and Serialize() returns it as it is until a variable field or ext changes.
+/// Other frames are copied as usual.
+template <class T>
+bool TryToObject(std::vector<uint8_t>&& bytes, T* out, std::string* error = nullptr)
+{
+    Error detailError;
+    if (detail::DecodeAdopt(std::move(bytes), out, &detailError))
+        return true;
+    return detail::SetError(error, detail::ErrorText(detailError));
+}
+
 /// Bytes to object. Throws CParseError on failure (catch it in the same module).
 template <class T>
 T ToObject(const uint8_t* src, size_t size)
 {
     T object{detail::NoStampTag()};
     Error error;
-    if (!detail::Decode(src, size, &object, &error))
+    if (!detail::DecodeInto(src, size, object, &error))
         throw CParseError(error);
     return object;
 }
@@ -2113,6 +2344,53 @@ T ToObject(const std::vector<uint8_t>& bytes)
 {
     return ToObject<T>(bytes.data(), bytes.size());
 }
+
+/// Takes the bytes, like TryToObject with std::vector&&.
+template <class T>
+T ToObject(std::vector<uint8_t>&& bytes)
+{
+    Error error;
+    detail::FrameInfo info;
+    if (!detail::CheckFrame<T>(bytes.data(), bytes.size(), &info, &error))
+        throw CParseError(error);
+    if (!detail::Access::SameLayout<T>(bytes.data(), info))
+        return ToObject<T>(bytes.data(), bytes.size());
+    T object = detail::Access::Adopted<T>(std::move(bytes));
+    bool ok = false;
+    try
+    {
+        ok = detail::Access::ReadAdopted(object, info, &error);
+    }
+    catch (const std::bad_alloc&)
+    {
+        detail::Fail(&error, "out of memory");
+    }
+    if (!ok)
+        throw CParseError(error);
+    return object;
+}
+
+/// Fixed-only messages (T::View exists): checks the frame like TryToObject and reads the fixed fields in place,
+/// without allocating or copying. view stays valid while the bytes live and stay unchanged.
+/// Call with the type: protaco::TryView<Heartbeat>(bytes, &view).
+template <class T>
+bool TryView(const uint8_t* src, size_t size, typename T::View* view, std::string* error = nullptr)
+{
+    Error detailError;
+    if (detail::Access::ViewOf<T>(src, size, view, &detailError))
+        return true;
+    return detail::SetError(error, detail::ErrorText(detailError));
+}
+
+template <class T>
+bool TryView(const std::vector<uint8_t>& bytes, typename T::View* view, std::string* error = nullptr)
+{
+    return TryView<T>(bytes.data(), bytes.size(), view, error);
+}
+
+/// A view into a temporary would dangle.
+template <class T>
+bool TryView(std::vector<uint8_t>&& bytes, typename T::View* view, std::string* error = nullptr) = delete;
 
 }  // namespace protaco
 

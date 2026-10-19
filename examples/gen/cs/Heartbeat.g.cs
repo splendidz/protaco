@@ -87,6 +87,67 @@ namespace demo
             return Protaco.Codec.Serialize(this, GetEnvelope());
         }
 
+        /// <summary>Fixed fields read in place from received bytes (TryView): no allocation, no copy.
+        /// Valid while the array is unchanged. ext entries are not visible.</summary>
+        public struct View
+        {
+            private readonly byte[] src_;
+            private readonly int at_;
+
+            internal View(byte[] src, int at)
+            {
+                src_ = src;
+                at_ = at;
+            }
+
+            public Protaco.Envelope GetEnvelope() => Protaco.Codec.EnvelopeOf(src_);
+
+            /// <summary>
+            /// device name
+            /// [type string(32); fixed 32 bytes, set rejects longer values]
+            /// </summary>
+            public string Node => Protaco.Codec.Chars(src_, at_ + 0, 32);
+
+            /// <summary>
+            /// sequence number
+            /// [type int64]
+            /// </summary>
+            public long Seq => global::System.BitConverter.ToInt64(src_, at_ + 32);
+
+            /// <summary>
+            /// device is healthy
+            /// [type bool; default true]
+            /// </summary>
+            public bool Healthy => src_[at_ + 40] != 0;
+
+            /// <summary>
+            /// CPU load (0.0..1.0)
+            /// [type double]
+            /// </summary>
+            public double CpuLoad => global::System.BitConverter.ToDouble(src_, at_ + 41);
+
+            /// <summary>
+            /// uptime in seconds
+            /// [type int]
+            /// </summary>
+            public int UptimeSec => global::System.BitConverter.ToInt32(src_, at_ + 49);
+        }
+
+        /// <summary>Reads bytes in place as a View, with the checks of Codec.ToObject. False and the reason in error on failure.</summary>
+        public static bool TryView(byte[] bytes, out View view, out string error)
+        {
+            int at;
+            bool ok = Protaco.Codec.TryFixedBlock(bytes, MsgName, MsgVersion, MsgMinVersion, MsgSchemaHash, 53, false, out at, out error);
+            view = ok ? new View(bytes, at) : default(View);
+            return ok;
+        }
+
+        public static bool TryView(byte[] bytes, out View view)
+        {
+            string error;
+            return TryView(bytes, out view, out error);
+        }
+
         // Keys not allowed in ext: schema keys of every version
         private static bool IsSchemaKey(string key)
         {

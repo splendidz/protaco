@@ -17,7 +17,7 @@ namespace Protacoc
             "ext", "buf", "cache", "serialize", "msgname", "msgversion", "msgminversion", "msgschemahash", "schemahashes",
             "setenvelope", "getenvelope", "isschemakey", "visitvar", "visittext", "tostring", "kfixedoffset",
             "kfixedsize", "kallowextension", "equals", "gethashcode", "gettype", "getid", "setid", "getcorr", "setcorr",
-            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp", "protaco",
+            "gettimestamp", "settimestamp", "settimestampasnow", "trygettimefromtimestamp", "protaco", "view", "tryview",
         };
 
         // Where a type appears. Decides which kinds are allowed.
