@@ -1,5 +1,6 @@
-// Model.cs. Message definitions read from yaml. Shared by all generator stages.
+// Model.cs. Message and enum definitions read from yaml. Shared by all generator stages.
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Protacoc
 {
@@ -16,6 +17,7 @@ namespace Protacoc
         Bytes,
         List,
         Message,
+        Enum,
     }
 
     internal sealed class TypeRef
@@ -23,16 +25,17 @@ namespace Protacoc
         public TypeKind Kind;
         public int FixedLength;          // byte count of FixedString
         public TypeRef Element;          // element of List
-        public string MessageName;       // referenced message name
-        public MessageDef Resolved;      // set by the linker
+        public string TypeName;          // referenced message or enum name
+        public MessageDef Resolved;      // referenced message, set by the linker
+        public EnumDef ResolvedEnum;     // referenced enum, set by the linker
 
-        // Whether the type lives in the fixed block. Only scalars and string(N).
+        // Whether the type lives in the fixed block. Scalars, enums and string(N).
         public bool IsFixed
         {
             get
             {
                 return Kind == TypeKind.Bool || Kind == TypeKind.Int || Kind == TypeKind.Int64 || Kind == TypeKind.UInt
-                    || Kind == TypeKind.UInt64 || Kind == TypeKind.Double || Kind == TypeKind.FixedString;
+                    || Kind == TypeKind.UInt64 || Kind == TypeKind.Double || Kind == TypeKind.FixedString || Kind == TypeKind.Enum;
             }
         }
 
@@ -46,6 +49,7 @@ namespace Protacoc
                         return 1;
                     case TypeKind.Int:
                     case TypeKind.UInt:
+                    case TypeKind.Enum:
                         return 4;
                     case TypeKind.Int64:
                     case TypeKind.UInt64:
@@ -84,9 +88,24 @@ namespace Protacoc
                 case TypeKind.List:
                     return "list<" + Element + ">";
                 default:
-                    return MessageName;
+                    return TypeName;
             }
         }
+    }
+
+    // Common to message and enum files: one definition per file, file name = definition name.
+    internal abstract class SchemaDef
+    {
+        public string Name;
+        public int Version;
+        public int MinVersion;            // oldest supported version; equals Version without min_version
+        public string Namespace;          // "shop" or dotted "shop.orders"
+        public string Desc;
+        public List<string> Doc = new List<string>();
+        public string FilePath;
+        public string FileName;
+        public string Sha1;
+        public SourcePos Pos;
     }
 
     internal sealed class FieldDef
@@ -122,25 +141,16 @@ namespace Protacoc
         public uint SchemaHash;           // FNV-1a 32 of the canonical schema text (docs/reference.md "Schema fingerprint")
     }
 
-    internal sealed class MessageDef
+    internal sealed class MessageDef : SchemaDef
     {
-        public string Name;
-        public int Version;
-        public int MinVersion;            // oldest supported version; equals Version without min_version
-        public string Namespace;          // "shop" or dotted "shop.orders"
         public bool AllowExtension = true;
-        public string Desc;
-        public List<string> Doc = new List<string>();
         public List<FieldDef> Fields = new List<FieldDef>();
-        public string FilePath;
-        public string FileName;
-        public string Sha1;
-        public SourcePos Pos;
 
         // Set by the linker.
         public List<FieldDef> Physical = new List<FieldDef>();      // serialization order: added, then declaration
         public List<VersionView> Views = new List<VersionView>();   // MinVersion..Version
         public List<MessageDef> Dependencies = new List<MessageDef>();
+        public List<EnumDef> EnumDependencies = new List<EnumDef>();
         public int Depth;                 // nested message levels below this message
 
         public VersionView Latest
@@ -165,6 +175,45 @@ namespace Protacoc
             get
             {
                 return MinVersion < Version || Fields.Exists(f => f.Added != 1 || f.Removed != 0);
+            }
+        }
+    }
+
+    internal sealed class EnumValueDef
+    {
+        public string Key;
+        public int Number;
+        public string Desc;
+        public List<string> Doc = new List<string>();
+        public SourcePos Pos;
+        public int Added = 1;
+        public int Removed;
+
+        public bool AliveAt(int version)
+        {
+            return Added <= version && (Removed == 0 || version < Removed);
+        }
+    }
+
+    // Enum file (<Name>.enum.yaml). Values are int32. Removed values keep their names for ToString of old frames.
+    internal sealed class EnumDef : SchemaDef
+    {
+        public List<EnumValueDef> Values = new List<EnumValueDef>();
+
+        public List<EnumValueDef> Alive
+        {
+            get
+            {
+                return Values.Where(v => v.AliveAt(Version)).ToList();
+            }
+        }
+
+        // Default of a field of this enum without default: the first value of the latest version.
+        public EnumValueDef First
+        {
+            get
+            {
+                return Values.FirstOrDefault(v => v.AliveAt(Version));
             }
         }
     }

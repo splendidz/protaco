@@ -1,0 +1,7 @@
+# expect: PC318
+enum: PC318_number
+version: 1
+namespace: errors
+values:
+  - {key: A, value: 1}
+  - {key: B, value: 1}

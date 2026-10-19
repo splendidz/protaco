@@ -17,6 +17,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -838,7 +839,7 @@ inline bool ParseVar(CReader& reader, CRawFields* fields, Error* error)
 }
 
 // Size, write and read per value kind. The primary template handles generated message types.
-template <class T>
+template <class T, class Enable = void>
 struct Codec;
 
 class CTextWriter;
@@ -877,7 +878,7 @@ private:
     static void WriteVar(const T& message, CWriter& writer);
 };
 
-template <class T>
+template <class T, class Enable>
 struct Codec
 {
     static TacoType Type()
@@ -942,6 +943,39 @@ struct PodCodec
 template <>
 struct Codec<int32_t> : PodCodec<int32_t, TacoType::Int>
 {
+};
+
+// Enums (generated .enum.h): int32 in the serialized data. Numbers this build does not know are kept as they are.
+template <class T>
+struct Codec<T, typename std::enable_if<std::is_enum<T>::value>::type>
+{
+    static TacoType Type()
+    {
+        return TacoType::Int;
+    }
+
+    static T Make()
+    {
+        return T();
+    }
+
+    static size_t Size(T)
+    {
+        return sizeof(int32_t);
+    }
+
+    static void Write(CWriter& writer, T value)
+    {
+        writer.Pod<int32_t>(static_cast<int32_t>(value));
+    }
+
+    static bool Read(const uint8_t* src, size_t size, T* out, Error* error, int)
+    {
+        if (size != sizeof(int32_t))
+            return Fail(error, "scalar size mismatch");
+        *out = static_cast<T>(Load<int32_t>(src));
+        return true;
+    }
 };
 
 template <>
@@ -1454,9 +1488,24 @@ private:
     }
 
     template <class T>
-    void Value(const T& message)
+    void Value(const T& value)
+    {
+        ValueOf(value, std::is_enum<T>());
+    }
+
+    template <class T>
+    void ValueOf(const T& message, std::false_type)
     {
         Message(message);
+    }
+
+    // Enum: Name(number), ?(number) for a number this build does not know. EnumName comes from the generated .enum.h.
+    template <class T>
+    void ValueOf(T value, std::true_type)
+    {
+        const char* name = EnumName(value);
+        out_ += name != nullptr ? name : "?";
+        out_ += "(" + std::to_string(static_cast<int32_t>(value)) + ")";
     }
 
     // ext values carry only their kind, not a schema.

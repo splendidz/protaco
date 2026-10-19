@@ -32,6 +32,9 @@
     <Filter Include="gen\cpp\demo">
       <UniqueIdentifier>{EBC3CCA2-3493-5B16-BD6A-5C628AD64908}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gen\cpp\enums">
+      <UniqueIdentifier>{B6775DAE-09C3-5B17-9AD5-B6F26FC5075A}</UniqueIdentifier>
+    </Filter>
     <Filter Include="gen\cpp\partial">
       <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
     </Filter>
@@ -88,6 +91,12 @@
     </Filter>
     <Filter Include="schemas\demo">
       <UniqueIdentifier>{8F9BB853-02B9-5601-9D8E-90F9101B811C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\enumdefault">
+      <UniqueIdentifier>{46135ADF-77D8-5922-B7FD-89A7C1D13C1F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\enums">
+      <UniqueIdentifier>{B3FECE4B-9701-55A6-925A-38D8060EDD01}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas\errors">
       <UniqueIdentifier>{334EE2F5-5C20-561E-B40D-80E2E0EEFB0C}</UniqueIdentifier>
@@ -204,6 +213,12 @@
     <ClInclude Include="..\gen\cpp\demo\Topping.g.h">
       <Filter>gen\cpp\demo</Filter>
     </ClInclude>
+    <ClInclude Include="..\gen\cpp\enums\Pie.g.h">
+      <Filter>gen\cpp\enums</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gen\cpp\enums\PizzaSize.enum.h">
+      <Filter>gen\cpp\enums</Filter>
+    </ClInclude>
     <ClInclude Include="..\gen\cpp\partial\Delivery.g.h">
       <Filter>gen\cpp\partial</Filter>
     </ClInclude>
@@ -302,6 +317,18 @@
     <None Include="..\schemas\demo\Topping.yaml">
       <Filter>schemas\demo</Filter>
     </None>
+    <None Include="..\schemas\enumdefault\Box.yaml">
+      <Filter>schemas\enumdefault</Filter>
+    </None>
+    <None Include="..\schemas\enumdefault\Size.enum.yaml">
+      <Filter>schemas\enumdefault</Filter>
+    </None>
+    <None Include="..\schemas\enums\Pie.yaml">
+      <Filter>schemas\enums</Filter>
+    </None>
+    <None Include="..\schemas\enums\PizzaSize.enum.yaml">
+      <Filter>schemas\enums</Filter>
+    </None>
     <None Include="..\schemas\errors\PC101_tab.yaml">
       <Filter>schemas\errors</Filter>
     </None>
@@ -339,6 +366,15 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC206_namespace.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC208_enum_in_yaml.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC208_message.enum.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC301_enum.enum.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC301_name.yaml">
@@ -393,6 +429,9 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC313_dead.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC318_number.enum.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC402_ref.yaml">

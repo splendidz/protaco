@@ -1,5 +1,5 @@
-﻿// Linker.cs. Cross-message rules: name resolution, cycle check, topological sort, field semantics, fixed block layout.
-// Input file order is irrelevant (all files are loaded first, then looked up by name).
+﻿// Linker.cs. Cross-definition rules: name resolution (message or enum), cycle check, topological sort, field semantics,
+// enum values, fixed block layout. Input file order is irrelevant (all files are loaded first, then looked up by name).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,21 +52,32 @@ namespace Protacoc
             "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while",
         };
 
-        // Returns dependency order (referenced messages first), or null on error.
-        public static List<MessageDef> Link(List<MessageDef> messages, Diag diag)
+        // Messages in dependency order (referenced messages first) and enums by name. False on error.
+        public static bool Link(List<SchemaDef> defs, Diag diag, out List<MessageDef> order, out List<EnumDef> enums)
         {
-            Dictionary<string, MessageDef> byName = new Dictionary<string, MessageDef>();
-            foreach (MessageDef message in messages)
+            order = null;
+            enums = defs.OfType<EnumDef>().OrderBy(e => e.Name, StringComparer.Ordinal).ToList();
+            List<MessageDef> messages = defs.OfType<MessageDef>().ToList();
+            Dictionary<string, SchemaDef> byName = new Dictionary<string, SchemaDef>();
+            foreach (SchemaDef def in defs)
             {
-                MessageDef other;
-                if (byName.TryGetValue(message.Name, out other))
+                SchemaDef other;
+                if (byName.TryGetValue(def.Name, out other))
                 {
-                    diag.Error(message.Pos, Codes.DupMessage, "duplicate message name '" + message.Name + "' (first defined in " + other.FilePath + ")");
+                    diag.Error(def.Pos, Codes.DupMessage, "duplicate name '" + def.Name + "' (first defined in " + other.FilePath + ")");
                     continue;
                 }
-                byName.Add(message.Name, message);
+                byName.Add(def.Name, def);
             }
-            CheckNamespaces(messages, diag);
+            foreach (EnumDef enumDef in enums)
+            {
+                // C# helper class <Enum>Names must not collide with another definition.
+                if (byName.ContainsKey(enumDef.Name + "Names"))
+                    diag.Error(enumDef.Pos, Codes.DupMessage, "'" + enumDef.Name + "Names' is the C# name helper of enum '" + enumDef.Name + "'; rename the other definition");
+            }
+            CheckNamespaces(defs, diag);
+            foreach (EnumDef enumDef in enums)
+                CheckEnum(enumDef, diag);
             foreach (MessageDef message in messages)
             {
                 CheckFields(message, byName, diag);
@@ -74,10 +85,10 @@ namespace Protacoc
             }
             CheckNestedVersions(messages, diag);
             if (diag.ErrorCount != 0)
-                return null;
-            List<MessageDef> order = TopoSort(messages, diag);
+                return false;
+            order = TopoSort(messages, diag);
             if (order == null)
-                return null;
+                return false;
             // Dependencies come first, so depth and fingerprints of referenced messages are ready.
             foreach (MessageDef message in order)
             {
@@ -86,34 +97,72 @@ namespace Protacoc
                 if (message.Depth > MaxDepth)
                     diag.Error(message.Pos, Codes.TooDeep, "'" + message.Name + "' nests messages " + message.Depth + " levels deep. The maximum is " + MaxDepth);
             }
-            return diag.ErrorCount == 0 ? order : null;
+            return diag.ErrorCount == 0;
         }
 
         // Version rules. README.md "Versioning".
+        private static bool CheckVersionRange(SchemaDef def, string kind, Diag diag)
+        {
+            if (VersionNamespace.IsMatch(def.Name))
+                diag.Error(def.Pos, Codes.ReservedName, kind + " name '" + def.Name + "' is reserved for version namespaces (v1, v2, ...)");
+            if (CppKeywords.Contains(def.Name) || CsKeywords.Contains(def.Name))
+                diag.Error(def.Pos, Codes.Reserved, "'" + def.Name + "' is a C++ or C# keyword");
+            if (def.MinVersion > def.Version)
+            {
+                diag.Error(def.Pos, Codes.BadVersion, "min_version " + def.MinVersion + " is above version " + def.Version);
+                return false;
+            }
+            if (def.Version - def.MinVersion + 1 > MaxVersions)
+                diag.Error(def.Pos, Codes.BadVersion, "min_version " + def.MinVersion + " to version " + def.Version + " spans more than " + MaxVersions + " versions. Raise min_version");
+            return true;
+        }
+
+        // added/removed of one field or enum value.
+        private static void CheckLifetime(string key, int added, int removed, bool keepsBytes, SchemaDef def, SourcePos pos, Diag diag)
+        {
+            if (added > def.Version)
+                diag.Error(pos, Codes.BadVersion, "'" + key + "' added in " + added + ", above version " + def.Version);
+            if (removed == 0)
+                return;
+            if (removed > def.Version)
+                diag.Error(pos, Codes.BadVersion, "'" + key + "' removed in " + removed + ", above version " + def.Version);
+            else if (removed <= added)
+                diag.Error(pos, Codes.BadVersion, "'" + key + "' removed in " + removed + ", not after added " + added);
+            else if (!keepsBytes && removed <= def.MinVersion)
+                diag.Error(pos, Codes.DeadLine, "'" + key + "' removed in " + removed + " and min_version is " + def.MinVersion + ": no supported version has it. Delete the line");
+        }
+
         private static void CheckVersions(MessageDef message, Diag diag)
         {
-            if (VersionNamespace.IsMatch(message.Name))
-                diag.Error(message.Pos, Codes.ReservedName, "message name '" + message.Name + "' is reserved for version namespaces (v1, v2, ...)");
-            if (message.MinVersion > message.Version)
-            {
-                diag.Error(message.Pos, Codes.BadVersion, "min_version " + message.MinVersion + " is above version " + message.Version);
+            if (!CheckVersionRange(message, "message", diag))
                 return;
-            }
-            if (message.Version - message.MinVersion + 1 > MaxVersions)
-                diag.Error(message.Pos, Codes.BadVersion, "min_version " + message.MinVersion + " to version " + message.Version + " spans more than " + MaxVersions + " versions. Raise min_version");
             foreach (FieldDef field in message.Fields)
+                CheckLifetime(field.Key, field.Added, field.Removed, field.Type.IsFixed, message, field.Pos, diag);
+        }
+
+        // Enum values: int32, unique keys and numbers (removed numbers stay taken), at least one value in the latest version.
+        // Removed value lines stay: they keep the number taken and the name for ToString of old frames.
+        private static void CheckEnum(EnumDef enumDef, Diag diag)
+        {
+            if (!CheckVersionRange(enumDef, "enum", diag))
+                return;
+            HashSet<string> keys = new HashSet<string>();
+            Dictionary<int, string> numbers = new Dictionary<int, string>();
+            foreach (EnumValueDef value in enumDef.Values)
             {
-                if (field.Added > message.Version)
-                    diag.Error(field.Pos, Codes.BadVersion, "'" + field.Key + "' added in " + field.Added + ", above version " + message.Version);
-                if (field.Removed == 0)
-                    continue;
-                if (field.Removed > message.Version)
-                    diag.Error(field.Pos, Codes.BadVersion, "'" + field.Key + "' removed in " + field.Removed + ", above version " + message.Version);
-                else if (field.Removed <= field.Added)
-                    diag.Error(field.Pos, Codes.BadVersion, "'" + field.Key + "' removed in " + field.Removed + ", not after added " + field.Added);
-                else if (!field.Type.IsFixed && field.Removed <= message.MinVersion)
-                    diag.Error(field.Pos, Codes.DeadLine, "'" + field.Key + "' removed in " + field.Removed + " and min_version is " + message.MinVersion + ": no supported version has it. Delete the line");
+                if (!keys.Add(value.Key))
+                    diag.Error(value.Pos, Codes.DupKey, "duplicate enum value key '" + value.Key + "'");
+                if (CppKeywords.Contains(value.Key) || CsKeywords.Contains(value.Key))
+                    diag.Error(value.Pos, Codes.Reserved, "'" + value.Key + "' is a C++ or C# keyword");
+                string other;
+                if (numbers.TryGetValue(value.Number, out other))
+                    diag.Error(value.Pos, Codes.DupNumber, "'" + value.Key + "' reuses number " + value.Number + " of '" + other + "'. Numbers are never reused, removed values included");
+                else
+                    numbers.Add(value.Number, value.Key);
+                CheckLifetime(value.Key, value.Added, value.Removed, true, enumDef, value.Pos, diag);
             }
+            if (enumDef.First == null)
+                diag.Error(enumDef.Pos, Codes.MissingTop, "enum '" + enumDef.Name + "' has no value in version " + enumDef.Version);
         }
 
         // Nested bodies carry no version, so a message used as a field type has exactly one layout.
@@ -134,29 +183,29 @@ namespace Protacoc
             }
         }
 
-        // One run = one namespace, so output files stay flat (<Name>.g.h) and references need no qualification.
-        private static void CheckNamespaces(List<MessageDef> messages, Diag diag)
+        // One run = one namespace, so output files stay flat (<Name>.g.h, <Name>.enum.h) and references need no qualification.
+        private static void CheckNamespaces(List<SchemaDef> defs, Diag diag)
         {
-            List<MessageDef> sorted = messages.OrderBy(m => m.FilePath, StringComparer.Ordinal).ToList();
-            foreach (MessageDef message in sorted)
+            List<SchemaDef> sorted = defs.OrderBy(m => m.FilePath, StringComparer.Ordinal).ToList();
+            foreach (SchemaDef def in sorted)
             {
-                foreach (string part in message.Namespace.Split('.'))
+                foreach (string part in def.Namespace.Split('.'))
                 {
                     if (CppKeywords.Contains(part) || CsKeywords.Contains(part))
-                        diag.Error(message.Pos, Codes.BadNamespace, "namespace '" + message.Namespace + "' uses the keyword '" + part + "'");
+                        diag.Error(def.Pos, Codes.BadNamespace, "namespace '" + def.Namespace + "' uses the keyword '" + part + "'");
                 }
             }
             if (sorted.Count == 0)
                 return;
-            MessageDef first = sorted[0];
-            foreach (MessageDef message in sorted.Skip(1))
+            SchemaDef first = sorted[0];
+            foreach (SchemaDef def in sorted.Skip(1))
             {
-                if (message.Namespace != first.Namespace)
-                    diag.Error(message.Pos, Codes.NamespaceMismatch, "namespace '" + message.Namespace + "' differs from '" + first.Namespace + "' (" + first.FileName + "). Generate each namespace in its own run and output folder");
+                if (def.Namespace != first.Namespace)
+                    diag.Error(def.Pos, Codes.NamespaceMismatch, "namespace '" + def.Namespace + "' differs from '" + first.Namespace + "' (" + first.FileName + "). Generate each namespace in its own run and output folder");
             }
         }
 
-        private static void CheckFields(MessageDef message, Dictionary<string, MessageDef> byName, Diag diag)
+        private static void CheckFields(MessageDef message, Dictionary<string, SchemaDef> byName, Diag diag)
         {
             HashSet<string> keys = new HashSet<string>();
             HashSet<string> csNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -166,7 +215,8 @@ namespace Protacoc
                 if (!keys.Add(field.Key))
                     diag.Error(pos, Codes.DupKey, "duplicate field key '" + field.Key + "'");
                 CheckName(message, field, csNames, diag);
-                ResolveType(field.Type, field, byName, diag, false);
+                if (!ResolveType(field.Type, field, byName, diag, false))
+                    continue;
                 if (field.Required && field.Type.IsFixed)
                     diag.Error(pos, Codes.RequiredFixed, "'" + field.Key + "' is a fixed field and is always present. required is not allowed (validate the value in receiving code)");
                 CheckDefault(field, diag);
@@ -192,33 +242,42 @@ namespace Protacoc
                 diag.Error(field.Pos, Codes.NameClash, "C# property name '" + csName + "' clashes (keys differ only in case)");
         }
 
-        private static void ResolveType(TypeRef type, FieldDef field, Dictionary<string, MessageDef> byName, Diag diag, bool isElement)
+        // Named types become Message or Enum here. False if the type cannot be used.
+        private static bool ResolveType(TypeRef type, FieldDef field, Dictionary<string, SchemaDef> byName, Diag diag, bool isElement)
         {
             if (type.Kind == TypeKind.List)
             {
                 if (isElement)
                 {
                     diag.Error(field.Pos, Codes.BadElement, "list of lists is not supported. Wrap the element in a message");
-                    return;
+                    return false;
                 }
                 TypeRef element = type.Element;
                 if (element.Kind == TypeKind.Bool || element.Kind == TypeKind.FixedString)
                 {
-                    diag.Error(field.Pos, Codes.BadElement, "list<" + element + "> is not supported. Allowed elements: int, int64, uint, uint64, double, string, bytes, message");
-                    return;
+                    diag.Error(field.Pos, Codes.BadElement, "list<" + element + "> is not supported. Allowed elements: int, int64, uint, uint64, double, string, bytes, enum, message");
+                    return false;
                 }
-                ResolveType(element, field, byName, diag, true);
-                return;
+                return ResolveType(element, field, byName, diag, true);
             }
             if (type.Kind != TypeKind.Message)
-                return;
-            MessageDef target;
-            if (!byName.TryGetValue(type.MessageName, out target))
+                return true;
+            SchemaDef target;
+            if (!byName.TryGetValue(type.TypeName, out target))
             {
-                diag.Error(field.Pos, Codes.UnknownRef, "unknown message '" + type.MessageName + "'. Expected " + type.MessageName + ".yaml in an -I folder");
-                return;
+                diag.Error(field.Pos, Codes.UnknownRef, "unknown type '" + type.TypeName + "'. Expected " + type.TypeName + ".yaml or "
+                    + type.TypeName + Loader.EnumSuffix + " in an -I folder");
+                return false;
             }
-            type.Resolved = target;
+            EnumDef enumDef = target as EnumDef;
+            if (enumDef != null)
+            {
+                type.Kind = TypeKind.Enum;
+                type.ResolvedEnum = enumDef;
+                return true;
+            }
+            type.Resolved = (MessageDef)target;
+            return true;
         }
 
         private static void CheckDefault(FieldDef field, Diag diag)
@@ -254,6 +313,15 @@ namespace Protacoc
                     ok = !field.DefaultQuoted && DoubleText.IsMatch(text)
                         && double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d)
                         && !double.IsInfinity(d);
+                    break;
+                case TypeKind.Enum:
+                    ok = !field.DefaultQuoted && field.Type.ResolvedEnum.Alive.Exists(v => v.Key == text);
+                    if (!ok)
+                    {
+                        diag.Error(field.Pos, Codes.BadDefault, "default '" + text + "' is not a value of enum " + field.Type.TypeName + " (version "
+                            + field.Type.ResolvedEnum.Version + "). Write the value name without quotes");
+                        return;
+                    }
                     break;
                 case TypeKind.String:
                 case TypeKind.FixedString:
@@ -320,6 +388,7 @@ namespace Protacoc
             stack.RemoveAt(stack.Count - 1);
             state[message] = 2;
             message.Dependencies = DirectDependencies(message).ToList();
+            message.EnumDependencies = EnumDependencies(message).ToList();
             order.Add(message);
             return ok;
         }
@@ -332,6 +401,17 @@ namespace Protacoc
                 TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
                 if (type.Resolved != null && seen.Add(type.Resolved))
                     yield return type.Resolved;
+            }
+        }
+
+        private static IEnumerable<EnumDef> EnumDependencies(MessageDef message)
+        {
+            HashSet<EnumDef> seen = new HashSet<EnumDef>();
+            foreach (FieldDef field in message.Fields)
+            {
+                TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
+                if (type.ResolvedEnum != null && seen.Add(type.ResolvedEnum))
+                    yield return type.ResolvedEnum;
             }
         }
 

@@ -1,0 +1,6 @@
+# expect: PC208
+message: PC208_message
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int}

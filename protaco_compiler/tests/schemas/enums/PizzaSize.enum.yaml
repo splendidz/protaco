@@ -1,0 +1,10 @@
+# Pizza size. Kids was dropped in version 3; its number stays reserved and its name still prints.
+enum: PizzaSize
+version: 3
+namespace: enums
+values:
+  - {key: Small, value: 1, desc: 10 inch}
+  - {key: Medium, value: 2}
+  - {key: Large, value: 3}
+  - {key: Kids, value: 5, removed: 3}
+  - {key: Family, value: 4, added: 2}

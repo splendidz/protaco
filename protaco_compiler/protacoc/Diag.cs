@@ -52,6 +52,7 @@ namespace Protacoc
         public const string BadValue = "PC204";        // value format (bool, int, name)
         public const string DupAttr = "PC205";         // duplicate attribute
         public const string BadNamespace = "PC206";    // malformed namespace or keyword segment
+        public const string FileKind = "PC208";        // enum: outside <Name>.enum.yaml, or a .enum.yaml file without enum:
         public const string FileName = "PC301";        // message name differs from file name
         public const string DupKey = "PC302";          // duplicate field key
         public const string Reserved = "PC303";        // reserved word or generated member name
@@ -63,6 +64,7 @@ namespace Protacoc
         public const string BadVersion = "PC312";      // min_version, added or removed out of range
         public const string DeadLine = "PC313";        // variable field removed at or below min_version
         public const string ReservedName = "PC314";    // message name v<N> (version namespace)
+        public const string DupNumber = "PC318";       // two enum values with one number
         public const string DupMessage = "PC401";      // duplicate message name
         public const string UnknownRef = "PC402";      // unknown message reference
         public const string Cycle = "PC403";           // reference cycle

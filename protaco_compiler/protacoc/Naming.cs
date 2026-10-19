@@ -104,6 +104,29 @@ namespace Protacoc
             return lines;
         }
 
+        public static List<string> EnumDoc(EnumDef enumDef)
+        {
+            List<string> lines = new List<string>(enumDef.Doc);
+            if (!string.IsNullOrEmpty(enumDef.Desc))
+                lines.Add(enumDef.Desc);
+            List<string> tags = new List<string> { "enum", "version " + enumDef.Version };
+            if (enumDef.MinVersion < enumDef.Version)
+                tags.Add("supports " + enumDef.MinVersion + ".." + enumDef.Version);
+            tags.Add("source " + enumDef.FileName);
+            lines.Add("[" + string.Join("; ", tags) + "]");
+            return lines;
+        }
+
+        public static List<string> EnumValueDoc(EnumValueDef value)
+        {
+            List<string> lines = new List<string>(value.Doc);
+            if (!string.IsNullOrEmpty(value.Desc))
+                lines.Add(value.Desc);
+            if (value.Added != 1)
+                lines.Add("[added in " + value.Added + "]");
+            return lines;
+        }
+
         public static string XmlEscape(string text)
         {
             return text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");

@@ -1,0 +1,6 @@
+# expect: PC301
+enum: Other
+version: 1
+namespace: errors
+values:
+  - {key: A, value: 1}

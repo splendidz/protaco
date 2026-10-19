@@ -49,6 +49,8 @@ namespace Protacoc.Tests
             Run("C#: ToString matches C++", ToStringMatchesCpp);
             Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
             Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
+            Run("C#: enum fields match C++", EnumFields);
+            Run("generator: enum default must be a value PC308", GeneratorEnumDefault);
             Run("C#: timestamp to local time, same text as C++", TimestampConvertsToLocalTime);
             Console.WriteLine();
             Console.WriteLine("passed " + passed_ + " / failed " + failures_.Count);
@@ -291,6 +293,38 @@ namespace Protacoc.Tests
             Heartbeat beat = new Heartbeat { Node = "oven-1", Seq = 123456789, CpuLoad = 0.25, UptimeSec = 3600 };
             beat.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
             return beat;
+        }
+
+        // Same values as the C++ test MakePie.
+        private static enums.Pie MakePie()
+        {
+            enums.Pie pie = new enums.Pie { Size = enums.PizzaSize.Family, Crust = (enums.PizzaSize)9 };
+            pie.Sizes.AddRange(new[] { enums.PizzaSize.Small, enums.PizzaSize.Family, (enums.PizzaSize)5, (enums.PizzaSize)9 });
+            pie.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
+            return pie;
+        }
+
+        private static void EnumFields()
+        {
+            enums.Pie defaults = new enums.Pie();
+            Equal(enums.PizzaSize.Large, defaults.Size, "default");
+            Equal(enums.PizzaSize.Small, defaults.Crust, "first value");
+            Check(MakePie().Serialize().SequenceEqual(Golden("Pie.bin")), "same bytes as C++");
+            enums.Pie got = Protaco.Codec.ToObject<enums.Pie>(Golden("Pie.bin"));
+            Equal(9, (int)got.Crust, "unknown number kept");
+            Equal("Pie{size=Family(4), crust=?(9), sizes=[Small(1), Family(4), Kids(5), ?(9)], name=\"\"}", got.ToString(), "text");
+            enums.PizzaSize parsed;
+            Check(enums.PizzaSizeNames.TryParse("Medium", out parsed) && parsed == enums.PizzaSize.Medium, "parse");
+            Check(!enums.PizzaSizeNames.TryParse("Kids", out parsed), "removed name parsed");
+            Equal("Kids", enums.PizzaSizeNames.Name((enums.PizzaSize)5), "removed name");
+            Equal(null, enums.PizzaSizeNames.Name((enums.PizzaSize)9), "unknown name");
+        }
+
+        private static void GeneratorEnumDefault()
+        {
+            GenResult result = Protacoc("-I", TestSchemas("enumdefault"), "--cpp_out", Path.Combine(TempDir(), "out"));
+            Equal(2, result.Exit, "exit code");
+            Check(result.Output.Contains("error PC308:") && result.Output.Contains("'Huge' is not a value of enum Size"), "no PC308: " + result.Output);
         }
 
         private static void EnvelopeIsStampedOnCreation()

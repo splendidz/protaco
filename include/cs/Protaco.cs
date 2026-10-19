@@ -1389,6 +1389,24 @@ namespace Protaco
             Items(value, Value);
         }
 
+        /// <summary>Enum field: Name(number), ?(number) for a number the build does not know.</summary>
+        public void Field<T>(string key, T value, Func<T, string> name) where T : struct, Enum
+        {
+            Key(key);
+            EnumValue(value, name);
+        }
+
+        public void Field<T>(string key, List<T> value, Func<T, string> name) where T : struct, Enum
+        {
+            Key(key);
+            Items(value, item => EnumValue(item, name));
+        }
+
+        private void EnumValue<T>(T value, Func<T, string> name) where T : struct, Enum
+        {
+            out_.Append(name(value) ?? "?").Append('(').Append(Convert.ToInt32(value).ToString(CultureInfo.InvariantCulture)).Append(')');
+        }
+
         public void Field<T>(string key, List<T> value) where T : IMessage
         {
             Key(key);

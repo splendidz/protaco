@@ -1,5 +1,6 @@
 ﻿// Program.cs. protacoc.exe command line (protoc style).
-//   protacoc -I <yaml dir> [-I ...] --cpp_out <dir> [--cs_out <dir>] [--no_runtime] [--check] [message name or yaml path...]
+//   protacoc -I <yaml dir> [-I ...] --cpp_out <dir> [--cs_out <dir>] [--no_runtime] [--check] [name or yaml path...]
+// Inputs: <Name>.yaml (one message) and <Name>.enum.yaml (one enum).
 // The namespace comes from each yaml header (namespace:).
 // Exit codes: 0 success, 1 usage, 2 schema error, 3 --check mismatch
 using System;
@@ -34,22 +35,23 @@ namespace Protacoc
                 return usageError.Length > 0 ? 1 : 0;
             }
             Diag diag = new Diag();
-            List<MessageDef> messages = LoadAll(options, diag);
-            List<MessageDef> order = diag.ErrorCount == 0 ? Linker.Link(messages, diag) : null;
-            if (order == null)
+            List<SchemaDef> defs = LoadAll(options, diag);
+            List<MessageDef> order = null;
+            List<EnumDef> enums = null;
+            if (diag.ErrorCount != 0 || !Linker.Link(defs, diag, out order, out enums))
             {
                 diag.Print();
                 Console.Error.WriteLine("protacoc: " + diag.ErrorCount + " error(s)");
                 return 2;
             }
-            HashSet<MessageDef> targets = SelectTargets(order, options, diag);
+            HashSet<SchemaDef> targets = SelectTargets(defs, options, diag);
             if (diag.ErrorCount != 0)
             {
                 diag.Print();
                 return 2;
             }
             OutputSet output = new OutputSet(options.Check, diag);
-            Emit(order, targets, options, output);
+            Emit(order, enums, targets, options, output);
             if (diag.ErrorCount != 0)
             {
                 diag.Print();
@@ -118,16 +120,16 @@ namespace Protacoc
             Console.WriteLine("protacoc " + Naming.Version + ". message yaml to C++ (.g.h) / C# (.g.cs)");
             Console.WriteLine("usage: protacoc -I <yaml dir> [-I ...] --cpp_out <dir> [--cs_out <dir>] [options] [message...]");
             Console.WriteLine("  -I, --proto_path <dir>   yaml folder. Several folders share one name space");
-            Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h and the runtime Protaco.hpp");
-            Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs and the runtime Protaco.cs");
+            Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h, <enum>.enum.h and the runtime Protaco.hpp");
+            Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.cs and the runtime Protaco.cs");
             Console.WriteLine("  --no_runtime             skips the runtime files");
             Console.WriteLine("  --check                  checks without writing. Exit code 3 if anything differs");
-            Console.WriteLine("  message...               generates only these (name or yaml path). Default: all");
+            Console.WriteLine("  name...                  generates only these messages or enums (name or yaml path). Default: all");
         }
 
-        private static List<MessageDef> LoadAll(Options options, Diag diag)
+        private static List<SchemaDef> LoadAll(Options options, Diag diag)
         {
-            List<MessageDef> messages = new List<MessageDef>();
+            List<SchemaDef> defs = new List<SchemaDef>();
             foreach (string dir in options.ProtoPaths)
             {
                 if (!Directory.Exists(dir))
@@ -137,33 +139,40 @@ namespace Protacoc
                 }
                 foreach (string path in Directory.GetFiles(dir, "*.yaml").OrderBy(p => p, StringComparer.Ordinal))
                 {
-                    MessageDef message = Loader.Load(path, diag);
-                    if (message != null)
-                        messages.Add(message);
+                    SchemaDef def = Loader.Load(path, diag);
+                    if (def != null)
+                        defs.Add(def);
                 }
             }
-            return messages;
+            return defs;
         }
 
-        private static HashSet<MessageDef> SelectTargets(List<MessageDef> order, Options options, Diag diag)
+        private static HashSet<SchemaDef> SelectTargets(List<SchemaDef> defs, Options options, Diag diag)
         {
             if (options.Targets.Count == 0)
-                return new HashSet<MessageDef>(order);
-            HashSet<MessageDef> targets = new HashSet<MessageDef>();
+                return new HashSet<SchemaDef>(defs);
+            HashSet<SchemaDef> targets = new HashSet<SchemaDef>();
             foreach (string target in options.Targets)
             {
-                string name = target.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ? Path.GetFileNameWithoutExtension(target) : target;
-                MessageDef found = order.FirstOrDefault(m => m.Name == name);
+                string name = target.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ? Loader.Stem(target) : target;
+                SchemaDef found = defs.FirstOrDefault(m => m.Name == name);
                 if (found == null)
-                    diag.Error(Codes.Usage, "message not found: " + target);
+                    diag.Error(Codes.Usage, "message or enum not found: " + target);
                 else
                     targets.Add(found);
             }
             return targets;
         }
 
-        private static void Emit(List<MessageDef> order, HashSet<MessageDef> targets, Options options, OutputSet output)
+        private static void Emit(List<MessageDef> order, List<EnumDef> enums, HashSet<SchemaDef> targets, Options options, OutputSet output)
         {
+            foreach (EnumDef enumDef in enums.Where(targets.Contains))
+            {
+                if (options.CppOut != null)
+                    output.Write(Path.Combine(options.CppOut, enumDef.Name + ".enum.h"), CppEmitter.EmitEnum(enumDef, enumDef.Namespace.Split('.')));
+                if (options.CsOut != null)
+                    output.Write(Path.Combine(options.CsOut, enumDef.Name + ".enum.cs"), CsEmitter.EmitEnum(enumDef, enumDef.Namespace));
+            }
             foreach (MessageDef message in order.Where(targets.Contains))
             {
                 if (options.CppOut != null)

@@ -1,0 +1,5 @@
+message: Box
+version: 1
+namespace: enumdefault
+fields:
+  - {key: size, type: Size, default: Huge}

@@ -1,5 +1,6 @@
-﻿// Loader.cs. YDoc -> MessageDef. Checks key and value formats and per-field rules.
-// Cross-message rules (references, cycles, layout) belong to Linker.
+﻿// Loader.cs. YDoc -> MessageDef or EnumDef. Checks key and value formats, file naming and per-field rules.
+// Cross-definition rules (references, cycles, layout) belong to Linker.
+// File kinds: <Name>.yaml declares one message (message:), <Name>.enum.yaml declares one enum (enum:).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,13 +12,19 @@ namespace Protacoc
 {
     internal static class Loader
     {
+        public const string EnumSuffix = ".enum.yaml";
+
         private static readonly Regex Ident = new Regex("^[A-Za-z_][A-Za-z0-9_]*$");
         private static readonly Regex IntText = new Regex("^-?(0|[1-9][0-9]*)$");
         private static readonly Regex FixedStringType = new Regex("^string\\(([0-9]+)\\)$");
         private static readonly Regex ListType = new Regex("^list<(.+)>$");
 
-        private static readonly HashSet<string> TopKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "desc", "fields" };
+        private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "desc", "fields" };
+        private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
         private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc" };
+        private static readonly HashSet<string> ValueAttrs = new HashSet<string> { "key", "value", "added", "removed", "desc" };
+
+        public const int MaxFixedLength = 4096;
 
         // Integer text the same in C++ and C#: no sign '+', no leading zero (C++ reads 010 as octal 8).
         public static bool IsIntText(string text)
@@ -25,9 +32,19 @@ namespace Protacoc
             return IntText.IsMatch(text);
         }
 
-        public const int MaxFixedLength = 4096;
+        public static bool IsEnumFile(string path)
+        {
+            return path.EndsWith(EnumSuffix, StringComparison.OrdinalIgnoreCase);
+        }
 
-        public static MessageDef Load(string path, Diag diag)
+        // File name without .yaml or .enum.yaml: the name the file must declare.
+        public static string Stem(string path)
+        {
+            string name = Path.GetFileName(path);
+            return IsEnumFile(path) ? name.Substring(0, name.Length - EnumSuffix.Length) : Path.GetFileNameWithoutExtension(name);
+        }
+
+        public static SchemaDef Load(string path, Diag diag)
         {
             byte[] bytes;
             try
@@ -44,16 +61,27 @@ namespace Protacoc
             YDoc doc = YamlLite.Parse(text, path, diag);
             if (diag.ErrorCount != before)
                 return null;
-            MessageDef message = new MessageDef
+            bool enumFile = IsEnumFile(path);
+            bool declaresEnum = doc.Entries.Exists(t => t.Key.Text == "enum");
+            SourcePos filePos = new SourcePos(path, 1, 1);
+            if (enumFile && !declaresEnum)
             {
-                FilePath = path,
-                FileName = Path.GetFileName(path),
-                Sha1 = Sha1Hex(bytes),
-                Pos = new SourcePos(path, 1, 1),
-            };
-            message.Doc.AddRange(doc.HeaderDoc);
-            ReadTop(doc, message, diag);
-            return diag.ErrorCount == before ? message : null;
+                diag.Error(filePos, Codes.FileKind, "a " + EnumSuffix + " file declares one enum ('enum: " + Stem(path) + "')");
+                return null;
+            }
+            if (!enumFile && declaresEnum)
+            {
+                diag.Error(filePos, Codes.FileKind, "enums are declared in <Name>" + EnumSuffix + " files; rename this file to " + Stem(path) + EnumSuffix);
+                return null;
+            }
+            SchemaDef def = enumFile ? (SchemaDef)new EnumDef() : new MessageDef();
+            def.FilePath = path;
+            def.FileName = Path.GetFileName(path);
+            def.Sha1 = Sha1Hex(bytes);
+            def.Pos = filePos;
+            def.Doc.AddRange(doc.HeaderDoc);
+            ReadTop(doc, def, diag);
+            return diag.ErrorCount == before ? def : null;
         }
 
         private static string Sha1Hex(byte[] bytes)
@@ -68,15 +96,19 @@ namespace Protacoc
             }
         }
 
-        private static void ReadTop(YDoc doc, MessageDef message, Diag diag)
+        private static void ReadTop(YDoc doc, SchemaDef def, Diag diag)
         {
+            MessageDef message = def as MessageDef;
+            EnumDef enumDef = def as EnumDef;
+            string kind = message != null ? "message" : "enum";
+            HashSet<string> allowed = message != null ? MessageKeys : EnumKeys;
             HashSet<string> seen = new HashSet<string>();
             foreach (YTop top in doc.Entries)
             {
                 string key = top.Key.Text;
-                if (!TopKeys.Contains(key))
+                if (!allowed.Contains(key))
                 {
-                    diag.Error(top.Key.Pos, Codes.UnknownTop, "unknown top-level key '" + key + "'. Allowed: " + string.Join(", ", TopKeys));
+                    diag.Error(top.Key.Pos, Codes.UnknownTop, "unknown top-level key '" + key + "'. Allowed: " + string.Join(", ", allowed));
                     continue;
                 }
                 if (!seen.Add(key))
@@ -87,42 +119,47 @@ namespace Protacoc
                 switch (key)
                 {
                     case "message":
-                        message.Name = ReadIdent(top.Value, top.Key.Pos, diag);
-                        message.Pos = top.Key.Pos;
+                    case "enum":
+                        def.Name = ReadIdent(top.Value, top.Key.Pos, diag);
+                        def.Pos = top.Key.Pos;
                         break;
                     case "version":
-                        message.Version = ReadInt(top.Value, top.Key.Pos, 1, 65535, diag);
+                        def.Version = ReadInt(top.Value, top.Key.Pos, 1, 65535, diag);
                         break;
                     case "min_version":
-                        message.MinVersion = ReadInt(top.Value, top.Key.Pos, 1, 65535, diag);
+                        def.MinVersion = ReadInt(top.Value, top.Key.Pos, 1, 65535, diag);
                         break;
                     case "namespace":
-                        message.Namespace = ReadNamespace(top.Value, top.Key.Pos, diag);
+                        def.Namespace = ReadNamespace(top.Value, top.Key.Pos, diag);
                         break;
                     case "allow_extension":
                         message.AllowExtension = ReadBool(top.Value, top.Key.Pos, diag);
                         break;
                     case "desc":
-                        message.Desc = ReadText(top.Value, top.Key.Pos, diag);
+                        def.Desc = ReadText(top.Value, top.Key.Pos, diag);
                         break;
                     case "fields":
                         ReadFields(top, message, diag);
                         break;
+                    case "values":
+                        ReadValues(top, enumDef, diag);
+                        break;
                 }
             }
-            if (message.Name == null)
-                diag.Error(message.Pos, Codes.MissingTop, "missing 'message:'");
+            if (def.Name == null)
+                diag.Error(def.Pos, Codes.MissingTop, "missing '" + kind + ":'");
             if (!seen.Contains("version"))
-                diag.Error(message.Pos, Codes.MissingTop, "missing 'version:'");
+                diag.Error(def.Pos, Codes.MissingTop, "missing 'version:'");
             if (!seen.Contains("namespace"))
-                diag.Error(message.Pos, Codes.MissingTop, "missing 'namespace:' (for example 'namespace: app.proto')");
-            if (!seen.Contains("fields"))
-                diag.Error(message.Pos, Codes.MissingTop, "missing 'fields:'");
+                diag.Error(def.Pos, Codes.MissingTop, "missing 'namespace:' (for example 'namespace: app.proto')");
+            if (!seen.Contains(message != null ? "fields" : "values"))
+                diag.Error(def.Pos, Codes.MissingTop, "missing '" + (message != null ? "fields" : "values") + ":'");
             if (!seen.Contains("min_version"))
-                message.MinVersion = message.Version;
-            string stem = Path.GetFileNameWithoutExtension(message.FilePath);
-            if (message.Name != null && message.Name != stem)
-                diag.Error(message.Pos, Codes.FileName, "message name '" + message.Name + "' does not match file name '" + stem + "'. One message per file, file name = message name");
+                def.MinVersion = def.Version;
+            string stem = Stem(def.FilePath);
+            if (def.Name != null && def.Name != stem)
+                diag.Error(def.Pos, Codes.FileName, kind + " name '" + def.Name + "' does not match file name '" + def.FileName + "'. One " + kind
+                    + " per file: " + def.Name + (def is EnumDef ? EnumSuffix : ".yaml"));
         }
 
         private static List<YItem> Items(YTop top, Diag diag)
@@ -196,6 +233,55 @@ namespace Protacoc
             }
         }
 
+        private static void ReadValues(YTop top, EnumDef enumDef, Diag diag)
+        {
+            foreach (YItem item in Items(top, diag))
+            {
+                EnumValueDef value = new EnumValueDef { Pos = item.Pos };
+                value.Doc.AddRange(item.Doc);
+                HashSet<string> seen = new HashSet<string>();
+                foreach (KeyValuePair<YScalar, object> entry in item.Map.Entries)
+                {
+                    string attr = entry.Key.Text;
+                    SourcePos pos = entry.Key.Pos;
+                    if (!ValueAttrs.Contains(attr))
+                    {
+                        diag.Error(pos, Codes.UnknownAttr, "unknown enum value attribute '" + attr + "'. Allowed: " + string.Join(", ", ValueAttrs));
+                        continue;
+                    }
+                    if (!seen.Add(attr))
+                    {
+                        diag.Error(pos, Codes.DupAttr, "duplicate attribute '" + attr + "'");
+                        continue;
+                    }
+                    switch (attr)
+                    {
+                        case "key":
+                            value.Key = ReadIdent(entry.Value, pos, diag);
+                            break;
+                        case "value":
+                            value.Number = ReadInt(entry.Value, pos, int.MinValue + 1, int.MaxValue, diag);
+                            break;
+                        case "added":
+                            value.Added = ReadInt(entry.Value, pos, 1, 65535, diag);
+                            break;
+                        case "removed":
+                            value.Removed = ReadInt(entry.Value, pos, 2, 65535, diag);
+                            break;
+                        case "desc":
+                            value.Desc = ReadText(entry.Value, pos, diag);
+                            break;
+                    }
+                }
+                if (value.Key == null || !seen.Contains("value"))
+                {
+                    diag.Error(item.Pos, Codes.MissingTop, "an enum value needs key and value");
+                    continue;
+                }
+                enumDef.Values.Add(value);
+            }
+        }
+
         // Dotted identifiers: "sched.proto" -> C++ sched::proto, C# sched.proto. Keywords are checked by Linker.
         private static string ReadNamespace(object value, SourcePos pos, Diag diag)
         {
@@ -213,7 +299,7 @@ namespace Protacoc
             return text;
         }
 
-        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | message name
+        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | message or enum name
         public static TypeRef ParseType(string text, SourcePos pos, Diag diag)
         {
             if (text == null)
@@ -256,9 +342,10 @@ namespace Protacoc
                     return null;
                 return new TypeRef { Kind = TypeKind.List, Element = element };
             }
+            // A message or an enum: the linker decides which.
             if (Ident.IsMatch(text))
-                return new TypeRef { Kind = TypeKind.Message, MessageName = text };
-            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, message name");
+                return new TypeRef { Kind = TypeKind.Message, TypeName = text };
+            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, message or enum name");
             return null;
         }
 

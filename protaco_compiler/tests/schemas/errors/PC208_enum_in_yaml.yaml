@@ -1,0 +1,6 @@
+# expect: PC208
+enum: PC208_enum_in_yaml
+version: 1
+namespace: errors
+values:
+  - {key: A, value: 1}

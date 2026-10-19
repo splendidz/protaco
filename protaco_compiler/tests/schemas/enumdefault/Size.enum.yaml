@@ -1,0 +1,5 @@
+enum: Size
+version: 1
+namespace: enumdefault
+values:
+  - {key: Small, value: 1}

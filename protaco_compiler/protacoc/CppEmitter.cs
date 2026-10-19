@@ -1,4 +1,4 @@
-﻿// CppEmitter.cs. One message -> <Name>.g.h (C++14 compatible, header-only).
+﻿// CppEmitter.cs. One message -> <Name>.g.h, one enum -> <Name>.enum.h (C++14 compatible, header-only).
 // The latest version is <ns>::<Name>. Older supported versions are <ns>::v<N>::<Name>.
 // Public: user API only (constructor, get_/set_/mutable_ field accessors, GetExt/GetMutableExt when allowed, envelope,
 // Serialize, ToString). Field accessors are snake_case get_<key>; everything else is PascalCase.
@@ -21,6 +21,8 @@ namespace Protacoc
             w.Line("#pragma once");
             w.Line();
             w.Line("#include \"Protaco.hpp\"");
+            foreach (EnumDef dep in message.EnumDependencies.OrderBy(d => d.Name, System.StringComparer.Ordinal))
+                w.Line("#include \"" + dep.Name + ".enum.h\"");
             foreach (MessageDef dep in message.Dependencies.OrderBy(d => d.Name, System.StringComparer.Ordinal))
                 w.Line("#include \"" + dep.Name + ".g.h\"");
             w.Line();
@@ -37,6 +39,69 @@ namespace Protacoc
                 w.Line();
                 w.Line("}  // namespace v" + view.Version);
             }
+            w.Line();
+            for (int i = ns.Length - 1; i >= 0; --i)
+                w.Line("}  // namespace " + ns[i]);
+            return w.ToString();
+        }
+
+        // enum class <Name> : int32_t, EnumName (removed values included, for old frames) and TryParseEnum (latest values).
+        public static string EmitEnum(EnumDef enumDef, string[] ns)
+        {
+            CodeWriter w = new CodeWriter();
+            w.Line("// " + enumDef.Name + ".enum.h. protacoc " + Naming.Version + ", source " + enumDef.FileName + " (sha1 " + enumDef.Sha1 + "). Do not edit.");
+            w.Line("#pragma once");
+            w.Line();
+            w.Line("#include <cstdint>");
+            w.Line("#include <string>");
+            w.Line();
+            foreach (string part in ns)
+                w.Line("namespace " + part + "\n{");
+            w.Line();
+            Doc(w, Naming.EnumDoc(enumDef));
+            w.Line("enum class " + enumDef.Name + " : int32_t");
+            w.Line("{");
+            w.Indent();
+            foreach (EnumValueDef value in enumDef.Alive)
+            {
+                Doc(w, Naming.EnumValueDoc(value));
+                w.Line(value.Key + " = " + value.Number + ",");
+            }
+            w.Outdent();
+            w.Line("};");
+            w.Line();
+            w.Line("/// Name of a value, removed values included. nullptr for a number never declared.");
+            w.Line("inline const char* EnumName(" + enumDef.Name + " value)");
+            w.Line("{");
+            w.Line("    switch (static_cast<int32_t>(value))");
+            w.Line("    {");
+            foreach (EnumValueDef value in enumDef.Values)
+            {
+                w.Line("    case " + value.Number + ":");
+                w.Line("        return \"" + value.Key + "\";");
+            }
+            w.Line("    default:");
+            w.Line("        return nullptr;");
+            w.Line("    }");
+            w.Line("}");
+            w.Line();
+            w.Line("/// Value from its name (values of version " + enumDef.Version + "). False, out unchanged and error set for another name.");
+            w.Line("inline bool TryParseEnum(const std::string& name, " + enumDef.Name + "* out, std::string* error = nullptr)");
+            w.Line("{");
+            w.Indent();
+            foreach (EnumValueDef value in enumDef.Alive)
+            {
+                w.Line("if (name == \"" + value.Key + "\")");
+                w.Line("{");
+                w.Line("    *out = " + enumDef.Name + "::" + value.Key + ";");
+                w.Line("    return true;");
+                w.Line("}");
+            }
+            w.Line("if (error != nullptr)");
+            w.Line("    *error = \"unknown " + enumDef.Name + " name: \" + name;");
+            w.Line("return false;");
+            w.Outdent();
+            w.Line("}");
             w.Line();
             for (int i = ns.Length - 1; i >= 0; --i)
                 w.Line("}  // namespace " + ns[i]);
@@ -94,7 +159,7 @@ namespace Protacoc
                 case TypeKind.List:
                     return "std::vector<" + CppType(type.Element) + ">";
                 default:
-                    return type.MessageName;
+                    return type.TypeName;
             }
         }
 
@@ -132,6 +197,9 @@ namespace Protacoc
                     case TypeKind.FixedString:
                         w.Line("protaco::detail::StoreChars(" + FixedAt(field) + ", " + field.Type.FixedLength + ", " + literal + ", \"" + field.Key + "\", nullptr);");
                         break;
+                    case TypeKind.Enum:
+                        w.Line("protaco::detail::Store<int32_t>(" + FixedAt(field) + ", static_cast<int32_t>(" + literal + "));");
+                        break;
                     default:
                         w.Line("protaco::detail::Store<" + CppType(field.Type) + ">(" + FixedAt(field) + ", " + literal + ");");
                         break;
@@ -143,9 +211,15 @@ namespace Protacoc
         }
 
         // Writes only defaults other than 0, false and "" (the buffer starts zeroed).
+        // An enum field without default starts at the first value of the latest version.
         private static string FixedDefault(FieldDef field)
         {
             string text = field.DefaultText;
+            if (field.Type.Kind == TypeKind.Enum)
+            {
+                EnumValueDef value = text == null ? field.Type.ResolvedEnum.First : field.Type.ResolvedEnum.Values.First(v => v.Key == text);
+                return value.Number == 0 ? null : field.Type.TypeName + "::" + value.Key;
+            }
             if (text == null)
                 return null;
             switch (field.Type.Kind)
@@ -193,6 +267,11 @@ namespace Protacoc
                     case TypeKind.Bool:
                         Method(w, "bool get_" + key + "() const", "return protaco::detail::LoadBool(" + at + ");");
                         Method(w, "void set_" + key + "(bool value)", "protaco::detail::StoreBool(" + at + ", value);");
+                        break;
+                    case TypeKind.Enum:
+                        w.Line("/// Numbers this build does not know are kept as they are (ToString shows ?(n)).");
+                        Method(w, type + " get_" + key + "() const", "return static_cast<" + type + ">(protaco::detail::Load<int32_t>(" + at + "));");
+                        Method(w, "void set_" + key + "(" + type + " value)", "protaco::detail::Store<int32_t>(" + at + ", static_cast<int32_t>(value));");
                         break;
                     case TypeKind.FixedString:
                         Method(w, "std::string get_" + key + "() const", "return protaco::detail::LoadChars(" + at + ", " + field.Type.FixedLength + ");");

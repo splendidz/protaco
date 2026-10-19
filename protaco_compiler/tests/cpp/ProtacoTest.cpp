@@ -30,6 +30,7 @@
 #include "deep/D8.g.h"
 #include "partial/PizzaOrder.g.h"
 #include "partial/DeliveryRoute.g.h"
+#include "enums/Pie.g.h"
 #include "types/Numbers.g.h"
 #include "ver_v1/Recipe.g.h"
 #include "ver_v2/Recipe.g.h"
@@ -112,6 +113,17 @@ types::Numbers MakeNumbers()
     numbers.set_text(u8"café 寿司");
     numbers.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return numbers;
+}
+
+// Golden values. Same as the C# test MakePie. 5 is a removed value, 9 was never declared.
+enums::Pie MakePie()
+{
+    enums::Pie pie;
+    pie.set_size(enums::PizzaSize::Family);
+    pie.set_crust(static_cast<enums::PizzaSize>(9));
+    pie.mutable_sizes() = { enums::PizzaSize::Small, enums::PizzaSize::Family, static_cast<enums::PizzaSize>(5), static_cast<enums::PizzaSize>(9) };
+    pie.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
+    return pie;
 }
 
 // Golden values. Same as the C# test MakeDeliveryProof. Zeros, 0xFF and an empty element included.
@@ -669,6 +681,33 @@ TEST(Protaco, UnsignedTypesAndUtf8RoundTrip)
 }
 
 static_assert(protaco::kMaxFrameBytes == 0xFFFFFFFFu, "frames up to 4 GiB - 1");
+
+// Enums: defaults, lists, numbers this build does not know, names of removed values, parsing. Same as the C# test.
+TEST(Protaco, EnumFields)
+{
+    using enums::PizzaSize;
+    const enums::Pie defaults;
+    EXPECT_EQ(PizzaSize::Large, defaults.get_size());
+    EXPECT_EQ(PizzaSize::Small, defaults.get_crust());   // no default: first value
+
+    const enums::Pie sent = MakePie();
+    const enums::Pie got = protaco::ToObject<enums::Pie>(sent.Serialize());
+    EXPECT_EQ(PizzaSize::Family, got.get_size());
+    EXPECT_EQ(9, static_cast<int32_t>(got.get_crust()));
+    EXPECT_EQ(sent.get_sizes(), got.get_sizes());
+    EXPECT_EQ("Pie{size=Family(4), crust=?(9), sizes=[Small(1), Family(4), Kids(5), ?(9)], name=\"\"}", got.ToString());
+    ExpectGolden("Pie.bin", sent.Serialize());
+
+    PizzaSize parsed = PizzaSize::Small;
+    EXPECT_TRUE(enums::TryParseEnum("Medium", &parsed));
+    EXPECT_EQ(PizzaSize::Medium, parsed);
+    std::string error;
+    EXPECT_FALSE(enums::TryParseEnum("Kids", &parsed, &error));   // removed in version 3
+    EXPECT_EQ("unknown PizzaSize name: Kids", error);
+    EXPECT_EQ(PizzaSize::Medium, parsed);
+    EXPECT_STREQ("Kids", enums::EnumName(static_cast<PizzaSize>(5)));
+    EXPECT_EQ(nullptr, enums::EnumName(static_cast<PizzaSize>(9)));
+}
 
 // More TLVs than the decoder keeps on the stack (16): the rest goes to the heap, nothing is lost.
 TEST(Protaco, ManyExtEntriesRoundTrip)

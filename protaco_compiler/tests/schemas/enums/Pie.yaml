@@ -1,0 +1,10 @@
+# A pie with enum fields.
+message: Pie
+version: 1
+namespace: enums
+fields:
+  - {key: size, type: PizzaSize, default: Large}
+  # No default: the first value of the enum (Small).
+  - {key: crust, type: PizzaSize}
+  - {key: sizes, type: list<PizzaSize>}
+  - {key: name, type: string, default: ""}

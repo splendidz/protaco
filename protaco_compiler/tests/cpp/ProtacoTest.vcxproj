@@ -75,6 +75,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\include\cpp\Protaco.hpp" />
     <ClInclude Include="..\gen\cpp\**\*.g.h" />
+    <ClInclude Include="..\gen\cpp\**\*.enum.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\schemas\**\*.yaml" />
