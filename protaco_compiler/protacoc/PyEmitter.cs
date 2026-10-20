@@ -125,8 +125,16 @@ namespace Protacoc
             w.Line("def __init__(self, *, _stamp=None, **fields):");
             w.Indent();
             w.Line("\"\"\"Defaults; fields by key, for example " + message.Name + "(" + (view.Alive.Count == 0 ? "" : Name(view.Alive[0].Key) + "=...") + ").");
-            w.Line("The envelope gets a new id (protaco.NextId) and the current time (protaco.NowUs).\"\"\"");
-            w.Line("protaco.Message.__init__(self, _stamp)");
+            if (message.AutoEnvelope)
+            {
+                w.Line("The envelope gets a new id (protaco.NextId) and the current time (protaco.NowUs).\"\"\"");
+                w.Line("protaco.Message.__init__(self, _stamp)");
+            }
+            else
+            {
+                w.Line("The envelope stays 0 (auto_envelope false): set it with SetId, SetCorr and SetTimestamp.\"\"\"");
+                w.Line("protaco.Message.__init__(self, protaco.NO_STAMP)");
+            }
             foreach (FieldDef field in view.Alive)
             {
                 foreach (string line in Naming.FieldDoc(field))

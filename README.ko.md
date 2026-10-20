@@ -318,6 +318,7 @@ fields:
 | `fields` | 예 | 필드 목록 |
 | `min_version` | 아니오 | 아직 지원하는 가장 오래된 version, 기본값은 `version`. [버전 관리](#7-버전-관리) 참고 |
 | `allow_extension` | 아니오 | 확장 데이터 허용 여부, 기본값 `true` |
+| `auto_envelope` | 아니오 | 새 객체에 id와 현재 시각을 찍을지 여부, 기본값 `true`. [봉투](#65-봉투) 참고 |
 | `desc` | 아니오 | docstring에 들어가는 설명 |
 
 namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Python에서 패키지 폴더 `shop/orders/`가 됩니다.
@@ -730,7 +731,7 @@ if not channel:
   std::string log = route.ToString(style);
   ```
 
-- `TryView<T>`: [6.6 zero-copy](#66-zero-copy). `CExt`: [5.2](#52-쓰기와-읽기). `NextId()`, `NowUs()`, `SetClock()`, `TryGetTime()`: [6.5 봉투](#65-봉투)
+- `TryView<T>`: [6.6 zero-copy](#66-zero-copy). `CExt`: [5.2](#52-쓰기와-읽기). `NextId()`, `NowUs()`, `SetClock()`, `DisableAutoEnvelope()`, `TryGetTime()`: [6.5 봉투](#65-봉투)
 
 `CParseError`는 던진 모듈 안에서 잡고 DLL 경계를 넘기지 않습니다. DLL 경계에서는 `TryToObject`를 씁니다.
 
@@ -805,6 +806,7 @@ print(route.ToString(protaco.TextStyle.Pretty()))
 - corr(u32): 응답이 가리키는 요청의 id
 - ts(i64): 1970-01-01 기준 UTC 마이크로초
 - 디코딩한 객체는 새 id를 쓰지 않고 받은 봉투를 그대로 가짐. 생성 코드가 만드는 중첩 필드 객체도 id를 쓰지 않음(중첩 본문에는 봉투가 없음)
+- 봉투를 직접 채우려면 그 메시지의 YAML 헤더에 `auto_envelope: false`, 모듈의 모든 메시지에 적용하려면 `protaco::DisableAutoEnvelope()`(C# `Protaco.Envelopes.DisableAutoEnvelope`, Python `protaco.DisableAutoEnvelope`). 이때 새 객체는 id 0, ts 0으로 시작. `EnableAutoEnvelope()`는 기본 동작 복원
 
 **C++**
 

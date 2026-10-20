@@ -42,9 +42,20 @@ namespace Protacoc
             w.Line();
             w.Line("private readonly Protaco.Ext ext_ = new Protaco.Ext(IsSchemaKey);" + (message.AllowExtension ? "" : "   // stays empty: allow_extension false"));
             w.Line();
-            w.Line("/// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>");
-            w.Open("public " + message.Name + "()");
-            w.Close();
+            if (message.AutoEnvelope)
+            {
+                w.Line("/// <summary>Defaults. The envelope gets a new id (Protaco.Envelopes.NextId) and the current time (NowUs).</summary>");
+                w.Open("public " + message.Name + "()");
+                w.Close();
+            }
+            else
+            {
+                w.Line("/// <summary>Defaults. The envelope stays 0 (auto_envelope false): set it with SetId, SetCorr and SetTimestamp.</summary>");
+                w.Line("public " + message.Name + "()");
+                w.Line("    : base(Protaco.NoStamp.Value)");
+                w.Line("{");
+                w.Line("}");
+            }
             w.Line();
             w.Line("/// <summary>No envelope id or time (nested fields).</summary>");
             w.Line("public " + message.Name + "(Protaco.NoStamp noStamp)");

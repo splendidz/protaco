@@ -37,6 +37,7 @@ from partial.Topping_g import Topping as PartialTopping  # noqa: E402
 from recursive.Node_g import Node  # noqa: E402
 from scalars.Move_g import Move  # noqa: E402
 from scalars.Numbers_g import Numbers  # noqa: E402
+from scalars.Tick_g import Tick  # noqa: E402
 from v1.Recipe_g import Recipe as Recipe1  # noqa: E402
 from v2.Recipe_g import Recipe as Recipe2  # noqa: E402
 
@@ -385,6 +386,24 @@ class ProtacoTest(unittest.TestCase):
         reply.SetTimestampAsNow()
         self.assertGreater(reply.GetTimestamp(), protaco.TIMESTAMP_MIN)
         self.assertEqual(first.GetId(), protaco.ToObject(DeliveryRoute, reply.Serialize()).GetCorr())
+
+    def test_auto_envelope_can_be_turned_off(self):
+        # auto_envelope false (Tick) and DisableAutoEnvelope() leave id and ts at 0 and take no id from the counter.
+        before = DeliveryRoute()
+        tick = Tick()
+        self.assertEqual((0, 0), (tick.GetId(), tick.GetTimestamp()))
+        protaco.DisableAutoEnvelope()
+        try:
+            off = DeliveryRoute()
+        finally:
+            protaco.EnableAutoEnvelope()
+        self.assertEqual((0, 0), (off.GetId(), off.GetTimestamp()))
+        self.assertEqual(before.GetId() + 1, DeliveryRoute().GetId())
+        sent = Tick(n=1)
+        sent.SetId(protaco.NextId())
+        sent.SetTimestampAsNow()
+        got = protaco.ToObject(Tick, sent.Serialize())
+        self.assertEqual((sent.GetId(), sent.GetTimestamp()), (got.GetId(), got.GetTimestamp()))
 
     def test_timestamp_converts_to_local_time(self):
         local = datetime.datetime(2026, 10, 20, 14, 3, 22)

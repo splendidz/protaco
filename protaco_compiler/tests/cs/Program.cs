@@ -50,6 +50,7 @@ namespace Protacoc.Tests
             Run("C#: ToString matches C++", ToStringMatchesCpp);
             Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
             Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
+            Run("C#: auto_envelope false and DisableAutoEnvelope", AutoEnvelopeCanBeTurnedOff);
             Run("C#: enum fields match C++", EnumFields);
             Run("C#: map fields match C++", MapFields);
             Run("C#: recursive messages match C++", RecursiveMessages);
@@ -487,6 +488,28 @@ namespace Protacoc.Tests
             Check(reply.GetTimestamp() > Protaco.Envelopes.TimestampMin, "system clock");
             Equal(first.GetId(), Protaco.Codec.ToObject<DeliveryRoute>(reply.Serialize()).GetCorr(), "corr");
             Check(order.GetId() == second.GetId() + 1, "order id");
+        }
+
+        // auto_envelope false (Tick) and DisableAutoEnvelope() leave Id and Ts at 0 and take no id from the counter.
+        private static void AutoEnvelopeCanBeTurnedOff()
+        {
+            DeliveryRoute before = new DeliveryRoute();
+            scalars.Tick tick = new scalars.Tick();
+            Equal(0u, tick.GetId(), "Tick id");
+            Equal(0L, tick.GetTimestamp(), "Tick ts");
+            Protaco.Envelopes.DisableAutoEnvelope();
+            DeliveryRoute off = new DeliveryRoute();
+            Protaco.Envelopes.EnableAutoEnvelope();
+            Equal(0u, off.GetId(), "id while disabled");
+            Equal(0L, off.GetTimestamp(), "ts while disabled");
+            DeliveryRoute after = new DeliveryRoute();
+            Equal(before.GetId() + 1, after.GetId(), "counter untouched");
+            scalars.Tick sent = new scalars.Tick();
+            sent.SetId(Protaco.Envelopes.NextId());
+            sent.SetTimestampAsNow();
+            scalars.Tick got = Protaco.Codec.ToObject<scalars.Tick>(sent.Serialize());
+            Equal(sent.GetId(), got.GetId(), "decoded id");
+            Equal(sent.GetTimestamp(), got.GetTimestamp(), "decoded ts");
         }
 
         private static void TimestampConvertsToLocalTime()

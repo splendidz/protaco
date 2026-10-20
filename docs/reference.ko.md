@@ -27,7 +27,7 @@ field = <key>:<type>[!][=<default>]
 ```
 
 - `name`: 메시지 이름. `version`: 계산할 version의 십진수
-- `ext`: `allow_extension`이 true이면 `1`, false이면 `0`
+- `ext`: `allow_extension`이 true이면 `1`, false이면 `0`. `auto_envelope`는 바이트를 바꾸지 않으므로 텍스트에 넣지 않음
 - 필드 순서: `added` 오름차순, 같으면 YAML 선언 순서
 - 포함 범위: 계산할 version까지 추가된 필드
 - `!`: required 필드. `=<default>`: 명시한 기본값의 텍스트, 문자열의 바깥 따옴표 제외
@@ -623,7 +623,7 @@ protaco::Envelope GetEnvelope() const;
 void SetEnvelope(const protaco::Envelope& env);
 ```
 
-`id`는 메시지 id, `corr`는 이 응답이 가리키는 요청 id, `ts`는 1970-01-01 이후 UTC 마이크로초입니다. 메시지 생성 시 id·ts를 자동 설정하고 corr은 0으로 시작합니다. corr은 사용자가 설정합니다.
+`id`는 메시지 id, `corr`는 이 응답이 가리키는 요청 id, `ts`는 1970-01-01 이후 UTC 마이크로초입니다. 메시지 생성 시 id·ts를 자동 설정하고 corr은 0으로 시작합니다. corr은 사용자가 설정합니다. `auto_envelope: false`인 메시지, 그리고 `DisableAutoEnvelope()` 호출 뒤의 모든 메시지는 id·ts도 0으로 시작합니다.
 
 - 매개변수: 각 setter의 새 값, 또는 봉투 전체 `env`
 - 반환값: getter는 값 복사, setter는 void
@@ -715,6 +715,53 @@ request = DeliveryRoute()
 now = protaco.NowUs()
 another_id = protaco.NextId()
 protaco.SetClock(None)
+```
+
+</details>
+
+**자동 봉투 끄기**
+
+**C++**
+
+```cpp
+void DisableAutoEnvelope();
+void EnableAutoEnvelope();
+```
+
+- 동작: DisableAutoEnvelope 뒤에 만든 메시지 객체는 id 0, ts 0으로 시작하고 NextId에서 id를 가져가지 않음. EnableAutoEnvelope는 기본 동작 복원
+- 범위: 모듈(DLL 또는 실행 파일)의 모든 메시지. 메시지 하나만 끄려면 그 YAML 헤더에 `auto_envelope: false`
+- 반환값: void
+- 주의: 스레드 안전. 이미 만든 객체의 봉투는 그대로. 디코딩과 중첩 필드에는 영향 없음
+
+**C++**
+
+```cpp
+protaco::DisableAutoEnvelope();           // 프로그램 시작 때
+demo::DeliveryRoute request;              // id 0, ts 0
+request.SetId(protaco::NextId());
+request.SetTimestampAsNow();
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+Protaco.Envelopes.DisableAutoEnvelope();
+var request = new demo.DeliveryRoute();
+request.SetId(Protaco.Envelopes.NextId());
+request.SetTimestampAsNow();
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+protaco.DisableAutoEnvelope()
+request = DeliveryRoute()
+request.SetId(protaco.NextId())
+request.SetTimestampAsNow()
 ```
 
 </details>
@@ -1378,6 +1425,8 @@ public bool TryGetTimeFromTimestamp(out int year, out int month, out int day,
 public static uint NextId();
 public static long NowUs();
 public static void SetClock(System.Func<long> nowUs);
+public static void DisableAutoEnvelope();
+public static void EnableAutoEnvelope();
 public const long TimestampMin = 946684800000000L;
 public const long TimestampMax = 253402300799999999L;
 public static bool TryGetTime(long timestampUs, out string date, out string time, out string error);
@@ -1388,7 +1437,7 @@ public static bool TryGetTime(long timestampUs, out int year, out int month, out
 
 </details>
 
-id·corr·ts의 의미와 시각 범위는 [4.2](#42-봉투)와 같습니다. getter는 값, setter는 void를 반환합니다. GetEnvelope는 struct 복사본을 반환합니다. 시계 콜백은 UTC 마이크로초를 반환해야 하며 null로 시스템 시계를 복원합니다. NextId는 스레드 안전하고, 시계 교체는 메시지 생성 전에 합니다.
+id·corr·ts의 의미와 시각 범위는 [4.2](#42-봉투)와 같습니다. getter는 값, setter는 void를 반환합니다. GetEnvelope는 struct 복사본을 반환합니다. 시계 콜백은 UTC 마이크로초를 반환해야 하며 null로 시스템 시계를 복원합니다. NextId는 스레드 안전하고, 시계 교체는 메시지 생성 전에 합니다. DisableAutoEnvelope·EnableAutoEnvelope는 프로세스 단위이며 동작은 [4.2](#42-봉투)와 같습니다.
 
 시각 변환은 bool로 성공 여부를 반환하고 out 인자에 로컬 시각을 기록합니다. 실패 시 문자열 출력은 null, 정수 출력은 0입니다. 메시지 멤버에는 error 없는 오버로드도 있지만 `Envelopes.TryGetTime`에는 out error가 필요합니다.
 
@@ -1728,6 +1777,8 @@ message.TryGetTimeFromTimestampParts()
 protaco.NextId()
 protaco.NowUs()
 protaco.SetClock(now_us=None)
+protaco.DisableAutoEnvelope()
+protaco.EnableAutoEnvelope()
 protaco.TryGetTime(timestamp_us)
 protaco.TryGetTimeParts(timestamp_us)
 protaco.TIMESTAMP_MIN  # 946684800000000
@@ -1736,7 +1787,7 @@ protaco.TIMESTAMP_MAX  # 253402300799999999
 
 </details>
 
-id·corr·ts의 의미는 [4.2](#42-봉투)와 같습니다. getter는 값, setter는 None을 반환합니다. GetEnvelope는 복사본을 반환하고 SetEnvelope도 값을 복사합니다. NextId는 스레드 안전합니다. SetClock은 UTC 마이크로초를 반환하는 콜백을 받으며 None이면 시스템 시계로 돌아갑니다. 메시지 생성 전에 설정합니다.
+id·corr·ts의 의미는 [4.2](#42-봉투)와 같습니다. getter는 값, setter는 None을 반환합니다. GetEnvelope는 복사본을 반환하고 SetEnvelope도 값을 복사합니다. NextId는 스레드 안전합니다. SetClock은 UTC 마이크로초를 반환하는 콜백을 받으며 None이면 시스템 시계로 돌아갑니다. 메시지 생성 전에 설정합니다. DisableAutoEnvelope·EnableAutoEnvelope는 프로세스 단위이며 동작은 [4.2](#42-봉투)와 같습니다.
 
 시각 변환의 입력은 UTC 마이크로초이고 결과는 로컬 시각입니다. TryGetTime 및 메시지의 같은 기능은 Result.value에 `(date, time)`을 담습니다. Parts는 `(year, month, day, hour, minute, second, millisecond, microsecond)`입니다. 지원 범위 밖이나 변환 실패는 error에 기록합니다.
 

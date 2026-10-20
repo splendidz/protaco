@@ -1,0 +1,7 @@
+# The sender fills the envelope: new objects keep id 0 and ts 0.
+message: Tick
+version: 1
+namespace: scalars
+auto_envelope: false
+fields:
+  - {key: n, type: int}

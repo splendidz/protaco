@@ -181,6 +181,21 @@ def SetClock(now_us=None):
     _clock = now_us if now_us is not None else _system_clock_us
 
 
+_auto_envelope = True
+
+
+def DisableAutoEnvelope():
+    """New message objects of this process keep id 0 and ts 0, as with auto_envelope false."""
+    global _auto_envelope
+    _auto_envelope = False
+
+
+def EnableAutoEnvelope():
+    """Default: a new message object gets id = NextId() and ts = NowUs(), unless its yaml has auto_envelope false."""
+    global _auto_envelope
+    _auto_envelope = True
+
+
 def TryGetTimeParts(timestamp_us):
     """Timestamp (UTC microseconds) to local time. Result value: (year, month, day, hour, minute, second, millisecond,
     microsecond). Values outside 2000-01-01..9999-12-31 are not times."""
@@ -637,13 +652,13 @@ class _Schema:
 class Message:
     """Base of every generated message: the envelope carried in the frame header, and ext.
     A new object gets id = NextId() and ts = NowUs(); corr starts at 0. Objects created by the decoder or as nested
-    fields (_stamp=NO_STAMP) get none."""
+    fields (_stamp=NO_STAMP) get none. auto_envelope false in the yaml, or DisableAutoEnvelope(), leaves id and ts at 0."""
 
     __slots__ = ("_env", "_ext")
 
     def __init__(self, _stamp=None):
         self._ext = None
-        if _stamp is NO_STAMP:
+        if _stamp is NO_STAMP or not _auto_envelope:
             self._env = Envelope()
         else:
             self._env = Envelope(NextId(), 0, NowUs())

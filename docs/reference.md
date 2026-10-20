@@ -27,7 +27,7 @@ field = <key>:<type>[!][=<default>]
 ```
 
 - `name`: message name. `version`: the version being hashed, in decimal
-- `ext`: `1` when `allow_extension` is true, otherwise `0`
+- `ext`: `1` when `allow_extension` is true, otherwise `0`. `auto_envelope` changes no bytes and is not part of the text
 - Field order: ascending `added`, then YAML declaration order
 - Included fields: those added by the version being hashed
 - `!`: required field. `=<default>`: explicitly supplied default text, without outer string quotes
@@ -623,7 +623,7 @@ protaco::Envelope GetEnvelope() const;
 void SetEnvelope(const protaco::Envelope& env);
 ```
 
-`id` is the message id, `corr` identifies the request this reply answers, and `ts` is UTC microseconds since 1970-01-01. Construction sets id and ts automatically; corr starts at 0 and is set by the caller.
+`id` is the message id, `corr` identifies the request this reply answers, and `ts` is UTC microseconds since 1970-01-01. Construction sets id and ts automatically; corr starts at 0 and is set by the caller. A message with `auto_envelope: false`, or any message after `DisableAutoEnvelope()`, starts with id and ts at 0 as well.
 
 - Parameters: each setter's new value, or the complete `env`
 - Returns: getters return copies; setters return void
@@ -715,6 +715,53 @@ request = DeliveryRoute()
 now = protaco.NowUs()
 another_id = protaco.NextId()
 protaco.SetClock(None)
+```
+
+</details>
+
+**Turning off the automatic envelope**
+
+**C++**
+
+```cpp
+void DisableAutoEnvelope();
+void EnableAutoEnvelope();
+```
+
+- Effect: after DisableAutoEnvelope, new message objects keep id 0 and ts 0 and take no id from NextId. EnableAutoEnvelope restores the default
+- Scope: every message of the module (DLL or executable). For one message only, set `auto_envelope: false` in its YAML header
+- Returns: void
+- Notes: thread-safe. Objects created earlier keep their envelope. Decoding and nested fields are not affected
+
+**C++**
+
+```cpp
+protaco::DisableAutoEnvelope();           // at program start
+demo::DeliveryRoute request;              // id 0, ts 0
+request.SetId(protaco::NextId());
+request.SetTimestampAsNow();
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+Protaco.Envelopes.DisableAutoEnvelope();
+var request = new demo.DeliveryRoute();
+request.SetId(Protaco.Envelopes.NextId());
+request.SetTimestampAsNow();
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+protaco.DisableAutoEnvelope()
+request = DeliveryRoute()
+request.SetId(protaco.NextId())
+request.SetTimestampAsNow()
 ```
 
 </details>
@@ -1378,6 +1425,8 @@ public bool TryGetTimeFromTimestamp(out int year, out int month, out int day,
 public static uint NextId();
 public static long NowUs();
 public static void SetClock(System.Func<long> nowUs);
+public static void DisableAutoEnvelope();
+public static void EnableAutoEnvelope();
 public const long TimestampMin = 946684800000000L;
 public const long TimestampMax = 253402300799999999L;
 public static bool TryGetTime(long timestampUs, out string date, out string time, out string error);
@@ -1388,7 +1437,7 @@ public static bool TryGetTime(long timestampUs, out int year, out int month, out
 
 </details>
 
-id, corr, ts, and the time range mean the same as in [4.2](#42-envelope). Getters return the value and setters return void. GetEnvelope returns a copy of the struct. The clock callback must return UTC microseconds, and null restores the system clock. NextId is thread-safe; replace the clock before creating messages.
+id, corr, ts, and the time range mean the same as in [4.2](#42-envelope). Getters return the value and setters return void. GetEnvelope returns a copy of the struct. The clock callback must return UTC microseconds, and null restores the system clock. NextId is thread-safe; replace the clock before creating messages. DisableAutoEnvelope and EnableAutoEnvelope work per process, as in [4.2](#42-envelope).
 
 Time conversion returns success as a bool and writes the local time to the out arguments. On failure, string outputs are null and integer outputs are 0. The message members also have overloads without error, but `Envelopes.TryGetTime` always takes out error.
 
@@ -1728,6 +1777,8 @@ message.TryGetTimeFromTimestampParts()
 protaco.NextId()
 protaco.NowUs()
 protaco.SetClock(now_us=None)
+protaco.DisableAutoEnvelope()
+protaco.EnableAutoEnvelope()
 protaco.TryGetTime(timestamp_us)
 protaco.TryGetTimeParts(timestamp_us)
 protaco.TIMESTAMP_MIN  # 946684800000000
@@ -1736,7 +1787,7 @@ protaco.TIMESTAMP_MAX  # 253402300799999999
 
 </details>
 
-id, corr, and ts mean the same as in [4.2](#42-envelope). Getters return the value and setters return None. GetEnvelope returns a copy, and SetEnvelope copies the value too. NextId is thread-safe. SetClock takes a callback that returns UTC microseconds; None goes back to the system clock. Set it before creating messages.
+id, corr, and ts mean the same as in [4.2](#42-envelope). Getters return the value and setters return None. GetEnvelope returns a copy, and SetEnvelope copies the value too. NextId is thread-safe. SetClock takes a callback that returns UTC microseconds; None goes back to the system clock. Set it before creating messages. DisableAutoEnvelope and EnableAutoEnvelope work per process, as in [4.2](#42-envelope).
 
 Time conversion takes UTC microseconds and gives local time. TryGetTime and the matching message function put `(date, time)` in Result.value. The Parts variants give `(year, month, day, hour, minute, second, millisecond, microsecond)`. A value outside the supported range, or a failed conversion, is reported in error.
 

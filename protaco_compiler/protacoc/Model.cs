@@ -166,6 +166,7 @@ namespace Protacoc
     internal sealed class MessageDef : SchemaDef
     {
         public bool AllowExtension = true;
+        public bool AutoEnvelope = true;  // false: new objects keep id 0 and ts 0. Not part of the fingerprint
         public List<FieldDef> Fields = new List<FieldDef>();
 
         // Set by the linker.

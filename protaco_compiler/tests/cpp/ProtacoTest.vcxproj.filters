@@ -258,6 +258,9 @@
     <ClInclude Include="..\gen\cpp\scalars\Numbers.g.h">
       <Filter>gen\cpp\scalars</Filter>
     </ClInclude>
+    <ClInclude Include="..\gen\cpp\scalars\Tick.g.h">
+      <Filter>gen\cpp\scalars</Filter>
+    </ClInclude>
     <ClInclude Include="..\gen\cpp\ver_v1\Recipe.g.h">
       <Filter>gen\cpp\ver_v1</Filter>
     </ClInclude>
@@ -531,6 +534,9 @@
       <Filter>schemas\scalars</Filter>
     </None>
     <None Include="..\schemas\scalars\Numbers.yaml">
+      <Filter>schemas\scalars</Filter>
+    </None>
+    <None Include="..\schemas\scalars\Tick.yaml">
       <Filter>schemas\scalars</Filter>
     </None>
     <None Include="..\schemas\ver_v1\Recipe.yaml">

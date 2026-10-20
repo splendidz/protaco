@@ -20,7 +20,7 @@ namespace Protacoc
         private static readonly Regex ListType = new Regex("^list<(.+)>$");
         private static readonly Regex MapType = new Regex("^map<(.+)>$");
 
-        private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "desc", "fields" };
+        private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "auto_envelope", "desc", "fields" };
         private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
         private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc" };
         private static readonly HashSet<string> ValueAttrs = new HashSet<string> { "key", "value", "added", "removed", "desc" };
@@ -142,6 +142,9 @@ namespace Protacoc
                         break;
                     case "allow_extension":
                         message.AllowExtension = ReadBool(top.Value, top.Key.Pos, diag);
+                        break;
+                    case "auto_envelope":
+                        message.AutoEnvelope = ReadBool(top.Value, top.Key.Pos, diag);
                         break;
                     case "desc":
                         def.Desc = ReadText(top.Value, top.Key.Pos, diag);

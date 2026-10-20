@@ -174,11 +174,14 @@ namespace Protacoc
 
         private static void Constructor(CodeWriter w, MessageDef message, VersionView view)
         {
-            w.Line("/// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs).");
+            w.Line(message.AutoEnvelope
+                ? "/// Initialized to defaults. The envelope gets a new id (protaco::NextId) and the current time (protaco::NowUs)."
+                : "/// Initialized to defaults. The envelope stays 0 (auto_envelope false): set it with SetId, SetCorr and SetTimestamp.");
             w.Line(message.Name + "()");
             w.Line("    : " + message.Name + "(protaco::detail::NoStampTag())");
             w.Line("{");
-            w.Line("    protaco::detail::StampEnvelope(buf_);");
+            if (message.AutoEnvelope)
+                w.Line("    protaco::detail::StampEnvelope(buf_);");
             w.Line("}");
             w.Line();
             w.Line("/// Runtime use: no envelope id or time (decoded messages, nested fields). Fixed fields live in the frame buffer.");

@@ -526,7 +526,25 @@ inline std::atomic<uint32_t>& IdCounter()
     static std::atomic<uint32_t> counter(0);
     return counter;
 }
+
+inline std::atomic<bool>& AutoEnvelope()
+{
+    static std::atomic<bool> on(true);
+    return on;
+}
 }  // namespace detail
+
+/// New message objects of this module (DLL or executable) keep id 0 and ts 0, as with auto_envelope false. Thread-safe.
+inline void DisableAutoEnvelope()
+{
+    detail::AutoEnvelope().store(false, std::memory_order_relaxed);
+}
+
+/// Default: a new message object gets id = NextId() and ts = NowUs(), unless its yaml has auto_envelope false.
+inline void EnableAutoEnvelope()
+{
+    detail::AutoEnvelope().store(true, std::memory_order_relaxed);
+}
 
 /// Next envelope id of this module (DLL or executable): 1, 2, 3, ... and 0 is skipped after wrap-around. Thread-safe.
 inline uint32_t NextId()
@@ -606,9 +624,11 @@ inline bool TryGetTime(int64_t timestampUs, std::string* date, std::string* time
 
 namespace detail
 {
-// New message objects: id from NextId, ts from NowUs.
+// New message objects: id from NextId, ts from NowUs. Nothing after DisableAutoEnvelope.
 inline void StampEnvelope(std::vector<uint8_t>& buf)
 {
+    if (!AutoEnvelope().load(std::memory_order_relaxed))
+        return;
     uint8_t* p = EnvelopeAt(buf);
     Store<uint32_t>(p, NextId());
     Store<int64_t>(p + 8, NowUs());
@@ -2211,6 +2231,7 @@ bool Access::ViewOf(const uint8_t* src, size_t size, typename T::View* out, Erro
 
 /// Envelope API shared by every generated message (CRTP base). The envelope lives in the frame header, so these calls
 /// read and write the frame bytes directly. A new object gets id = NextId() and ts = NowUs(); corr starts at 0.
+/// auto_envelope false in the yaml, or DisableAutoEnvelope(), leaves id and ts at 0.
 template <class T>
 class CMessage
 {

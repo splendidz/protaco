@@ -34,6 +34,7 @@
 #include "maps/Menu.g.h"
 #include "recursive/Node.g.h"
 #include "scalars/Numbers.g.h"
+#include "scalars/Tick.g.h"
 #include "ver_v1/Recipe.g.h"
 #include "ver_v2/Recipe.g.h"
 
@@ -949,6 +950,31 @@ TEST(Protaco, EnvelopeIsStampedOnCreation)
     EXPECT_EQ(77u, reply.GetId());
     EXPECT_GT(reply.GetTimestamp(), protaco::kTimestampMin);
     EXPECT_EQ(first.GetId(), protaco::ToObject<DeliveryRoute>(reply.Serialize()).GetCorr());
+}
+
+// auto_envelope false (Tick) and DisableAutoEnvelope() leave id and ts at 0 and take no id from the counter.
+TEST(Protaco, AutoEnvelopeCanBeTurnedOff)
+{
+    const DeliveryRoute before;
+    const scalars::Tick tick;
+    EXPECT_EQ(0u, tick.GetId());
+    EXPECT_EQ(0, tick.GetTimestamp());
+
+    protaco::DisableAutoEnvelope();
+    const DeliveryRoute off;
+    protaco::EnableAutoEnvelope();
+    EXPECT_EQ(0u, off.GetId());
+    EXPECT_EQ(0, off.GetTimestamp());
+
+    const DeliveryRoute after;
+    EXPECT_EQ(before.GetId() + 1, after.GetId());
+
+    scalars::Tick sent;
+    sent.SetId(protaco::NextId());
+    sent.SetTimestampAsNow();
+    const scalars::Tick got = protaco::ToObject<scalars::Tick>(sent.Serialize());
+    EXPECT_EQ(sent.GetId(), got.GetId());
+    EXPECT_EQ(sent.GetTimestamp(), got.GetTimestamp());
 }
 
 // Timestamps are UTC microseconds; TryGetTimeFromTimestamp and Pretty() show local time. Same as the C# test.

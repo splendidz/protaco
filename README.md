@@ -318,6 +318,7 @@ fields:
 | `fields` | Yes | Field list |
 | `min_version` | No | Oldest version still supported; defaults to `version`. See [Version management](#7-version-management) |
 | `allow_extension` | No | Whether extension data is allowed; default `true` |
+| `auto_envelope` | No | Whether a new object gets an id and the current time; default `true`. See [Envelope](#65-envelope) |
 | `desc` | No | Description for the docstring |
 
 The namespace `shop.orders` becomes `shop::orders` in C++, `shop.orders` in C#, and the package folder `shop/orders/` in Python.
@@ -730,7 +731,7 @@ The runtime is `Protaco.hpp` in namespace `protaco`.
   std::string log = route.ToString(style);
   ```
 
-- `TryView<T>`: [6.6 Zero-copy](#66-zero-copy). `CExt`: [5.2](#52-writing-and-reading). `NextId()`, `NowUs()`, `SetClock()`, `TryGetTime()`: [6.5 Envelope](#65-envelope)
+- `TryView<T>`: [6.6 Zero-copy](#66-zero-copy). `CExt`: [5.2](#52-writing-and-reading). `NextId()`, `NowUs()`, `SetClock()`, `DisableAutoEnvelope()`, `TryGetTime()`: [6.5 Envelope](#65-envelope)
 
 Catch `CParseError` in the module that throws it and never let it cross a DLL boundary. Use `TryToObject` at DLL boundaries.
 
@@ -805,6 +806,7 @@ The frame header carries three envelope values. Creating an object stamps the id
 - corr (u32): the id of the request a reply answers
 - ts (i64): UTC microseconds since 1970-01-01
 - Decoded objects take no new id; they keep the received envelope. Nested field objects made by the generated code take no id either (nested bodies carry no envelope)
+- To fill the envelope yourself, set `auto_envelope: false` in the YAML header of that message, or call `protaco::DisableAutoEnvelope()` for every message of the module (C# `Protaco.Envelopes.DisableAutoEnvelope`, Python `protaco.DisableAutoEnvelope`). New objects then start with id 0 and ts 0. `EnableAutoEnvelope()` restores the default
 
 **C++**
 

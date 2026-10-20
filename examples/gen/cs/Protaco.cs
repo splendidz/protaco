@@ -57,6 +57,21 @@ namespace Protaco
         private const long UnixEpochTicks = 621355968000000000L;
         private static int lastId_;
         private static Func<long> clock_ = SystemClockUs;
+        private static volatile bool autoEnvelope_ = true;
+
+        internal static bool AutoEnvelope => autoEnvelope_;
+
+        /// <summary>New message objects of this process keep Id 0 and Ts 0, as with auto_envelope false. Thread-safe.</summary>
+        public static void DisableAutoEnvelope()
+        {
+            autoEnvelope_ = false;
+        }
+
+        /// <summary>Default: a new message object gets Id = NextId() and Ts = NowUs(), unless its yaml has auto_envelope false.</summary>
+        public static void EnableAutoEnvelope()
+        {
+            autoEnvelope_ = true;
+        }
 
         /// <summary>Next envelope id of this process: 1, 2, 3, ... and 0 is skipped after wrap-around. Thread-safe.</summary>
         public static uint NextId()
@@ -135,6 +150,7 @@ namespace Protaco
     /// <summary>
     /// Base of every generated message: the envelope carried in the frame header. A new object gets Id = Envelopes.NextId()
     /// and Ts = Envelopes.NowUs(); Corr starts at 0. Objects created by the decoder or as nested fields get none.
+    /// auto_envelope false in the yaml, or Envelopes.DisableAutoEnvelope(), leaves Id and Ts at 0.
     /// </summary>
     public abstract class Message
     {
@@ -142,7 +158,7 @@ namespace Protaco
 
         protected Message()
         {
-            if (Codec.Decoding)
+            if (Codec.Decoding || !Envelopes.AutoEnvelope)
                 return;
             env_.Id = Envelopes.NextId();
             env_.Ts = Envelopes.NowUs();
