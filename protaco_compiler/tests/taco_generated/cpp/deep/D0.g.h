@@ -98,6 +98,31 @@ public:
         }
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<D0>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new D0 frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 42;
+        }
+
+        /// [type int]
+        int32_t get_v() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 0);
+        }
+
+        void set_v(int32_t value)
+        {
+            protaco::detail::Store<int32_t>(Fixed() + 0, value);
+        }
+
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<D0>;

@@ -1069,6 +1069,30 @@ if (demo.Heartbeat.TryView(received, out view))
 - 확장 데이터(ext)는 view로 볼 수 없음
 - Python에는 View가 없음([6.4](#64-python))
 
+C++의 `MutableView`는 shared memory 영역처럼 직접 가진 메모리에서 읽기와 쓰기를 모두 제자리에서 합니다. `protaco::TryMutableView`는 `TryView`와 같은 검사를 하고, 성공하면 view에 메시지의 getter·setter(fixed 메시지와 배열 원소는 `mutable_`)와 Envelope setter가 있습니다.
+
+**C++**
+
+```cpp
+// The region holds one demo::Board frame: fill it once from a new object.
+uint8_t* region = MapSharedMemory(demo::Board::MutableView::FrameSize());
+const demo::Board fresh;
+std::memcpy(region, fresh.Serialize().data(), demo::Board::MutableView::FrameSize());
+
+demo::Board::MutableView board;                     // valid while the region is mapped
+std::string error;
+if (protaco::TryMutableView<demo::Board>(region, demo::Board::MutableView::FrameSize(), &board, &error))
+{
+    board.mutable_spots(2).set_lat(37.5);            // written in place, nothing copied
+    board.SetTimestampAsNow();
+}
+```
+
+- `MutableView`는 `View`와 함께, fixed 필드만 있는 version에 생성됨. `FrameSize()`는 새 프레임의 바이트 수로 영역 크기가 됨
+- 영역에는 먼저 프레임이 들어 있어야 함. 0으로 채운 메모리에 `TryMutableView`하면 `bad magic`으로 실패
+- 쓰기는 일반 저장. 여러 프로세스·스레드가 읽고 쓰면 동기화는 사용자 몫
+- C++만 지원. C# `View`는 읽기 전용, Python에는 없음
+
 C++에서는 받은 버퍼를 객체에 넘겨줄 수도 있습니다. `ToObject`나 `TryToObject`에 `std::move`로 vector를 주면, 프레임이 그 클래스의 version layout과 정확히 같을 때(같은 지원 version 범위와 fingerprint) 그 버퍼가 그대로 객체의 프레임 버퍼가 됩니다. 이후 `Serialize()`는 가변 필드나 ext를 바꾸기 전까지 그 버퍼를 돌려줍니다. 더 새 version 등 다른 프레임은 보통처럼 복사합니다.
 
 **C++**

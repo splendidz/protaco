@@ -134,6 +134,55 @@ public:
         }
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<Move>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new Move frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 57;
+        }
+
+        /// [type string(8); fixed 8 bytes, set rejects longer values]
+        std::string get_from() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 8);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
+        bool set_from(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 0, 8, value, "from", error);
+        }
+
+        /// [type string(8); fixed 8 bytes, set rejects longer values]
+        std::string get_to() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 8, 8);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
+        bool set_to(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 8, 8, value, "to", error);
+        }
+
+        /// [type bool]
+        bool get_pass() const
+        {
+            return protaco::detail::LoadBool(Fixed() + 16);
+        }
+
+        void set_pass(bool value)
+        {
+            protaco::detail::StoreBool(Fixed() + 16, value);
+        }
+
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Move>;

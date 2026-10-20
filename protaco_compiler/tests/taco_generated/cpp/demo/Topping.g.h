@@ -121,6 +121,45 @@ public:
         }
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<Topping>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new Topping frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 71;
+        }
+
+        /// topping name
+        /// [type string(24); fixed 24 bytes, set rejects longer values]
+        std::string get_name() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 24);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 24 bytes.
+        bool set_name(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 0, 24, value, "name", error);
+        }
+
+        /// weight in grams
+        /// [type int; default 30]
+        int32_t get_grams() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 24);
+        }
+
+        void set_grams(int32_t value)
+        {
+            protaco::detail::Store<int32_t>(Fixed() + 24, value);
+        }
+
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Topping>;

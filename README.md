@@ -1069,6 +1069,30 @@ if (demo.Heartbeat.TryView(received, out view))
 - Extension data (ext) is not visible through a view
 - Python has no View ([6.4](#64-python))
 
+In C++, `MutableView` writes as well as reads in place, in memory you own, such as a shared memory region. `protaco::TryMutableView` runs the same checks as `TryView`; the view then has the getters and setters of the message (`mutable_` for fixed messages and array elements) and the envelope setters.
+
+**C++**
+
+```cpp
+// The region holds one demo::Board frame: fill it once from a new object.
+uint8_t* region = MapSharedMemory(demo::Board::MutableView::FrameSize());
+const demo::Board fresh;
+std::memcpy(region, fresh.Serialize().data(), demo::Board::MutableView::FrameSize());
+
+demo::Board::MutableView board;                     // valid while the region is mapped
+std::string error;
+if (protaco::TryMutableView<demo::Board>(region, demo::Board::MutableView::FrameSize(), &board, &error))
+{
+    board.mutable_spots(2).set_lat(37.5);            // written in place, nothing copied
+    board.SetTimestampAsNow();
+}
+```
+
+- `MutableView` is generated with `View`, for versions with fixed fields only. `FrameSize()` is the byte count of a new frame: the size of the region
+- The region must hold a frame first; `TryMutableView` on zeroed memory fails with `bad magic`
+- Writes are plain stores. Readers and writers in several processes or threads need your own synchronization
+- C++ only. C# `View` is read-only and Python has none
+
 In C++ you can also hand the received buffer to the object. Pass a vector to `ToObject` or `TryToObject` with `std::move`. When the frame matches the layout of the class version exactly (same supported version range and fingerprints), that buffer becomes the object's frame buffer as is. From then on, `Serialize()` returns that buffer until a variable field or ext changes. Other frames, such as ones from a newer version, are copied as usual.
 
 **C++**

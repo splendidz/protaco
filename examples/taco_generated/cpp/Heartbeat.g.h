@@ -168,6 +168,81 @@ public:
         }
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<Heartbeat>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new Heartbeat frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 98;
+        }
+
+        /// device name
+        /// [type string(32); fixed 32 bytes, set rejects longer values]
+        std::string get_node() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 32);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
+        bool set_node(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 0, 32, value, "node", error);
+        }
+
+        /// sequence number
+        /// [type int64]
+        int64_t get_seq() const
+        {
+            return protaco::detail::Load<int64_t>(Fixed() + 32);
+        }
+
+        void set_seq(int64_t value)
+        {
+            protaco::detail::Store<int64_t>(Fixed() + 32, value);
+        }
+
+        /// device is healthy
+        /// [type bool; default true]
+        bool get_healthy() const
+        {
+            return protaco::detail::LoadBool(Fixed() + 40);
+        }
+
+        void set_healthy(bool value)
+        {
+            protaco::detail::StoreBool(Fixed() + 40, value);
+        }
+
+        /// CPU load (0.0..1.0)
+        /// [type double]
+        double get_cpuLoad() const
+        {
+            return protaco::detail::Load<double>(Fixed() + 41);
+        }
+
+        void set_cpuLoad(double value)
+        {
+            protaco::detail::Store<double>(Fixed() + 41, value);
+        }
+
+        /// uptime in seconds
+        /// [type int]
+        int32_t get_uptimeSec() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 49);
+        }
+
+        void set_uptimeSec(int32_t value)
+        {
+            protaco::detail::Store<int32_t>(Fixed() + 49, value);
+        }
+
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Heartbeat>;

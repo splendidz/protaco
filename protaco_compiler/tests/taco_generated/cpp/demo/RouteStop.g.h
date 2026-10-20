@@ -144,6 +144,59 @@ public:
         }
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<RouteStop>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new RouteStop frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 113;
+        }
+
+        /// Order delivered at this stop. Example: A-100
+        /// order number
+        /// [type string(16); fixed 16 bytes, set rejects longer values]
+        std::string get_orderId() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 0, 16);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
+        bool set_orderId(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 0, 16, value, "orderId", error);
+        }
+
+        /// street address
+        /// [type string(48); fixed 48 bytes, set rejects longer values]
+        std::string get_address() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 16, 48);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 48 bytes.
+        bool set_address(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 16, 48, value, "address", error);
+        }
+
+        /// minutes until arrival
+        /// [type int; default 15]
+        int32_t get_etaMin() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 64);
+        }
+
+        void set_etaMin(int32_t value)
+        {
+            protaco::detail::Store<int32_t>(Fixed() + 64, value);
+        }
+
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<RouteStop>;

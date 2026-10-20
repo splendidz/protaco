@@ -881,6 +881,43 @@ TEST(Protaco, FixedMessages)
     ExpectGolden("Trail.bin", trail.Serialize());
 }
 
+// MutableView: a frame in memory the caller owns (here a vector standing in for shared memory), read and written in place.
+TEST(Protaco, MutableViewWritesInPlace)
+{
+    const arrays::Rack rack = MakeRack();
+    const std::vector<uint8_t>& fresh = rack.Serialize();
+    std::vector<uint8_t> shm(arrays::Rack::MutableView::FrameSize());
+    ASSERT_EQ(shm.size(), fresh.size());
+    std::memcpy(shm.data(), fresh.data(), fresh.size());
+
+    arrays::Rack::MutableView view;
+    std::string error;
+    ASSERT_TRUE(protaco::TryMutableView<arrays::Rack>(shm.data(), shm.size(), &view, &error)) << error;
+    view.mutable_slots(1).set_id(500);
+    view.mutable_slots(1).mutable_path(0).set_y(-8);
+    view.set_count(9);
+    view.SetCorr(77);
+    EXPECT_EQ(500u, view.get_slots(1).get_id());
+    EXPECT_FALSE(view.set_slots(4, arrays::Slot(), &error));
+    EXPECT_EQ("slots[4]: index out of range (size 4)", error);
+
+    const arrays::Rack got = protaco::ToObject<arrays::Rack>(shm);
+    EXPECT_EQ(500u, got.get_slots(1).get_id());
+    EXPECT_EQ(-8, got.get_slots(1).get_path(0).get_y());
+    EXPECT_EQ(9, got.get_count());
+    EXPECT_EQ(77u, got.GetCorr());
+
+    std::vector<uint8_t> panelBytes = MakePanel().Serialize();
+    arrays::Panel::MutableView panel;
+    ASSERT_TRUE(protaco::TryMutableView<arrays::Panel>(panelBytes, &panel));
+    EXPECT_TRUE(panel.set_names(1, "shm"));
+    EXPECT_EQ("shm", protaco::ToObject<arrays::Panel>(panelBytes).get_names(1));
+
+    std::vector<uint8_t> blank(shm.size(), 0);   // memory not filled with a frame first
+    EXPECT_FALSE(protaco::TryMutableView<arrays::Rack>(blank, &view, &error));
+    EXPECT_EQ("bad magic", error);
+}
+
 TEST(Protaco, EnumFields)
 {
     using enums::PizzaSize;

@@ -1076,6 +1076,40 @@ if (demo.Heartbeat.TryView(bytes, out var view, out string error)) {
 
 </details>
 
+**TryMutableView**
+
+**C++**
+
+```cpp
+template<class T>
+bool TryMutableView(uint8_t* data, size_t size, typename T::MutableView* view,
+                    std::string* error = nullptr);
+template<class T>
+bool TryMutableView(std::vector<uint8_t>& bytes, typename T::MutableView* view,
+                    std::string* error = nullptr);
+
+static constexpr size_t T::MutableView::FrameSize();
+```
+
+- 요구 사항: TryView와 같음. `T::MutableView`는 `T::View`와 함께 생성됨
+- 매개변수: T 프레임이 들어 있는 메모리(예: `T().Serialize()`로 한 번 채운 shared memory), 출력 view, 선택 오류 문자열
+- 반환값: 성공 시 true와 getter·setter가 제자리에서 동작하는 view. 검사와 오류 문구는 TryView와 같고, 0으로 채운 메모리는 `bad magic`으로 실패
+- 멤버: T의 필드 getter·setter(fixed 메시지와 배열 원소는 `mutable_`·`set_`), Envelope getter와 `SetId`, `SetCorr`, `SetTimestamp`, `SetTimestampAsNow`, `SetEnvelope`
+- `FrameSize()`: 새 T 프레임의 바이트 수. 준비할 메모리 크기
+- 수명과 동시성: 메모리가 살아 있는 동안 유효. 쓰기는 일반 저장이므로 동시에 읽고 쓰는 쪽의 동기화는 사용자 몫
+- C#, Python: 지원 안 함
+
+**C++**
+
+```cpp
+std::vector<uint8_t> memory = arrays::Rack().Serialize();   // shared memory 영역 대신
+arrays::Rack::MutableView rack;
+if (protaco::TryMutableView<arrays::Rack>(memory, &rack)) {
+    rack.mutable_slots(1).set_id(500);
+    rack.set_count(9);
+}
+```
+
 **PeekHeader와 Header**
 
 **C++**

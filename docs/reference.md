@@ -1076,6 +1076,40 @@ Not applicable. Python uses object decoding.
 
 </details>
 
+**TryMutableView**
+
+**C++**
+
+```cpp
+template<class T>
+bool TryMutableView(uint8_t* data, size_t size, typename T::MutableView* view,
+                    std::string* error = nullptr);
+template<class T>
+bool TryMutableView(std::vector<uint8_t>& bytes, typename T::MutableView* view,
+                    std::string* error = nullptr);
+
+static constexpr size_t T::MutableView::FrameSize();
+```
+
+- Requirements: the same as TryView; `T::MutableView` is generated next to `T::View`
+- Parameters: memory holding a frame of T (for example shared memory filled once from `T().Serialize()`), output view, optional error string
+- Returns: true with a view whose getters and setters work in place. Checks and error wording are those of TryView; zeroed memory fails with `bad magic`
+- Members: the field getters and setters of T (`mutable_` and `set_` for fixed messages and array elements), the envelope getters and `SetId`, `SetCorr`, `SetTimestamp`, `SetTimestampAsNow`, `SetEnvelope`
+- `FrameSize()`: bytes of a new T frame, the size of the memory to prepare
+- Lifetime and concurrency: valid while the memory lives. Writes are plain stores; synchronize concurrent readers and writers yourself
+- C# and Python: not available
+
+**C++**
+
+```cpp
+std::vector<uint8_t> memory = arrays::Rack().Serialize();   // stands in for a shared memory region
+arrays::Rack::MutableView rack;
+if (protaco::TryMutableView<arrays::Rack>(memory, &rack)) {
+    rack.mutable_slots(1).set_id(500);
+    rack.set_count(9);
+}
+```
+
 **PeekHeader and Header**
 
 **C++**

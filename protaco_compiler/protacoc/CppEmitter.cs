@@ -150,7 +150,10 @@ namespace Protacoc
                 Accessors(w, field);
             Common(w, message, view);
             if (view.AliveVar.Count == 0)
+            {
                 View(w, message, view);
+                MutableView(w, message, view);
+            }
             if (message.Fixed)
                 Refs(w, message, view);
             w.Outdent();
@@ -622,6 +625,31 @@ namespace Protacoc
             w.Line("{");
             w.Line("    return const_cast<uint8_t*>(p_);");
             w.Line("}");
+            w.Outdent();
+            w.Line("};");
+        }
+
+        // Fixed-only versions: read and write in place in memory the caller owns (protaco::TryMutableView), such as shared memory.
+        private static void MutableView(CodeWriter w, MessageDef message, VersionView view)
+        {
+            int hashCount = view.Version - message.MinVersion + 1;
+            int frame = HeaderBytesWithoutName + message.Name.Length + 4 * hashCount + 4 + view.FixedSize;
+            w.Line();
+            w.Line("/// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<" + message.Name + ">),");
+            w.Line("/// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.");
+            w.Line("/// Writes are plain stores: concurrent readers and writers need the caller's synchronization.");
+            w.Line("class MutableView : public protaco::CMutableView");
+            w.Line("{");
+            w.Line("public:");
+            w.Indent();
+            w.Line("/// Bytes of a new " + message.Name + " frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.");
+            Method(w, "static constexpr size_t FrameSize()", "return " + frame + ";");
+            foreach (FieldDef field in view.Alive)
+            {
+                Doc(w, Naming.FieldDoc(field));
+                FixedGetters(w, field, "Fixed() + " + field.FixedOffset);
+                FixedSetters(w, field, "Fixed() + " + field.FixedOffset);
+            }
             w.Outdent();
             w.Line("};");
         }

@@ -159,6 +159,78 @@ public:
         }
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<Rack>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new Rack frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 276;
+        }
+
+        /// [type Point; fixed message, inline 8 bytes]
+        /// Read in place: a view of the Point bytes inside this message.
+        Point::ConstRef get_origin() const
+        {
+            return Point::ConstRef(Fixed() + 0);
+        }
+
+        /// Written in place: the Point bytes inside this message.
+        Point::Ref mutable_origin()
+        {
+            return Point::Ref(Fixed() + 0);
+        }
+
+        /// Copies the fields of value in.
+        void set_origin(const Point& value)
+        {
+            protaco::detail::Access::CopyBlock(Fixed() + 0, value);
+        }
+
+        /// [type Slot[Sizes.Slots]; 4 elements, fixed 224 bytes]
+        /// Element count.
+        static constexpr size_t slots_size()
+        {
+            return 4;
+        }
+
+        /// Element read in place. index below slots_size() (asserted in debug builds).
+        Slot::ConstRef get_slots(size_t index) const
+        {
+            return Slot::ConstRef(Fixed() + 8 + 56 * protaco::detail::AssertIndex(index, 4));
+        }
+
+        /// Element written in place. index below slots_size() (asserted in debug builds).
+        Slot::Ref mutable_slots(size_t index)
+        {
+            return Slot::Ref(Fixed() + 8 + 56 * protaco::detail::AssertIndex(index, 4));
+        }
+
+        /// Copies the fields of value into the element. False and the reason in error for an index out of range.
+        bool set_slots(size_t index, const Slot& value, std::string* error = nullptr)
+        {
+            if (index >= 4)
+                return protaco::detail::IndexError(error, "slots", index, 4);
+            protaco::detail::Access::CopyBlock(Fixed() + 8 + 56 * index, value);
+            return true;
+        }
+
+        /// [type int]
+        int32_t get_count() const
+        {
+            return protaco::detail::Load<int32_t>(Fixed() + 232);
+        }
+
+        void set_count(int32_t value)
+        {
+            protaco::detail::Store<int32_t>(Fixed() + 232, value);
+        }
+
+    };
+
 private:
     friend struct protaco::detail::Access;
     friend class protaco::CMessage<Rack>;

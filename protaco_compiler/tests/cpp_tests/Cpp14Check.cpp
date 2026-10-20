@@ -22,6 +22,17 @@ static_assert(__cplusplus == 201402L, "must be compiled as C++14");
 
 using namespace demo;
 
+bool Cpp14MutableView()
+{
+    std::vector<uint8_t> memory = arrays::Rack().Serialize();
+    arrays::Rack::MutableView view;
+    if (memory.size() != arrays::Rack::MutableView::FrameSize() || !protaco::TryMutableView<arrays::Rack>(memory, &view))
+        return false;
+    view.mutable_slots(2).set_name("c14");
+    view.SetTimestampAsNow();
+    return protaco::ToObject<arrays::Rack>(memory).get_slots(2).Copy().get_name() == "c14";
+}
+
 bool Cpp14FixedMessages()
 {
     arrays::Rack rack;
@@ -29,7 +40,7 @@ bool Cpp14FixedMessages()
     rack.set_slots(0, rack.get_slots(1).Copy());
     arrays::Rack::View view;
     return protaco::TryView<arrays::Rack>(rack.Serialize(), &view) && view.get_slots(0).get_path(0).get_x() == 2
-        && !rack.ToString().empty() && !rack.get_origin().ToString().empty();
+        && !rack.ToString().empty() && !rack.get_origin().ToString().empty() && Cpp14MutableView();
 }
 
 bool Cpp14Arrays()

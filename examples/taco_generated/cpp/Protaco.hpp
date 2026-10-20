@@ -1068,6 +1068,9 @@ struct Access
     template <class T>
     static bool ViewOf(const uint8_t* src, size_t size, typename T::View* out, Error* error);
 
+    template <class T>
+    static bool MutableViewOf(uint8_t* data, size_t size, typename T::MutableView* out, Error* error);
+
 private:
     template <class T>
     static size_t VarSize(const T& message);
@@ -2297,6 +2300,77 @@ private:
     const uint8_t* fixed_ = nullptr;
 };
 
+/// Base of generated MutableView classes: a frame in memory the caller owns, such as shared memory, read and written in
+/// place. Nothing is copied. Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+class CMutableView
+{
+public:
+    Envelope GetEnvelope() const
+    {
+        return detail::LoadEnvelope(frame_);
+    }
+
+    uint32_t GetId() const
+    {
+        return GetEnvelope().id;
+    }
+
+    void SetId(uint32_t id)
+    {
+        detail::Store<uint32_t>(EnvelopeAt(), id);
+    }
+
+    uint32_t GetCorr() const
+    {
+        return GetEnvelope().corr;
+    }
+
+    void SetCorr(uint32_t corr)
+    {
+        detail::Store<uint32_t>(EnvelopeAt() + 4, corr);
+    }
+
+    /// UTC microseconds since 1970-01-01.
+    int64_t GetTimestamp() const
+    {
+        return GetEnvelope().ts;
+    }
+
+    void SetTimestamp(int64_t timestampUs)
+    {
+        detail::Store<int64_t>(EnvelopeAt() + 8, timestampUs);
+    }
+
+    void SetTimestampAsNow()
+    {
+        SetTimestamp(NowUs());
+    }
+
+    void SetEnvelope(const Envelope& env)
+    {
+        SetId(env.id);
+        SetCorr(env.corr);
+        SetTimestamp(env.ts);
+    }
+
+protected:
+    uint8_t* Fixed() const
+    {
+        return fixed_;
+    }
+
+private:
+    friend struct detail::Access;
+
+    uint8_t* EnvelopeAt() const
+    {
+        return frame_ + 8 + frame_[3];
+    }
+
+    uint8_t* frame_ = nullptr;
+    uint8_t* fixed_ = nullptr;
+};
+
 namespace detail
 {
 template <class T>
@@ -2334,6 +2408,18 @@ bool Access::ViewOf(const uint8_t* src, size_t size, typename T::View* out, Erro
     {
         return Fail(error, "out of memory");
     }
+}
+
+// The same checks as ViewOf; the view then points at the same bytes, writable.
+template <class T>
+bool Access::MutableViewOf(uint8_t* data, size_t size, typename T::MutableView* out, Error* error)
+{
+    typename T::View view;
+    if (!ViewOf<T>(data, size, &view, error))
+        return false;
+    out->frame_ = data;
+    out->fixed_ = data + (view.fixed_ - view.frame_);
+    return true;
 }
 }  // namespace detail
 
@@ -2521,6 +2607,23 @@ bool TryView(const std::vector<uint8_t>& bytes, typename T::View* view, std::str
 /// A view into a temporary would dangle.
 template <class T>
 bool TryView(std::vector<uint8_t>&& bytes, typename T::View* view, std::string* error = nullptr) = delete;
+
+/// Fixed-only versions: the frame in data, read and written in place, with the checks of TryView. Nothing is copied.
+/// The view is valid while data lives. Fill new memory with a serialized T first (T::MutableView::FrameSize() bytes).
+template <class T>
+bool TryMutableView(uint8_t* data, size_t size, typename T::MutableView* view, std::string* error = nullptr)
+{
+    Error detailError;
+    if (detail::Access::MutableViewOf<T>(data, size, view, &detailError))
+        return true;
+    return detail::SetError(error, detail::ErrorText(detailError));
+}
+
+template <class T>
+bool TryMutableView(std::vector<uint8_t>& bytes, typename T::MutableView* view, std::string* error = nullptr)
+{
+    return TryMutableView<T>(bytes.data(), bytes.size(), view, error);
+}
 
 }  // namespace protaco
 

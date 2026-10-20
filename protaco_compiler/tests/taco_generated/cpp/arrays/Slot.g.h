@@ -258,6 +258,140 @@ public:
 
     };
 
+    /// Fixed fields read and written in place in a frame in memory the caller owns (protaco::TryMutableView<Slot>),
+    /// for example shared memory. Nothing is copied. Valid after a successful TryMutableView while the memory lives.
+    /// Writes are plain stores: concurrent readers and writers need the caller's synchronization.
+    class MutableView : public protaco::CMutableView
+    {
+    public:
+        /// Bytes of a new Slot frame (header and fixed block): the memory to fill with Serialize() and give TryMutableView.
+        static constexpr size_t FrameSize()
+        {
+            return 96;
+        }
+
+        /// [type uint]
+        uint32_t get_id() const
+        {
+            return protaco::detail::Load<uint32_t>(Fixed() + 0);
+        }
+
+        void set_id(uint32_t value)
+        {
+            protaco::detail::Store<uint32_t>(Fixed() + 0, value);
+        }
+
+        /// [type string(8); fixed 8 bytes, set rejects longer values; default "empty"]
+        std::string get_name() const
+        {
+            return protaco::detail::LoadChars(Fixed() + 4, 8);
+        }
+
+        /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
+        bool set_name(const std::string& value, std::string* error = nullptr)
+        {
+            return protaco::detail::StoreChars(Fixed() + 4, 8, value, "name", error);
+        }
+
+        /// [type Point; fixed message, inline 8 bytes]
+        /// Read in place: a view of the Point bytes inside this message.
+        Point::ConstRef get_pos() const
+        {
+            return Point::ConstRef(Fixed() + 12);
+        }
+
+        /// Written in place: the Point bytes inside this message.
+        Point::Ref mutable_pos()
+        {
+            return Point::Ref(Fixed() + 12);
+        }
+
+        /// Copies the fields of value in.
+        void set_pos(const Point& value)
+        {
+            protaco::detail::Access::CopyBlock(Fixed() + 12, value);
+        }
+
+        /// [type Point[2]; 2 elements, fixed 16 bytes]
+        /// Element count.
+        static constexpr size_t path_size()
+        {
+            return 2;
+        }
+
+        /// Element read in place. index below path_size() (asserted in debug builds).
+        Point::ConstRef get_path(size_t index) const
+        {
+            return Point::ConstRef(Fixed() + 20 + 8 * protaco::detail::AssertIndex(index, 2));
+        }
+
+        /// Element written in place. index below path_size() (asserted in debug builds).
+        Point::Ref mutable_path(size_t index)
+        {
+            return Point::Ref(Fixed() + 20 + 8 * protaco::detail::AssertIndex(index, 2));
+        }
+
+        /// Copies the fields of value into the element. False and the reason in error for an index out of range.
+        bool set_path(size_t index, const Point& value, std::string* error = nullptr)
+        {
+            if (index >= 2)
+                return protaco::detail::IndexError(error, "path", index, 2);
+            protaco::detail::Access::CopyBlock(Fixed() + 20 + 8 * index, value);
+            return true;
+        }
+
+        /// [type Level]
+        /// Numbers this build does not know are kept as they are (ToString shows ?(n)).
+        Level get_level() const
+        {
+            return static_cast<Level>(protaco::detail::Load<int32_t>(Fixed() + 36));
+        }
+
+        void set_level(Level value)
+        {
+            protaco::detail::Store<int32_t>(Fixed() + 36, static_cast<int32_t>(value));
+        }
+
+        /// [type double[2]; 2 elements, fixed 16 bytes]
+        /// Element count.
+        static constexpr size_t temps_size()
+        {
+            return 2;
+        }
+
+        /// Element read in place. index below temps_size() (asserted in debug builds).
+        double get_temps(size_t index) const
+        {
+            return protaco::detail::Load<double>(Fixed() + 40 + 8 * protaco::detail::AssertIndex(index, 2));
+        }
+
+        /// All elements, copied.
+        std::array<double, 2> get_temps() const
+        {
+            std::array<double, 2> values;
+            for (size_t i = 0; i < 2; ++i)
+                values[i] = protaco::detail::Load<double>(Fixed() + 40 + 8 * i);
+            return values;
+        }
+
+        /// Element write in place. False and the reason in error for an index out of range.
+        bool set_temps(size_t index, double value, std::string* error = nullptr)
+        {
+            if (index >= 2)
+                return protaco::detail::IndexError(error, "temps", index, 2);
+            protaco::detail::Store<double>(Fixed() + 40 + 8 * index, value);
+            return true;
+        }
+
+        /// All elements.
+        void set_temps(const std::array<double, 2>& values)
+        {
+            for (size_t i = 0; i < 2; ++i)
+                protaco::detail::Store<double>(Fixed() + 40 + 8 * i, values[i]);
+        }
+
+    };
+
     /// Read-only Slot inside another message's fixed block: fields read in place, nothing copied.
     /// Valid while those bytes live.
     class ConstRef : public protaco::detail::BlockRef
