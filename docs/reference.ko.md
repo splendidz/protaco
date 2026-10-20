@@ -4,7 +4,7 @@
 
 protacoc 0.6.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
-1. [스키마 지문](#1-스키마-지문)
+1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
 3. [진단](#3-진단)
    - [생성기 오류 코드](#31-생성기-오류-코드)
@@ -15,11 +15,11 @@ protacoc 0.6.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작�
 6. [Python API](#6-python-api)
 7. [빌드와 시험](#7-빌드와-시험)
 
-## 1. 스키마 지문
+## 1. 스키마 fingerprint
 
-지문은 메시지의 한 version을 나타내는 정규 텍스트의 UTF-8 바이트에 대한 32비트 FNV-1a 해시입니다. 프레임은 `min_version`부터 `version`까지의 지문을 순서대로 싣고, 수신 클래스는 자기 version의 지문을 비교합니다. 구현 원본은 [SchemaFingerprint.cs](../protaco_compiler/protacoc/SchemaFingerprint.cs)입니다.
+fingerprint는 메시지의 한 version을 나타내는 canonical text의 UTF-8 바이트에 대한 32비트 FNV-1a 해시입니다. 프레임은 `min_version`부터 `version`까지의 fingerprint를 순서대로 싣고, 수신 클래스는 자기 version의 fingerprint를 비교합니다. 구현 원본은 [SchemaFingerprint.cs](../protaco_compiler/protacoc/SchemaFingerprint.cs)입니다.
 
-**정규 텍스트**
+**canonical text**
 
 ```text
 protaco-schema-1|<name>|<version>|<ext 0/1>|<field>;<field>;...
@@ -33,24 +33,24 @@ field = <key>:<type>[!][=<default>]
 - `!`: required 필드. `=<default>`: 명시한 기본값의 텍스트, 문자열의 바깥 따옴표 제외
 - 끝 구분자: 각 필드 뒤 `;`. BOM, 마지막 줄바꿈, 추가 공백 없음
 
-고정 필드와 가변 필드를 나누어 정렬하지 않습니다. 실제 본문의 고정 영역 배치와 달리 정규 텍스트는 위 필드 순서를 그대로 사용합니다. 기본값을 생략하면 `=`도 생략합니다.
+고정 필드와 가변 필드를 나누어 정렬하지 않습니다. 실제 본문의 고정 영역 layout과 달리 canonical text는 위 필드 순서를 그대로 사용합니다. 기본값을 생략하면 `=`도 생략합니다.
 
-해당 version에서 제거된 고정 필드는 `~<key>:<type>;`로 남습니다. 바이트 자리를 유지하며 required·default 표기는 붙이지 않습니다. 제거된 가변 필드는 정규 텍스트에서 빠집니다. `added`·`removed` 숫자 자체는 포함하지 않으므로 새 version을 추가해도 옛 version의 지문은 유지됩니다.
+해당 version에서 제거된 고정 필드는 `~<key>:<type>;`로 남습니다. 바이트 자리를 유지하며 required·default 표기는 붙이지 않습니다. 제거된 가변 필드는 canonical text에서 빠집니다. `added`·`removed` 숫자 자체는 포함하지 않으므로 새 version을 추가해도 옛 version의 fingerprint는 유지됩니다.
 
-| 타입 | 정규 텍스트 |
+| 타입 | canonical text |
 |---|---|
 | 기본 타입 | `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string`, `string(N)`, `bytes` |
 | 목록 | `list<T>`, T도 같은 규칙으로 변환 |
 | map | `map<K,V>`, 쉼표 뒤 공백 없음, K·V도 같은 규칙으로 변환 |
-| 다른 메시지 | `Name@xxxxxxxx`, 해당 메시지 지문의 소문자 16진수 8자리 |
+| 다른 메시지 | `Name@xxxxxxxx`, 해당 메시지 fingerprint의 소문자 16진수 8자리 |
 | 자기 참조 | `Name@self` |
 | enum | `enum(Name)`, 값 목록 제외 |
 
-namespace, 주석, `desc`는 지문에 들어가지 않습니다. 다른 메시지의 지문 변경은 이를 참조하는 메시지에도 반영됩니다. enum 값 추가는 지문을 바꾸지 않습니다.
+namespace, 주석, `desc`는 fingerprint에 들어가지 않습니다. 다른 메시지의 fingerprint 변경은 이를 참조하는 메시지에도 반영됩니다. enum 값 추가는 fingerprint를 바꾸지 않습니다.
 
 **계산**
 
-입력 `canonical`은 위 규칙으로 만든 UTF-8 문자열입니다. 반환값은 부호 없는 32비트 지문입니다. 각 곱셈은 2³²를 법으로 계산합니다.
+입력 `canonical`은 위 규칙으로 만든 UTF-8 문자열입니다. 반환값은 부호 없는 32비트 fingerprint입니다. 각 곱셈은 2³²를 법으로 계산합니다.
 
 **C++**
 
@@ -103,7 +103,7 @@ protaco-schema-1|Heartbeat|1|0|node:string(32);seq:int64;healthy:bool=true;cpuLo
 protaco-schema-1|Order|3|1|id:string(8);~qty:int;color:string!;weight:double=0.5;tags:list<string>;label:string;rush:bool;
 ```
 
-| 입력 | 지문 |
+| 입력 | fingerprint |
 |---|---|
 | Topping version 1 | `0xEB8A11D8` |
 | Heartbeat version 1 | `0x2BB85C55` |
@@ -197,7 +197,7 @@ bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp Menu Cat
 | PC403 | 순환·허용되지 않는 자기 참조 | 두 메시지의 상호 참조, map 안의 Self |
 | PC404 | 컨테이너에 허용되지 않는 타입 | `list<bool>`, `map<double, int>`, `string(N)` map 값 |
 | PC405 | namespace 혼용 | 한 실행에 서로 다른 namespace |
-| PC406 | 생성기 중첩 한도 초과 | 자기 참조를 제외한 중첩 100단계 초과 |
+| PC406 | 생성기 중첩 limit 초과 | 자기 참조를 제외한 중첩 100단계 초과 |
 | PC407 | 중첩 메시지의 version 기능 | 필드 타입 메시지에 `min_version/added/removed` 사용 |
 | PC501 | 파일 입출력 | 입력 폴더 없음, 쓰기 실패, `--check` 불일치 |
 | PC502 | 명령행·대상 오류 | 출력 언어 없음, 모르는 옵션 또는 대상 |
@@ -218,15 +218,15 @@ C++ `CParseError::GetError()`의 `Error{path, what}`, C# `ProtacoException.Path/
 
 | 문구 | 원인 | 경로 |
 |---|---|---|
-| `frame too large` | 프레임 크기 한도 초과 | 없음 |
-| `frame too short` | 28바이트 기본 헤더, 이름 또는 지문 배열 부족 | 없음 |
+| `frame too large` | 프레임 크기 limit 초과 | 없음 |
+| `frame too short` | 28바이트 기본 헤더, 이름 또는 fingerprint 배열 부족 | 없음 |
 | `bad magic` | 시작 두 바이트가 `PC` 아님 | 없음 |
 | `unknown frame version N, expected 4` | 직렬화 형식 불일치 | 없음 |
 | `bad version range A..B` | 최솟값 0, 역전 또는 지원 version 255개 초과 | 없음 |
 | `message name mismatch: expected A, got B` | 수신 클래스와 메시지 이름 불일치 | 없음 |
 | `message version too old: N reads version R or newer, got S` | S < R. 지원하는 옛 타입이 있으면 `. Use the vS type` 추가 | 없음 |
 | `message version too new: N reads version R, sender supports A..S` | 송신 측 min_version > R | 없음 |
-| `schema mismatch: N version R expected 0xAAAAAAAA, got 0xBBBBBBBB` | R의 지문 불일치 | 없음 |
+| `schema mismatch: N version R expected 0xAAAAAAAA, got 0xBBBBBBBB` | R의 fingerprint 불일치 | 없음 |
 | `frame truncated` | BodyLen보다 실제 본문이 짧음 | 없음 |
 | `trailing bytes after frame` | BodyLen 뒤에 추가 바이트 | 없음 |
 
@@ -288,12 +288,12 @@ C++ `CParseError::GetError()`의 `Error{path, what}`, C# `ProtacoException.Path/
 
 수신 클래스의 메시지 version을 R, 프레임의 메시지 version을 S라고 하면 `ToObject`·`TryToObject`와 고정 필드 `TryView`는 다음 순서로 검사합니다.
 
-1. 프레임 크기 한도.
-2. 헤더 최소 길이, magic, 직렬화 형식, 이름·지문 영역, version 범위.
+1. 프레임 크기 limit.
+2. 헤더 최소 길이, magic, 직렬화 형식, 이름·fingerprint 영역, version 범위.
 3. 메시지 이름.
 4. S < R 여부. 옛 프레임은 그 version의 생성 클래스로 수신.
 5. 송신 측 min_version > R 여부.
-6. 송신 프레임에 실린 R의 지문과 수신 클래스 지문.
+6. 송신 프레임에 실린 R의 fingerprint와 수신 클래스 fingerprint.
 7. BodyLen과 실제 본문 길이. 잘림과 뒤에 붙은 바이트 검사.
 8. 본문 고정 영역, TLV, 필수 필드, 중첩·컨테이너 규칙. S > R이면 본문 오류에 version 꼬리말 추가.
 
@@ -320,12 +320,12 @@ std::string get_<k>() const; // string(N)
 bool set_<k>(const std::string& value, std::string* error = nullptr);
 ```
 
-생성자는 스키마 기본값으로 필드를 초기화하고 봉투에 새 id와 현재 시각을 넣습니다. 디코더와 생성 코드가 내부적으로 만드는 중첩 필드는 id를 소비하지 않습니다.
+생성자는 스키마 기본값으로 필드를 초기화하고 Envelope에 새 id와 현재 시각을 넣습니다. 디코더와 생성 코드가 내부적으로 만드는 중첩 필드는 id를 소비하지 않습니다.
 
 - 매개변수: `value`는 새 필드 값, `error`는 고정 문자열 오류 출력
 - 반환값: getter는 값, 숫자·bool·enum setter는 void, 고정 문자열 setter는 성공 여부
 - 고정 문자열 오류: UTF-8 바이트 수가 N 초과이면 false, 기존 값 유지. 예: `orderId: 17 bytes, longer than string(16)`
-- 배치: bool 1바이트, int·uint·enum 4바이트, int64·uint64·double 8바이트, `string(N)` N바이트
+- layout: bool 1바이트, int·uint·enum 4바이트, int64·uint64·double 8바이트, `string(N)` N바이트
 - 주의: 고정 필드 setter는 객체의 프레임 버퍼에 직접 기록. `string(N)`의 N은 1..4096이며 남는 바이트는 0
 
 **C++**
@@ -502,7 +502,7 @@ const std::vector<uint8_t>& Serialize() const;
 std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const;
 ```
 
-Serialize는 봉투를 포함한 전체 프레임의 참조를 반환합니다. 반환한 데이터는 객체를 수정하거나 파괴하기 전까지 사용할 수 있습니다. 비동기 전송 중 객체를 바꿀 필요가 있으면 별도 vector에 복사합니다.
+Serialize는 Envelope를 포함한 전체 프레임의 참조를 반환합니다. 반환한 데이터는 객체를 수정하거나 파괴하기 전까지 사용할 수 있습니다. 비동기 전송 중 객체를 바꿀 필요가 있으면 별도 vector에 복사합니다.
 
 - 매개변수: Serialize는 없음. ToString의 `style`은 [4.5 텍스트](#45-텍스트)의 출력 설정
 - 반환값: Serialize는 객체 내부 버퍼 참조, ToString은 독립적인 문자열
@@ -557,7 +557,7 @@ static uint16_t MsgMinVersion();
 static uint32_t MsgSchemaHash();
 ```
 
-매개변수 없이 클래스의 이름, version, 지원 최솟값, 해당 version의 지문을 반환합니다. 이름 포인터는 정적 문자열을 가리킵니다. 옛 클래스는 같은 헤더의 `<ns>::v<N>::<Name>`에 생성되며 해당 version의 필드만 노출합니다. 최신 클래스가 옛 프레임을 자동으로 최신 객체로 바꾸지는 않습니다.
+매개변수 없이 클래스의 이름, version, 지원 최솟값, 해당 version의 fingerprint를 반환합니다. 이름 포인터는 정적 문자열을 가리킵니다. 옛 클래스는 같은 헤더의 `<ns>::v<N>::<Name>`에 생성되며 해당 version의 필드만 노출합니다. 최신 클래스가 옛 프레임을 자동으로 최신 객체로 바꾸지는 않습니다.
 
 **C++**
 
@@ -599,7 +599,7 @@ restored = protaco.ToObject(v1.Order, old_order.Serialize())
 
 고정 필드만 있는 version에는 `class View : public protaco::CView`가 생성됩니다. 각 필드의 `get_<k>() const`와 `GetEnvelope/GetId/GetCorr/GetTimestamp`를 제공합니다. 필드 getter는 값을 반환하며 고정 문자열 getter는 `std::string`을 만듭니다. 따라서 TryView 자체의 무복사 동작과 문자열 반환의 비용은 별개입니다. 생성·수명·예제는 [4.3 디코딩](#43-디코딩)의 TryView 항목에 있습니다.
 
-### 4.2 봉투
+### 4.2 Envelope
 
 **Envelope와 메시지 접근자**
 
@@ -625,10 +625,10 @@ void SetEnvelope(const protaco::Envelope& env);
 
 `id`는 메시지 id, `corr`는 이 응답이 가리키는 요청 id, `ts`는 1970-01-01 이후 UTC 마이크로초입니다. 메시지 생성 시 id·ts를 자동 설정하고 corr은 0으로 시작합니다. corr은 사용자가 설정합니다. `auto_envelope: false`인 메시지, 그리고 `DisableAutoEnvelope()` 호출 뒤의 모든 메시지는 id·ts도 0으로 시작합니다.
 
-- 매개변수: 각 setter의 새 값, 또는 봉투 전체 `env`
+- 매개변수: 각 setter의 새 값, 또는 Envelope 전체 `env`
 - 반환값: getter는 값 복사, setter는 void
 - 저장 위치: 프레임 헤더. SetTimestampAsNow는 NowUs의 현재 값을 기록
-- 주의: 직렬화·디코딩은 새 id를 발급하지 않으며, 디코딩한 봉투를 보존
+- 주의: 직렬화·디코딩은 새 id를 발급하지 않으며, 디코딩한 Envelope를 보존
 
 **C++**
 
@@ -719,7 +719,7 @@ protaco.SetClock(None)
 
 </details>
 
-**자동 봉투 끄기**
+**자동 Envelope 끄기**
 
 **C++**
 
@@ -731,7 +731,7 @@ void EnableAutoEnvelope();
 - 동작: DisableAutoEnvelope 뒤에 만든 메시지 객체는 id 0, ts 0으로 시작하고 NextId에서 id를 가져가지 않음. EnableAutoEnvelope는 기본 동작 복원
 - 범위: 모듈(DLL 또는 실행 파일)의 모든 메시지. 메시지 하나만 끄려면 그 YAML 헤더에 `auto_envelope: false`
 - 반환값: void
-- 주의: 스레드 안전. 이미 만든 객체의 봉투는 그대로. 디코딩과 중첩 필드에는 영향 없음
+- 주의: 스레드 안전. 이미 만든 객체의 Envelope는 그대로. 디코딩과 중첩 필드에는 영향 없음
 
 **C++**
 
@@ -861,7 +861,7 @@ bool TryToObject(std::vector<uint8_t>&& bytes, T* out,
 - 오류: 디코딩 실패를 반환값으로 보고. 문자열 형식은 [3.2](#32-디코딩-오류)
 - 입력 수명: 일반 오버로드는 호출 중에만 입력 필요. out 자신의 Serialize 버퍼도 입력 가능
 
-rvalue vector는 프레임의 메시지 version·min_version·모든 지문이 T의 배치와 같으면 버퍼를 넘겨받습니다. 성공한 객체가 원래 버퍼를 소유하며, 가변 필드나 ext가 바뀌기 전까지 Serialize가 이를 재사용합니다. 다른 배치의 허용 프레임은 일반 디코딩처럼 복사합니다. 이 최적화는 프레임 버퍼에 관한 것이며 가변 필드 객체의 디코딩은 필요합니다. 실패하더라도 이동한 입력 vector가 보존된다고 가정하지 않습니다.
+rvalue vector는 프레임의 메시지 version·min_version·모든 fingerprint가 T의 layout과 같으면 버퍼를 넘겨받습니다. 성공한 객체가 원래 버퍼를 소유하며, 가변 필드나 ext가 바뀌기 전까지 Serialize가 이를 재사용합니다. 다른 layout의 허용 프레임은 일반 디코딩처럼 복사합니다. 이 최적화는 프레임 버퍼에 관한 것이며 가변 필드 객체의 디코딩은 필요합니다. 실패하더라도 이동한 입력 vector가 보존된다고 가정하지 않습니다.
 
 **C++**
 
@@ -1038,9 +1038,9 @@ bool PeekHeader(const uint8_t* src, size_t size, Header* out,
 ```
 
 - 매개변수: 헤더까지 포함된 바이트, 길이, 결과 Header, 선택 오류 문자열
-- 반환값: 성공이면 true와 헤더 값. schemaHash는 송신 측 version의 지문
+- 반환값: 성공이면 true와 헤더 값. schemaHash는 송신 측 version의 fingerprint
 - 주의: 본문이 없어도 헤더가 완전하면 성공. 메시지 타입·본문 길이·본문 유효성 검사는 별도 디코딩에서 진행
-- 수명: Header는 이름과 봉투를 소유하므로 입력 바이트 수명에 종속되지 않음
+- 수명: Header는 이름과 Envelope를 소유하므로 입력 바이트 수명에 종속되지 않음
 - 전체 프레임 길이: 28 + 이름의 UTF-8 바이트 수 + 4 × 지원 version 수 + bodySize
 
 **C++**
@@ -1184,7 +1184,7 @@ struct TextStyle {
 
 - 설정: separator는 한 줄 항목 구분자, open·close는 괄호, indent는 단계당 공백 수, 0이면 한 줄
 - maxText: 문자열 생략 기준. C++은 바이트 수, C#·Python은 문자 수
-- envelope: 최상위 봉투 표시. Pretty는 indentWidth와 envelope=true인 TextStyle 반환
+- envelope: 최상위 Envelope 표시. Pretty는 indentWidth와 envelope=true인 TextStyle 반환
 - 수명: C++의 구분자 포인터는 ToString 호출이 끝날 때까지 유효한 문자열 필요
 
 필드는 YAML 순서로, ext는 끝의 `ext{...}`로 출력합니다. 문자열은 따옴표·역슬래시·줄바꿈 등을 escape하며 길면 `"abcd"...(+12)`처럼 생략합니다. bytes는 앞 8바이트까지 표시합니다. double은 유효 숫자 15자리이며 nan/inf/-inf를 사용하고 0과 -0은 `0`입니다. enum은 `Large(3)`, 모르는 번호는 `?(9)`, 없는 선택 필드는 `null`입니다. map은 키를 정렬하며 문자열은 코드 포인트 순서, 숫자·enum은 값 순서입니다.
@@ -1231,7 +1231,7 @@ pretty = route.ToString(protaco.TextStyle.Pretty())
 
 </details>
 
-예제 프로그램의 실제 출력입니다. 봉투 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
+예제 프로그램의 실제 출력입니다. Envelope 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
 
 ```text
 DeliveryRoute{rider="rider-7", stops=[RouteStop{orderId="A-100", address="1 Pizza St", etaMin=15}], note="", ext{priority=5}}
@@ -1303,7 +1303,7 @@ if result:
 
 </details>
 
-### 4.7 상수와 한도
+### 4.7 상수와 limit
 
 모두 `protaco` namespace에 있습니다.
 
@@ -1329,7 +1329,7 @@ enum : uint32_t {
 | kMaxFrameBytes | 전체 프레임 최대 4 GiB - 1바이트 |
 | kMaxKeyLength | 키 최대 255 UTF-8 바이트 |
 
-목록 원소 수는 남은 바이트 / 4, map 항목 수는 남은 바이트 / 8 이하로 검사합니다. C#의 더 작은 배열 한도는 [5.7](#57-상수와-한도)에 있습니다.
+목록 원소 수는 남은 바이트 / 4, map 항목 수는 남은 바이트 / 8 이하로 검사합니다. C#의 더 작은 배열 limit은 [5.7](#57-상수와-limit)에 있습니다.
 
 런타임 버전 가드는 `PROTACO_RUNTIME_0_6_0`입니다. 출력 폴더별 런타임 사본이 있어도 같은 버전은 한 번만 include됩니다. 다른 런타임 버전을 섞으면 재정의 오류가 발생합니다.
 
@@ -1368,9 +1368,9 @@ public const uint MsgSchemaHash = 0x7A0526C6u;
 
 클래스는 `Protaco.Message, Protaco.IMessage`를 구현합니다. 필드 이름은 YAML 키의 첫 글자를 대문자로 바꾼 속성입니다. 목록은 List, map은 Dictionary, bytes는 byte[]이며 속성으로 읽고 대입합니다.
 
-- 생성자: 스키마 기본값과 새 봉투로 초기화
+- 생성자: 스키마 기본값과 새 Envelope로 초기화
 - 속성 setter: 새 값 대입. 고정 문자열은 UTF-8 N바이트 초과 시 ArgumentException, 기존 값 유지
-- Serialize 반환값: 호출마다 봉투를 포함한 새 byte[]. 이전 배열은 이후 객체 수정에 영향 없음
+- Serialize 반환값: 호출마다 Envelope를 포함한 새 byte[]. 이전 배열은 이후 객체 수정에 영향 없음
 - ToString 반환값: 문자열. style 인자는 출력 설정
 - Ext: 열린 메시지만 공개. 반환값은 메시지 소유 Ext
 - 메타데이터: 매개변수 없는 함수 대신 const 필드
@@ -1391,7 +1391,7 @@ uint hash = demo.DeliveryRoute.MsgSchemaHash;
 
 </details>
 
-### 5.2 봉투
+### 5.2 Envelope
 
 <details>
 <summary>C# — 시그니처</summary>
@@ -1437,7 +1437,7 @@ public static bool TryGetTime(long timestampUs, out int year, out int month, out
 
 </details>
 
-id·corr·ts의 의미와 시각 범위는 [4.2](#42-봉투)와 같습니다. getter는 값, setter는 void를 반환합니다. GetEnvelope는 struct 복사본을 반환합니다. 시계 콜백은 UTC 마이크로초를 반환해야 하며 null로 시스템 시계를 복원합니다. NextId는 스레드 안전하고, 시계 교체는 메시지 생성 전에 합니다. DisableAutoEnvelope·EnableAutoEnvelope는 프로세스 단위이며 동작은 [4.2](#42-봉투)와 같습니다.
+id·corr·ts의 의미와 시각 범위는 [4.2](#42-envelope)와 같습니다. getter는 값, setter는 void를 반환합니다. GetEnvelope는 struct 복사본을 반환합니다. 시계 콜백은 UTC 마이크로초를 반환해야 하며 null로 시스템 시계를 복원합니다. NextId는 스레드 안전하고, 시계 교체는 메시지 생성 전에 합니다. DisableAutoEnvelope·EnableAutoEnvelope는 프로세스 단위이며 동작은 [4.2](#42-envelope)와 같습니다.
 
 시각 변환은 bool로 성공 여부를 반환하고 out 인자에 로컬 시각을 기록합니다. 실패 시 문자열 출력은 null, 정수 출력은 0입니다. 메시지 멤버에는 error 없는 오버로드도 있지만 `Envelopes.TryGetTime`에는 out error가 필요합니다.
 
@@ -1493,7 +1493,7 @@ public static bool TryView(byte[] bytes, out View view);
 - TryToObject: 성공이면 true. 실패이면 false와 default(T), error에 이유. out 인자는 항상 새로 씀
 - PeekHeader: 성공이면 true와 Header. 실패이면 header=null. 본문 검사는 하지 않음
 - TryView: 고정 필드 version만 제공. 성공이면 View, 실패이면 default(View)
-- View 수명: 내부 참조가 배열을 유지하며 배열이 변경되지 않는 동안 유효. 필드는 읽기 전용 속성, 봉투는 GetEnvelope()
+- View 수명: 내부 참조가 배열을 유지하며 배열이 변경되지 않는 동안 유효. 필드는 읽기 전용 속성, Envelope는 GetEnvelope()
 - 버퍼 소유권 이전: 해당 없음
 
 <details>
@@ -1580,7 +1580,7 @@ string name = demo.PizzaSizeNames.Name(size);
 
 Name은 제거된 값까지 조회하며 모르는 번호이면 null입니다. TryParse는 현재 version의 이름만 허용하고 실패 시 false와 default(PizzaSize)를 반환합니다. 수신한 모르는 번호는 enum 값으로 보존합니다.
 
-### 5.7 상수와 한도
+### 5.7 상수와 limit
 
 <details>
 <summary>C# — 시그니처</summary>
@@ -1596,7 +1596,7 @@ public const int MaxFrameBytes = 0x7FFFFFC7;
 
 </details>
 
-배열 한도 때문에 프레임은 최대 0x7FFFFFC7바이트로 약 2 GiB입니다. 나머지 한도는 [4.7](#47-상수와-한도)과 같습니다. 런타임용 멤버는 생성 클래스의 명시적 IMessage 구현에 있으며 응용 코드에서 직접 호출할 필요가 없습니다.
+배열 limit 때문에 프레임은 최대 0x7FFFFFC7바이트로 약 2 GiB입니다. 나머지 limit은 [4.7](#47-상수와-limit)과 같습니다. 런타임용 멤버는 생성 클래스의 명시적 IMessage 구현에 있으며 응용 코드에서 직접 호출할 필요가 없습니다.
 
 ## 6. Python API
 
@@ -1651,7 +1651,7 @@ def ToString(self, style=None): ...
 - 매개변수: fields는 YAML 키의 값. _stamp는 생성 코드가 중첩 필드에 사용하는 내부 초기화 선택
 - 속성: YAML 키 그대로. Python 예약어이면 끝에 `_` 추가(`from_`, `pass_`)
 - 생성자 오류: 모르는 키에 TypeError
-- Serialize 반환값: 봉투를 포함한 bytes
+- Serialize 반환값: Envelope를 포함한 bytes
 - Serialize 오류: 범위를 넘는 숫자, 긴 고정 문자열 등에 ProtacoError. 예: `orderId: 17 bytes, longer than string(16)`
 - 컨테이너: list·dict·bytes. 단일 자기 참조의 기본값은 None
 - 메타데이터: MsgName, MsgVersion, MsgMinVersion, MsgSchemaHash 클래스 속성
@@ -1755,7 +1755,7 @@ if result:
 
 </details>
 
-### 6.5 봉투와 시각
+### 6.5 Envelope와 시각
 
 <details>
 <summary>Python — 시그니처</summary>
@@ -1787,7 +1787,7 @@ protaco.TIMESTAMP_MAX  # 253402300799999999
 
 </details>
 
-id·corr·ts의 의미는 [4.2](#42-봉투)와 같습니다. getter는 값, setter는 None을 반환합니다. GetEnvelope는 복사본을 반환하고 SetEnvelope도 값을 복사합니다. NextId는 스레드 안전합니다. SetClock은 UTC 마이크로초를 반환하는 콜백을 받으며 None이면 시스템 시계로 돌아갑니다. 메시지 생성 전에 설정합니다. DisableAutoEnvelope·EnableAutoEnvelope는 프로세스 단위이며 동작은 [4.2](#42-봉투)와 같습니다.
+id·corr·ts의 의미는 [4.2](#42-envelope)와 같습니다. getter는 값, setter는 None을 반환합니다. GetEnvelope는 복사본을 반환하고 SetEnvelope도 값을 복사합니다. NextId는 스레드 안전합니다. SetClock은 UTC 마이크로초를 반환하는 콜백을 받으며 None이면 시스템 시계로 돌아갑니다. 메시지 생성 전에 설정합니다. DisableAutoEnvelope·EnableAutoEnvelope는 프로세스 단위이며 동작은 [4.2](#42-envelope)와 같습니다.
 
 시각 변환의 입력은 UTC 마이크로초이고 결과는 로컬 시각입니다. TryGetTime 및 메시지의 같은 기능은 Result.value에 `(date, time)`을 담습니다. Parts는 `(year, month, day, hour, minute, second, millisecond, microsecond)`입니다. 지원 범위 밖이나 변환 실패는 error에 기록합니다.
 
@@ -1850,7 +1850,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 
 디코더는 모르는 번호를 일반 int로 보존합니다. Python 예약어인 enum 멤버는 `None_`처럼 바뀌지만 Name·TryParse는 원래 YAML 이름을 사용합니다.
 
-### 6.8 상수와 한도
+### 6.8 상수와 limit
 
 <details>
 <summary>Python — 상수</summary>
@@ -1866,7 +1866,7 @@ protaco.MAX_FRAME_BYTES      # 0xFFFFFFFF
 
 </details>
 
-한도는 [4.7](#47-상수와-한도)과 같습니다. 고정 영역은 struct.Struct로 pack/unpack합니다. View와 C++의 이동 버퍼 인수 API는 해당 없음입니다.
+limit은 [4.7](#47-상수와-limit)과 같습니다. 고정 영역은 struct.Struct로 pack/unpack합니다. View와 C++의 이동 버퍼 인수 API는 해당 없음입니다.
 
 ## 7. 빌드와 시험
 
@@ -1949,12 +1949,12 @@ bin/
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs/Program.cs), [Python 시험](../protaco_compiler/tests/py/test_protaco.py)에 있습니다.
 
-- 생성기: 오류 코드별 YAML, 순환, namespace 혼용, 중첩 한도, 필드 타입 메시지의 version 기능 제한, enum default, 입력 순서 무관, `--check`의 최신·변조 결과 판정
-- 스키마 계약: FNV-1a 정규 텍스트, 이름·version·지문 불일치, 옛 지문 유지, 새 프레임을 자기 version으로 읽기, 옛 타입 선택, 송신 min_version 검사
-- 값과 컨테이너: 기본값, 고정 문자열 초과, bytes, 부호 없는 정수, UTF-8, enum, map, 자기 참조, 재귀 100단계 한도
+- 생성기: 오류 코드별 YAML, 순환, namespace 혼용, 중첩 limit, 필드 타입 메시지의 version 기능 제한, enum default, 입력 순서 무관, `--check`의 최신·변조 결과 판정
+- 스키마 계약: FNV-1a canonical text, 이름·version·fingerprint 불일치, 옛 fingerprint 유지, 새 프레임을 자기 version으로 읽기, 옛 타입 선택, 송신 min_version 검사
+- 값과 컨테이너: 기본값, 고정 문자열 초과, bytes, 부호 없는 정수, UTF-8, enum, map, 자기 참조, 재귀 100단계 limit
 - 오류와 경로: 필수 필드 누락, 중첩 경로, 닫힌 메시지의 키 거부·새 필드 버림, 모든 길이의 잘림, C++ 무작위 비트 반전
 - 버퍼와 API: C++ 고정 필드 직접 기록·Serialize 재사용·mutable 참조·복사·ext 대입·이동 버퍼 인수, C++·C# TryView, 16개를 넘는 가변 필드, C++14 전용 번역 단위
-- 봉투와 텍스트: 생성 시 id·시각 기록, 디코딩의 id 미소비, 시계 교체, 로컬 시각, PeekHeader, 세 언어 ToString 일치, Python 예약어 속성
+- Envelope와 텍스트: 생성 시 id·시각 기록, 디코딩의 id 미소비, 시계 교체, 로컬 시각, PeekHeader, 세 언어 ToString 일치, Python 예약어 속성
 - 상호 운용: C++ 골든 파일을 C#·Python에서 읽고 동일 입력의 바이트 비교. 골든 파일은 DeliveryRoute, PizzaOrder, Heartbeat, DeliveryProof, Numbers, Pie, Menu, Node
 
 map의 임의 순회 순서까지 언어 간 바이트 동일성을 보장하는 것은 아닙니다. 골든 시험은 해당 시험 데이터의 결과를 비교합니다. 성능 비교와 측정 조건은 [벤치마크](benchmark/README.ko.md)에 있습니다.

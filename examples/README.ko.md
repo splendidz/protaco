@@ -98,7 +98,7 @@ Windows 스크립트는 `MSBUILD`·`PYTHON`, Linux 스크립트는 `DOTNET`·`CX
 | 스키마 | 보여 주는 기능 | 쓰는 곳 |
 |---|---|---|
 | [RouteStop](schemas/RouteStop.yaml) | 고정 문자열, 정수 기본값 | `DeliveryRoute.stops` 원소 |
-| [DeliveryRoute](schemas/DeliveryRoute.yaml) | 가변 문자열, required, 중첩 메시지 목록 | 송수신·오류·로그·봉투 |
+| [DeliveryRoute](schemas/DeliveryRoute.yaml) | 가변 문자열, required, 중첩 메시지 목록 | 송수신·오류·로그·Envelope |
 | [Heartbeat](schemas/Heartbeat.yaml) | 고정 필드, `allow_extension: false` | 고정 버퍼·View |
 | [PizzaOrder](schemas/PizzaOrder.yaml) | 기본값, 목록, 중첩 메시지 | 확장 데이터 |
 | [Topping](schemas/Topping.yaml) | 작은 고정 필드 메시지 | `PizzaOrder.toppings` 원소 |
@@ -169,7 +169,7 @@ values:
 
 ## 4. 프로그램 설명
 
-[C++](cpp/main.cpp)은 아래 8단계를 실행합니다. [C#](cs/Program.cs)은 고정 버퍼 단계가 없는 7단계이고, [Python](py/main.py)은 zero-copy 단계가 없는 7단계입니다. 다음은 C++의 실제 실행 출력입니다. 봉투 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
+[C++](cpp/main.cpp)은 아래 8단계를 실행합니다. [C#](cs/Program.cs)은 고정 버퍼 단계가 없는 7단계이고, [Python](py/main.py)은 zero-copy 단계가 없는 7단계입니다. 다음은 C++의 실제 실행 출력입니다. Envelope 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
 
 ```text
 DeliveryRoute: 182 bytes
@@ -259,7 +259,7 @@ print("  rider=%s first=%s at %s in %d min, note=%s" % (got.rider, stop.orderId,
 
 </details>
 
-C++ `Serialize()`는 객체의 프레임 버퍼 참조를 반환합니다. 전송 수단에 `bytes.data()`와 `bytes.size()`를 넘깁니다. `ToObject<T>`는 이름·version·지문을 검사하고 실패하면 `protaco::CParseError`를 던집니다. `mutable_stops()`를 호출한 객체는 이후 수정을 추적할 수 없으므로 직렬화마다 가변 블록을 다시 만듭니다. C# `Serialize()`는 매번 새 배열을, Python은 `bytes`를 반환합니다.
+C++ `Serialize()`는 객체의 프레임 버퍼 참조를 반환합니다. 전송 수단에 `bytes.data()`와 `bytes.size()`를 넘깁니다. `ToObject<T>`는 이름·version·fingerprint를 검사하고 실패하면 `protaco::CParseError`를 던집니다. `mutable_stops()`를 호출한 객체는 이후 수정을 추적할 수 없으므로 직렬화마다 가변 블록을 다시 만듭니다. C# `Serialize()`는 매번 새 배열을, Python은 `bytes`를 반환합니다.
 
 ### 4.2 고정 필드만 있는 메시지
 
@@ -429,7 +429,7 @@ print(route.ToString(protaco.TextStyle.Pretty()))
 
 </details>
 
-기본 출력은 한 줄이며 `Pretty()`는 봉투와 필드를 줄별로 보여 줍니다. `etaMin`을 설정하지 않아 기본값 15가 출력됩니다. 확장 항목은 `ext{...}`에 모입니다.
+기본 출력은 한 줄이며 `Pretty()`는 Envelope와 필드를 줄별로 보여 줍니다. `etaMin`을 설정하지 않아 기본값 15가 출력됩니다. 확장 항목은 `ext{...}`에 모입니다.
 
 ### 4.6 enum·map·재귀
 
@@ -533,9 +533,9 @@ if (Heartbeat.TryView(received, out view))
 
 </details>
 
-`TryView`는 고정 필드만 있는 메시지의 프레임을 검사한 뒤 받은 바이트에서 필드를 읽습니다. C++은 원본 바이트가 살아 있고 바뀌지 않는 동안, C#은 배열이 바뀌지 않는 동안 View가 유효합니다. C++의 `ToObject(std::move(bytes))`는 지원 version 범위와 지문이 수신 타입의 배치와 일치할 때 버퍼 소유권을 가져갑니다. 이후 가변 필드나 ext를 바꾸기 전까지 `Serialize()`가 그 버퍼를 재사용합니다.
+`TryView`는 고정 필드만 있는 메시지의 프레임을 검사한 뒤 받은 바이트에서 필드를 읽습니다. C++은 원본 바이트가 살아 있고 바뀌지 않는 동안, C#은 배열이 바뀌지 않는 동안 View가 유효합니다. C++의 `ToObject(std::move(bytes))`는 지원 version 범위와 fingerprint가 수신 타입의 layout과 일치할 때 버퍼 소유권을 가져갑니다. 이후 가변 필드나 ext를 바꾸기 전까지 `Serialize()`가 그 버퍼를 재사용합니다.
 
-### 4.8 봉투
+### 4.8 Envelope
 
 **C++**
 
@@ -588,7 +588,7 @@ if when:
 
 ### 5.1 C++
 
-[RouteStop.g.h](gen/cpp/RouteStop.g.h)의 고정 문자열 setter는 UTF-8 바이트 한도를 검사합니다. `orderId`는 16바이트, `address`는 48바이트입니다. 정수 setter는 버퍼의 고정 위치에 기록합니다.
+[RouteStop.g.h](gen/cpp/RouteStop.g.h)의 고정 문자열 setter는 UTF-8 바이트 limit을 검사합니다. `orderId`는 16바이트, `address`는 48바이트입니다. 정수 setter는 버퍼의 고정 위치에 기록합니다.
 
 **C++**
 
@@ -696,7 +696,7 @@ void set_prices(const std::unordered_map<std::string, double>& value)
 <details>
 <summary>C#</summary>
 
-[Menu.g.cs](gen/cs/Menu.g.cs)의 속성과 직렬화 메서드입니다. C#은 PascalCase 속성을 사용하고 객체의 봉투를 직렬화합니다.
+[Menu.g.cs](gen/cs/Menu.g.cs)의 속성과 직렬화 메서드입니다. C#은 PascalCase 속성을 사용하고 객체의 Envelope를 직렬화합니다.
 
 ```csharp
 public PizzaSize DefaultSize { get; set; } = PizzaSize.Large;
@@ -718,7 +718,7 @@ public byte[] Serialize()
 <details>
 <summary>Python</summary>
 
-[Menu_g.py](gen/py/demo/Menu_g.py)의 클래스 선언 일부와 `_Bind` 호출입니다. 생성자 본문은 생략했습니다. `_Bind`는 생성 클래스의 고정·가변 필드 배치를 런타임에 등록합니다. `examples/gen/py`를 `sys.path`에 넣으면 `demo` 패키지를 import할 수 있습니다.
+[Menu_g.py](gen/py/demo/Menu_g.py)의 클래스 선언 일부와 `_Bind` 호출입니다. 생성자 본문은 생략했습니다. `_Bind`는 생성 클래스의 고정·가변 필드 layout을 런타임에 등록합니다. `examples/gen/py`를 `sys.path`에 넣으면 `demo` 패키지를 import할 수 있습니다.
 
 ```python
 class Menu(protaco.Message):
@@ -793,7 +793,7 @@ fields:
   - {key: rush, type: bool, added: 3}
 ```
 
-- version 2: 고정 필드 `weight`와 가변 필드 `tags` 추가. `weight`는 `id`와 `qty` 사이에 선언해도 기존 고정 영역 뒤에 배치.
+- version 2: 고정 필드 `weight`와 가변 필드 `tags` 추가. `weight`는 `id`와 `qty` 사이에 선언해도 기존 고정 영역 뒤에 layout.
 - version 3: `qty`, `note` 제거, `label`, `rush` 추가. `min_version: 1`이므로 제거한 두 줄 유지.
 - version 4: 필수였던 `color` 제거, `min_version: 2`로 version 1 지원 종료.
 
@@ -806,7 +806,7 @@ fields:
 | build3 | `build3::Order` (v3), `build3::v1::Order`, `build3::v2::Order` | 1..3 |
 | build4 | `build4::Order` (v4), `build4::v2::Order`, `build4::v3::Order` | 2..4 |
 
-옛 version 클래스의 지문은 그 version을 배포한 클래스와 같습니다. 예를 들어 `build3::v1::Order::MsgSchemaHash()`와 `build1::Order::MsgSchemaHash()`는 같은 값입니다.
+옛 version 클래스의 fingerprint는 그 version을 배포한 클래스와 같습니다. 예를 들어 `build3::v1::Order::MsgSchemaHash()`와 `build1::Order::MsgSchemaHash()`는 같은 값입니다.
 
 C#의 대응 이름은 `build3.Order`, `build3.v1.Order`입니다. Python은 `protaco_compiler/tests/gen/py`를 모듈 경로에 넣고 같은 모듈의 `Order`와 `v1.Order`를 사용합니다.
 
@@ -822,7 +822,7 @@ old = v1.Order()
 
 </details>
 
-### 6.3 고정 영역 배치
+### 6.3 고정 영역 layout
 
 | version | 고정 필드 순서 |
 |---|---|
@@ -834,7 +834,7 @@ old = v1.Order()
 
 ### 6.4 빌드 간 교환
 
-새 프레임을 옛 수신 측이 받는 경우입니다. `NewerFrameReadAsOwnVersion` 시험에서 build3이 보내면 build1은 version 1 배치로 읽고, `qty`는 기본값 1, `note`는 빈 문자열이 됩니다. 새 가변 필드 `tags`와 `label`은 ext에 남습니다. build2는 자기 필드인 `weight`와 `tags`를 읽습니다.
+새 프레임을 옛 수신 측이 받는 경우입니다. `NewerFrameReadAsOwnVersion` 시험에서 build3이 보내면 build1은 version 1 layout으로 읽고, `qty`는 기본값 1, `note`는 빈 문자열이 됩니다. 새 가변 필드 `tags`와 `label`은 ext에 남습니다. build2는 자기 필드인 `weight`와 `tags`를 읽습니다.
 
 옛 프레임을 새 수신 측이 받는 경우입니다. `OlderFrameNeedsOldType` 시험에서 build1의 프레임을 `build3::Order`로 읽으면 다음 오류입니다.
 

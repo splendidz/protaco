@@ -1,6 +1,6 @@
 # Benchmark: protaco and Protocol Buffers
 
-[한국어](README.ko.md) · [Back to README](../../README.md#84-measured-against-protocol-buffers)
+[한국어](README.ko.md) · [Back to README](../../README.md#fast-because-it-is-zero-copy)
 
 This folder contains code and results comparing protaco 0.6.0 and protobuf 3.21.12 on the same two messages. Prepare a separate build environment to run it.
 

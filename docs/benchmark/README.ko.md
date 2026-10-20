@@ -1,6 +1,6 @@
 # 벤치마크: protaco와 Protocol Buffers
 
-[English](README.md) · [README로 돌아가기](../../README.ko.md#84-protocol-buffers와-측정-비교)
+[English](README.md) · [README로 돌아가기](../../README.ko.md#zero-copy라서-빠릅니다)
 
 이 폴더에는 protaco 0.6.0과 protobuf 3.21.12를 같은 두 메시지로 비교한 코드와 측정 결과가 있습니다. 별도 빌드 환경을 준비해 실행합니다.
 
@@ -27,7 +27,7 @@
 - 디코딩: 바이트를 객체로 디코딩한 뒤 `i0` 필드 하나 읽기. protaco는 `TryToObject()`, protobuf는 재사용 메시지에 `ParseFromArray()`.
 - TryView: `Fixed512` 프레임을 `TryToObject`와 같은 규칙으로 검사한 뒤, 객체 전체로 복사하지 않고 `i0` 필드 하나 읽기.
 
-측정 항목마다 10,000회 예열 후 100,000회 호출을 20라운드 반복합니다. 각 라운드의 경과 시간을 호출 수로 나눈 값에서 평균과 표본 표준편차(sd)를 구합니다. `std::chrono::steady_clock`으로 시간을 재며, 입력과 결과에 volatile 값을 사용합니다. 공개 CSV는 세 번 실행한 결과에서 각 행의 평균 시간이 중앙값인 실행을 골랐습니다. 해당 실행의 평균과 sd를 함께 기록합니다.
+측정 항목마다 10,000회 warm-up 후 100,000회 호출을 20라운드 반복합니다. 각 라운드의 경과 시간을 호출 수로 나눈 값에서 평균과 표본 표준편차(sd)를 구합니다. `std::chrono::steady_clock`으로 시간을 재며, 입력과 결과에 volatile 값을 사용합니다. 공개 CSV는 세 번 실행한 결과에서 각 행의 평균 시간이 중앙값인 실행을 골랐습니다. 해당 실행의 평균과 sd를 함께 기록합니다.
 
 두 라이브러리 모두 호출 사이에 송신 객체와 디코딩 출력 객체를 재사용합니다. 다만 protaco의 `TryToObject`는 내부에서 새 객체로 디코딩한 뒤 출력 객체에 옮깁니다. protobuf는 출력 메시지의 기존 저장 공간을 다시 사용합니다.
 
@@ -39,7 +39,7 @@ Intel Core i9-13900H, Windows 11, MSVC 14.16(v141) x64 `/O2 /MD` 환경입니다
 
 ![Fixed512와 Mixed256의 Encoding·Decoding 시간](../img/benchmark.ko.svg)
 
-막대는 호출당 평균 시간, 수염은 20라운드의 표준편차입니다. 괄호는 protobuf 시간을 protaco 시간으로 나눈 배율입니다. 패널마다 세로축 범위가 다릅니다.
+막대는 호출당 평균 시간, error bar는 20라운드의 표준편차입니다. 괄호는 protobuf 시간을 protaco 시간으로 나눈 배율입니다. 패널마다 세로축 범위가 다릅니다.
 
 ### Fixed512
 

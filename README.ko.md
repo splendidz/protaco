@@ -53,7 +53,7 @@ C++ 런타임은 헤더 하나, C# 런타임은 소스 파일 하나, Python 런
 
 ### 옛 빌드와 섞여도 통신합니다
 
-메시지의 version을 올려도 아직 지원하는 옛 version의 클래스가 namespace로 나뉘어 같은 생성 파일에 함께 나옵니다. 새 빌드는 상대가 읽을 수 있는 배치의 클래스를 골라 보내고, 옛 빌드가 보낸 프레임도 그 version의 클래스로 그대로 읽습니다. 그래서 모든 프로그램과 장비를 한 번에 갱신하지 않아도 됩니다. 배포가 섞이는 기간에도 통신이 끊기지 않습니다.
+메시지의 version을 올려도 아직 지원하는 옛 version의 클래스가 namespace로 나뉘어 같은 생성 파일에 함께 나옵니다. 새 빌드는 상대가 읽을 수 있는 layout의 클래스를 골라 보내고, 옛 빌드가 보낸 프레임도 그 version의 클래스로 그대로 읽습니다. 그래서 모든 프로그램과 장비를 한 번에 갱신하지 않아도 됩니다. 배포가 섞이는 기간에도 통신이 끊기지 않습니다.
 
 ```cpp
 shop::Order order;          // 현재 version 3
@@ -64,7 +64,7 @@ shop::v1::Order legacy;     // 같은 헤더에 생성된 version 1 클래스. �
 
 ### 안정적이고 강건합니다
 
-프레임마다 메시지 이름, version, 스키마 지문이 실립니다. 받는 쪽은 셋을 모두 확인하고, 다른 메시지나 맞지 않는 배치를 조용히 읽는 대신 이유가 적힌 오류를 돌려줍니다. `Try*` 함수는 예외를 던지지 않고 성공 여부와 오류 문자열을 돌려줍니다. YAML 주석은 docstring이 되고, 필드마다 추가·제거된 version이 같은 YAML 파일에 남습니다.
+프레임마다 메시지 이름, version, 스키마 fingerprint가 실립니다. 받는 쪽은 셋을 모두 확인하고, 다른 메시지나 맞지 않는 layout을 조용히 읽는 대신 이유가 적힌 오류를 돌려줍니다. `Try*` 함수는 예외를 던지지 않고 성공 여부와 오류 문자열을 돌려줍니다. YAML 주석은 docstring이 되고, 필드마다 추가·제거된 version이 같은 YAML 파일에 남습니다.
 
 구조가 평평할 필요도 없습니다. 필드 타입으로 다른 YAML의 메시지를 쓰고, 목록, map, enum, 자기 자신을 가리키는 재귀 메시지까지 선언할 수 있습니다.
 
@@ -177,11 +177,11 @@ if not ok:
 - C++은 header-only `*.g.h`, C#은 `*.g.cs`, Python은 `*_g.py`로 출력합니다. 따로 빌드하거나 링크할 lib/dll이 없습니다. 생성 파일을 프로젝트에 넣으면 끝입니다!
 - 생성할 때마다 코드 옆에 같은 버전의 런타임을 씁니다. 생성기와 런타임 버전이 어긋날 일이 없습니다.
 - ⚡ C++에서는 고정 필드의 setter가 최종 바이트를 바로 기록하고, 바뀐 것이 없으면 `Serialize()`가 마지막 바이트를 그대로 돌려줍니다. 받는 쪽은 `TryView`로 복사 없이 읽습니다(C++, C#).
-- 🛡️ 받을 때 이름, version, 스키마 지문을 모두 확인합니다. 깨진 데이터가 조용히 읽히는 일이 없습니다.
+- 🛡️ 받을 때 이름, version, 스키마 fingerprint를 모두 확인합니다. 깨진 데이터가 조용히 읽히는 일이 없습니다.
 - 버전 관리가 필드 단위입니다. 필드마다 `added`와 `removed`로 이력을 남기고, 아직 지원하는 옛 version의 클래스도 `v1::Order`처럼 namespace로 나눠 함께 생성합니다.
 - 스키마에 없는 키-값도 확장 데이터(ext)로 실어 보낼 수 있습니다. 필요 없으면 `allow_extension: false`로 끕니다.
 - 예외 없는 API가 기본입니다. `Try*` 함수는 성공 여부를 돌려주고 실패 이유를 `경로: 이유` 형태의 문자열로 알려 줍니다.
-- 메시지마다 봉투(id, 상관 id, 마이크로초 시각)가 있습니다. 객체를 만들면 1씩 늘어나는 id와 현재 시각이 자동으로 찍히고, 응답에는 요청의 id를 상관 id로 담습니다.
+- 메시지마다 Envelope(id, correlation id, 마이크로초 시각)가 있습니다. 객체를 만들면 1씩 늘어나는 id와 현재 시각이 자동으로 찍히고, 응답에는 요청의 id를 correlation id로 담습니다.
 - 📝 `ToString()` 한 줄로 필드, enum 이름, 확장 데이터를 로그에 남깁니다.
 - 🐧 Windows와 Linux를 정식으로 지원합니다. 문자열은 어디서나 UTF-8입니다.
 
@@ -196,7 +196,7 @@ Protaco는 Protocol Buffers보다 좁은 범위를 다룹니다. 지원 언어�
 | 생성기와 런타임 | 생성 코드 옆에 같은 버전의 런타임 출력 | 설치한 런타임과 생성 코드 버전이 맞아야 함, 다르면 생성 헤더에서 컴파일 오류 |
 | Encoding | 고정 필드는 setter가 프레임에 직접 기록(zero-copy) | 직렬화할 때 필드마다 인코딩, 정수는 varint |
 | Decoding | 고정 필드 메시지는 `TryView`로 복사 없이 읽음(zero-copy) | 메시지 객체로 파싱 |
-| 메시지 식별 | 이름, version, 스키마 지문 검사 | 데이터에 이름과 스키마가 없음, 없는 필드는 기본값 |
+| 메시지 식별 | 이름, version, 스키마 fingerprint 검사 | 데이터에 이름과 스키마가 없음, 없는 필드는 기본값 |
 | 버전 관리 | YAML 하나에 필드별 이력, 옛 version 클래스를 namespace로 함께 생성 | 필드 번호로 관리, 메시지당 클래스 하나 |
 | 스키마 문법 | YAML, 구조체를 선언하듯 | `.proto` 언어 |
 | 언어 | C++, C#, Python(Windows, Linux) | 다수 |
@@ -305,7 +305,7 @@ bin/Release/net8.0/protacoc -I schemas --cpp_out gen/cpp --cs_out gen/cs --py_ou
 - 참조는 이름으로 해결. 입력 파일 순서는 상관없음
 - 한 번의 protacoc 실행에 넣는 파일은 모두 같은 namespace(PC405). namespace가 다르면 실행과 출력 폴더를 나눔
 - 파일 맨 위 주석은 클래스 docstring. 항목 바로 위 주석, 같은 줄 끝 주석, `desc`는 항목 docstring
-- 최상위 `key: value`와 `fields:`·`values:` 아래 `- {k: v, ...}` 항목(한 줄에 하나)만 사용. 일반 YAML 전체를 받지는 않음. 흐름 목록 `[a, b]`는 PC102
+- 최상위 `key: value`와 `fields:`·`values:` 아래 `- {k: v, ...}` 항목(한 줄에 하나)만 사용. 일반 YAML 전체를 받지는 않음. flow list `[a, b]`는 PC102
 - `{...}` 안의 `,`는 값을 끝냄. 그래서 map 타입은 따옴표로 감쌈: `{key: prices, type: "map<string, double>"}`
 
 ### 4.2 메시지 키
@@ -330,7 +330,7 @@ fields:
 | `fields` | 예 | 필드 목록 |
 | `min_version` | 아니오 | 아직 지원하는 가장 오래된 version, 기본값은 `version`. [버전 관리](#7-버전-관리) 참고 |
 | `allow_extension` | 아니오 | 확장 데이터 허용 여부, 기본값 `true` |
-| `auto_envelope` | 아니오 | 새 객체에 id와 현재 시각을 찍을지 여부, 기본값 `true`. [봉투](#65-봉투) 참고 |
+| `auto_envelope` | 아니오 | 새 객체에 id와 현재 시각을 찍을지 여부, 기본값 `true`. [Envelope](#65-envelope) 참고 |
 | `desc` | 아니오 | docstring에 들어가는 설명 |
 
 namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Python에서 패키지 폴더 `shop/orders/`가 됩니다.
@@ -391,7 +391,7 @@ namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Pyt
 
 - 목록 원소: `int`, `int64`, `uint`, `uint64`, `double`, `string`, `bytes`, enum, 메시지. `list<bool>`, `list<string(N)>`, 목록의 목록, 목록의 map은 PC404
 - 중첩: 자기 참조를 빼고 100단계까지(PC406). 두 메시지가 서로 참조하면 PC403
-- 고정 필드는 YAML에서 가변 필드 사이에 선언해도 본문 앞 고정 영역에 모임. 배치 순서는 추가된 version, 그다음 선언 순
+- 고정 필드는 YAML에서 가변 필드 사이에 선언해도 본문 앞 고정 영역에 모임. layout 순서는 추가된 version, 그다음 선언 순
 
 ### 4.5 enum
 
@@ -413,7 +413,7 @@ values:
 - 최상위 키: `enum`, `version`, `min_version`, `namespace`, `desc`, `values`. 값 속성: `key`, `value`(int32), `added`, `removed`, `desc`
 - 값 번호는 한 번 쓰면 다시 쓰지 않음(PC318). 값을 빼려면 줄을 지우지 않고 `removed: N`을 붙임. 번호를 계속 점유하고, 옛 프레임을 출력할 때 이름이 나옴
 - 직렬화 데이터에는 int32 번호가 실림. 받는 쪽이 모르는 번호도 버리지 않고 그대로 보관
-- 스키마 지문에는 enum 이름만 들어감. 값을 추가해도 이 enum을 쓰는 메시지의 지문은 그대로
+- 스키마 fingerprint에는 enum 이름만 들어감. 값을 추가해도 이 enum을 쓰는 메시지의 fingerprint는 그대로
 - `ToString()`은 `이름(번호)`로 출력: `defaultSize=Large(3)`. 모르는 번호는 `?(9)`
 
 언어별 생성 결과입니다.
@@ -556,7 +556,7 @@ fields:
 - 재귀 필드(`list<Self>`, 단일 `Self`)는 `required` 불가(PC306)
 - map 값으로 자기 자신을 쓸 수 없음(PC403). libstdc++의 `std::unordered_map`이 완전한 타입을 요구하기 때문
 - 두 메시지가 서로 참조하는 순환(A → B → A)은 PC403
-- 재귀 메시지는 자기 필드의 타입으로 쓰이므로 version 기능(`min_version`, `added`, `removed`)을 쓸 수 없음(PC407, [7.9](#79-배치-규칙))
+- 재귀 메시지는 자기 필드의 타입으로 쓰이므로 version 기능(`min_version`, `added`, `removed`)을 쓸 수 없음(PC407, [7.9](#79-layout-규칙))
 - 디코딩할 때 실제 중첩이 100단계를 넘으면 `nesting too deep`
 
 **C++**
@@ -669,9 +669,9 @@ if not channel:
 
 ### 5.4 닫힌 메시지
 
-`allow_extension: false`이면 확장 API가 생성되지 않습니다(Python은 `ext` 속성이 남아 있지만 `SetValue`가 `ext is off for this message (allow_extension false)`로 실패). 같은 version 프레임에 모르는 키가 있으면 `unknown key (allow_extension false)`로 실패합니다. 더 새 version의 프레임은 수신 측 version의 지문을 확인한 뒤 새 필드를 버립니다.
+`allow_extension: false`이면 확장 API가 생성되지 않습니다(Python은 `ext` 속성이 남아 있지만 `SetValue`가 `ext is off for this message (allow_extension false)`로 실패). 같은 version 프레임에 모르는 키가 있으면 `unknown key (allow_extension false)`로 실패합니다. 더 새 version의 프레임은 수신 측 version의 fingerprint를 확인한 뒤 새 필드를 버립니다.
 
-이 설정도 스키마 지문에 들어갑니다. 배포한 계약에서 값을 바꾸면 호환되지 않으므로 처음부터 메시지의 확장 정책을 정합니다.
+이 설정도 스키마 fingerprint에 들어갑니다. 배포한 계약에서 값을 바꾸면 호환되지 않으므로 처음부터 메시지의 확장 정책을 정합니다.
 
 ## 6. 생성 API
 
@@ -683,14 +683,14 @@ if not channel:
 
 | 항목 | API | 동작 |
 |---|---|---|
-| 생성자 | `<Name>()` | 모든 필드를 기본값으로 초기화, 봉투에 새 id와 현재 시각 기록 |
+| 생성자 | `<Name>()` | 모든 필드를 기본값으로 초기화, Envelope에 새 id와 현재 시각 기록 |
 | 고정 필드 | `T get_<k>() const`, `void set_<k>(T)` | 프레임 버퍼에 직접 읽고 쓰기 |
 | 고정 문자열 | `bool set_<k>(const std::string&, std::string* error = nullptr)` | 길이를 넘으면 `false`, 기존 값 유지 |
 | 가변 필드 | `const T& get_<k>() const`, `void set_<k>(const T&)` | 읽기와 대입 |
 | 가변 값 수정 | `T& mutable_<k>()` | 목록, map, bytes, 메시지를 제자리에서 수정. `string`에는 없음 |
 | 선택 필드 | `has_<k>()`, `clear_<k>()` | 단일 자기 참조 필드, [4.7](#47-재귀-메시지) |
 | 확장 데이터 | `GetExt()`, `GetMutableExt()` | 열린 메시지만 |
-| 봉투 | `GetId()`, `SetCorr()`, `SetTimestampAsNow()` 등 | [6.5](#65-봉투) |
+| Envelope | `GetId()`, `SetCorr()`, `SetTimestampAsNow()` 등 | [6.5](#65-envelope) |
 | 직렬화 | `const std::vector<uint8_t>& Serialize() const` | 객체의 프레임 버퍼 참조 |
 | 로그 | `std::string ToString(const protaco::TextStyle& = protaco::TextStyle()) const` | [9. 텍스트 출력](#9-텍스트-출력) |
 | 정적 정보 | `MsgName()`, `MsgVersion()`, `MsgMinVersion()`, `MsgSchemaHash()` | 분기와 진단 |
@@ -743,7 +743,7 @@ if not channel:
   std::string log = route.ToString(style);
   ```
 
-- `TryView<T>`: [6.6 zero-copy](#66-zero-copy). `CExt`: [5.2](#52-쓰기와-읽기). `NextId()`, `NowUs()`, `SetClock()`, `DisableAutoEnvelope()`, `TryGetTime()`: [6.5 봉투](#65-봉투)
+- `TryView<T>`: [6.6 zero-copy](#66-zero-copy). `CExt`: [5.2](#52-쓰기와-읽기). `NextId()`, `NowUs()`, `SetClock()`, `DisableAutoEnvelope()`, `TryGetTime()`: [6.5 Envelope](#65-envelope)
 
 `CParseError`는 던진 모듈 안에서 잡고 DLL 경계를 넘기지 않습니다. DLL 경계에서는 `TryToObject`를 씁니다.
 
@@ -773,7 +773,7 @@ string pretty = route.ToString(Protaco.TextStyle.Pretty());
 
 - 필드는 키의 첫 글자만 대문자로 바꾼 속성(`orderId` → `OrderId`). 고정 문자열은 길이를 넘기면 `ArgumentException`
 - 열린 메시지는 `Ext` 속성. API는 [5.2](#52-쓰기와-읽기)
-- 봉투는 C++과 같은 이름의 메서드(`GetId()`, `SetCorr()`, `SetTimestampAsNow()` 등)
+- Envelope는 C++과 같은 이름의 메서드(`GetId()`, `SetCorr()`, `SetTimestampAsNow()` 등)
 - `MsgName`, `MsgVersion`, `MsgMinVersion`, `MsgSchemaHash`는 상수: `demo.DeliveryRoute.MsgName`
 - 옛 version은 `shop.v1.Order`처럼 별도 namespace
 - `ProtacoException`의 `Path`, `What`으로 위치와 이유 확인. `Message`는 `경로: 이유`
@@ -810,15 +810,15 @@ print(route.ToString(protaco.TextStyle.Pretty()))
 - 표준 모듈과 같은 이름의 namespace(예: `types`)는 그 표준 모듈을 가리므로 피함
 - 고정 영역은 `struct.Struct` 한 번으로 묶고 풀므로 View가 따로 없음
 
-### 6.5 봉투
+### 6.5 Envelope
 
-프레임 헤더에는 봉투 값 세 개가 실립니다. 객체를 만들 때 id와 시각이 자동으로 찍히고, corr는 사용자가 씁니다.
+프레임 헤더에는 Envelope 값 세 개가 실립니다. 객체를 만들 때 id와 시각이 자동으로 찍히고, corr는 사용자가 씁니다.
 
 - id(u32): 메시지마다 새 번호. 모듈 전역 카운터라서 여러 메시지 종류가 섞인 로그에서도 id 하나로 메시지를 찾음. 1부터 시작, 0은 건너뜀, 스레드 안전
 - corr(u32): 응답이 가리키는 요청의 id
 - ts(i64): 1970-01-01 기준 UTC 마이크로초
-- 디코딩한 객체는 새 id를 쓰지 않고 받은 봉투를 그대로 가짐. 생성 코드가 만드는 중첩 필드 객체도 id를 쓰지 않음(중첩 본문에는 봉투가 없음)
-- 봉투를 직접 채우려면 그 메시지의 YAML 헤더에 `auto_envelope: false`, 모듈의 모든 메시지에 적용하려면 `protaco::DisableAutoEnvelope()`(C# `Protaco.Envelopes.DisableAutoEnvelope`, Python `protaco.DisableAutoEnvelope`). 이때 새 객체는 id 0, ts 0으로 시작. `EnableAutoEnvelope()`는 기본 동작 복원
+- 디코딩한 객체는 새 id를 쓰지 않고 받은 Envelope를 그대로 가짐. 생성 코드가 만드는 중첩 필드 객체도 id를 쓰지 않음(중첩 본문에는 Envelope가 없음)
+- Envelope를 직접 채우려면 그 메시지의 YAML 헤더에 `auto_envelope: false`, 모듈의 모든 메시지에 적용하려면 `protaco::DisableAutoEnvelope()`(C# `Protaco.Envelopes.DisableAutoEnvelope`, Python `protaco.DisableAutoEnvelope`). 이때 새 객체는 id 0, ts 0으로 시작. `EnableAutoEnvelope()`는 기본 동작 복원
 
 **C++**
 
@@ -878,7 +878,7 @@ reply.SetTimestampAsNow()
 
 ### 6.6 zero-copy
 
-고정 필드만 있는 메시지는 `TryView`로 받은 바이트를 복사 없이 읽습니다. `TryToObject`와 같은 프레임 검사(이름, version, 지문, 길이)를 하고, 통과하면 view가 바이트를 가리킵니다.
+고정 필드만 있는 메시지는 `TryView`로 받은 바이트를 복사 없이 읽습니다. `TryToObject`와 같은 프레임 검사(이름, version, fingerprint, 길이)를 하고, 통과하면 view가 바이트를 가리킵니다.
 
 **C++**
 
@@ -901,13 +901,13 @@ if (demo.Heartbeat.TryView(received, out view))
 
 </details>
 
-- `View`는 그 version에 가변 필드가 없는 메시지에만 생성됨. 필드 getter와 봉투 getter만 있음
+- `View`는 그 version에 가변 필드가 없는 메시지에만 생성됨. 필드 getter와 Envelope getter만 있음
 - `TryView`는 받은 바이트를 복사하지 않음. C++은 고정 영역 뒤 항목(확장 데이터, 새 version 필드)이 16개 이하이면 할당도 없고, C#은 프레임 검사용 객체를 만듦. view는 바이트를 가리킬 뿐이라 바이트가 살아 있고 바뀌지 않는 동안만 유효. 고정 문자열 getter는 읽을 때 `std::string`(C# `string`)을 새로 만듦
 - C++에 임시 vector(`std::vector&&`)를 넘기면 컴파일 오류. 바로 사라질 바이트를 가리키지 않게 막는 장치
 - 확장 데이터(ext)는 view로 볼 수 없음
 - Python에는 View가 없음([6.4](#64-python))
 
-C++에서는 받은 버퍼를 객체에 넘겨줄 수도 있습니다. `ToObject`나 `TryToObject`에 `std::move`로 vector를 주면, 프레임이 그 클래스의 version 배치와 정확히 같을 때(같은 지원 version 범위와 지문) 그 버퍼가 그대로 객체의 프레임 버퍼가 됩니다. 이후 `Serialize()`는 가변 필드나 ext를 바꾸기 전까지 그 버퍼를 돌려줍니다. 더 새 version 등 다른 프레임은 보통처럼 복사합니다.
+C++에서는 받은 버퍼를 객체에 넘겨줄 수도 있습니다. `ToObject`나 `TryToObject`에 `std::move`로 vector를 주면, 프레임이 그 클래스의 version layout과 정확히 같을 때(같은 지원 version 범위와 fingerprint) 그 버퍼가 그대로 객체의 프레임 버퍼가 됩니다. 이후 `Serialize()`는 가변 필드나 ext를 바꾸기 전까지 그 버퍼를 돌려줍니다. 더 새 version 등 다른 프레임은 보통처럼 복사합니다.
 
 **C++**
 
@@ -932,7 +932,7 @@ demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(byt
 
 ### 7.1 왜 필요한가
 
-프로그램은 한꺼번에 갱신되지 않습니다. 새 빌드와 옛 빌드가 함께 통신하는 동안 어떤 메시지를 읽을 수 있고 언제 거부해야 하는지가 분명해야 합니다. Protaco는 YAML 하나에 지원하는 version의 이력을 기록하고, 수신 실패를 이름, version, 지문별 오류로 알려 줍니다.
+프로그램은 한꺼번에 갱신되지 않습니다. 새 빌드와 옛 빌드가 함께 통신하는 동안 어떤 메시지를 읽을 수 있고 언제 거부해야 하는지가 분명해야 합니다. Protaco는 YAML 하나에 지원하는 version의 이력을 기록하고, 수신 실패를 이름, version, fingerprint별 오류로 알려 줍니다.
 
 | 변경 | YAML에서 할 일 | 옛 빌드에서 일어나는 일 |
 |---|---|---|
@@ -941,7 +941,7 @@ demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(byt
 
 ### 7.2 작은 변경
 
-필드를 추가하거나 제거할 때는 `version`을 올리고 그 필드에 `added`나 `removed`를 붙입니다. `min_version`은 그대로 둡니다. 옛 배치의 지문이 유지되므로 새 빌드와 옛 빌드가 계속 통신합니다. 옛 수신 측이 필수로 요구하는 가변 필드를 제거했다면 [배치 규칙](#79-배치-규칙)에 따라 옛 클래스로 보냅니다.
+필드를 추가하거나 제거할 때는 `version`을 올리고 그 필드에 `added`나 `removed`를 붙입니다. `min_version`은 그대로 둡니다. 옛 layout의 fingerprint가 유지되므로 새 빌드와 옛 빌드가 계속 통신합니다. 옛 수신 측이 필수로 요구하는 가변 필드를 제거했다면 [layout 규칙](#79-layout-규칙)에 따라 옛 클래스로 보냅니다.
 
 ### 7.3 개편 수준 변경
 
@@ -951,7 +951,7 @@ demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(byt
 message version too new: Order reads version 1, sender supports 3..3
 ```
 
-새 빌드도 너무 오래된 프레임을 `message version too old`로 거부합니다. 서로 다른 배치를 잘못 읽는 일은 생기지 않습니다. 크게 바뀌는 필드는 기존 필드를 `removed`로 남기고 새 키의 필드를 `added`로 추가합니다.
+새 빌드도 너무 오래된 프레임을 `message version too old`로 거부합니다. 서로 다른 layout을 잘못 읽는 일은 생기지 않습니다. 크게 바뀌는 필드는 기존 필드를 `removed`로 남기고 새 키의 필드를 `added`로 추가합니다.
 
 ### 7.4 version 선언
 
@@ -981,7 +981,7 @@ fields:
 - C#: `shop.Order`, `shop.v1.Order`, `shop.v2.Order`
 - Python: `Order_g.py` 안의 `Order`, `v1.Order`, `v2.Order`
 
-옛 version 클래스는 지원하는 version마다 하나씩, 그 version의 필드로 생성됩니다. 프레임 헤더에는 송신 측 `version`, `min_version`, 지원하는 version마다 4바이트 스키마 지문이 실립니다. 새 version을 추가해도 옛 version의 지문은 그대로입니다. 지문 계산 방법은 [스키마 지문](docs/reference.ko.md#1-스키마-지문)에 있습니다.
+옛 version 클래스는 지원하는 version마다 하나씩, 그 version의 필드로 생성됩니다. 프레임 헤더에는 송신 측 `version`, `min_version`, 지원하는 version마다 4바이트 스키마 fingerprint가 실립니다. 새 version을 추가해도 옛 version의 fingerprint는 그대로입니다. fingerprint 계산 방법은 [스키마 fingerprint](docs/reference.ko.md#1-스키마-fingerprint)에 있습니다.
 
 ### 7.6 수신 판정
 
@@ -994,9 +994,9 @@ if 프레임의 version < 3
     거부: message version too old: Order reads version 3 or newer, got 1. Use the v1 type
 if 송신 측 min_version > 3
     거부: message version too new: Order reads version 3, sender supports 4..5
-if 프레임에 실린 version 3 지문 != Order::MsgSchemaHash()
+if 프레임에 실린 version 3 fingerprint != Order::MsgSchemaHash()
     거부: schema mismatch: Order version 3 expected 0x..., got 0x...
-version 3 배치로 디코딩
+version 3 layout으로 디코딩
     더 새 version의 가변 필드는 열린 메시지면 ext에 보관, 닫힌 메시지면 버림
 ```
 
@@ -1004,7 +1004,7 @@ version 3 배치로 디코딩
 
 ### 7.7 송신
 
-클래스는 항상 자기 version으로 보냅니다. `min_version`부터 자기 version까지의 지문을 프레임에 넣습니다. 옛 배치가 필요한 상대에게는 `v1::Order` 같은 옛 클래스에 값을 채워 직렬화합니다.
+클래스는 항상 자기 version으로 보냅니다. `min_version`부터 자기 version까지의 fingerprint를 프레임에 넣습니다. 옛 layout이 필요한 상대에게는 `v1::Order` 같은 옛 클래스에 값을 채워 직렬화합니다.
 
 ### 7.8 배포 경우별 그림
 
@@ -1019,23 +1019,23 @@ sequenceDiagram
     participant V3 as 새 빌드 v3 (1..3 지원)
     participant V4 as 개편 빌드 v4 (2..4 지원)
     V3->>V1: Order version 3
-    Note over V1: v1 배치로 읽음<br/>새 가변 필드는 ext에 보관
+    Note over V1: v1 layout으로 읽음<br/>새 가변 필드는 ext에 보관
     V1->>V3: Order version 1
     Note over V3: Order로는 too old<br/>PeekHeader 확인 후 v1::Order로 읽음
     V4->>V1: Order version 4
     Note over V1: too new<br/>sender supports 2..4
     V4->>V2: v3::Order로 보냄 (color 포함)
-    Note over V2: v2 배치로 읽음
+    Note over V2: v2 layout으로 읽음
 ```
 
-### 7.9 배치 규칙
+### 7.9 layout 규칙
 
-- 고정 필드는 추가된 version, 그다음 선언 순으로 배치. 새 version의 고정 필드는 기존 고정 영역 끝에 붙음
+- 고정 필드는 추가된 version, 그다음 선언 순으로 놓음. 새 version의 고정 필드는 기존 고정 영역 끝에 붙음
 - 제거된 고정 필드의 바이트는 계속 남고 기본값으로 채움. YAML의 그 줄도 남김
 - 제거된 가변 필드는 보내지 않음. `min_version`이 그 필드의 `removed`에 도달하면 YAML의 그 줄을 지움(PC313)
 - 제거된 가변 필드가 옛 version에서 `required`였다면 새 프레임은 `missing required (frame version 4 read as 2)`로 거부될 수 있음. 이런 상대에게는 그 필드가 남아 있는 옛 클래스로 보냄
 - 필드 타입으로 쓰이는 메시지는 `min_version`, `added`, `removed`를 쓸 수 없음(PC407). 중첩 본문에는 version이 실리지 않기 때문. 중첩 구조를 바꿔야 하면 새 메시지를 추가. 재귀 메시지도 자기 필드의 타입이므로 같은 규칙
-- enum 값의 추가·제거는 enum의 `version`을 올리고 값에 `added`·`removed`를 붙임. 지문에는 enum 이름만 들어가므로 메시지 호환성에는 영향 없음. 받는 쪽은 모르는 번호도 보관
+- enum 값의 추가·제거는 enum의 `version`을 올리고 값에 `added`·`removed`를 붙임. fingerprint에는 enum 이름만 들어가므로 메시지 호환성에는 영향 없음. 받는 쪽은 모르는 번호도 보관
 
 ### 7.10 배포된 스키마 바꾸기
 
@@ -1044,7 +1044,7 @@ sequenceDiagram
 - 필드 추가(`added`), 필드 제거(`removed`), `min_version` 상향은 각각 `version`을 올려 반영. 새 메시지 추가는 언제나 가능
 - 기존 필드의 타입, `required`, `default`, 이름, 순서를 바꾸거나 제거한 키를 다시 쓰면 옛 계약과 호환되지 않음. 기존 필드를 제거하고 새 키의 필드를 추가
 - 메시지 이름과 `allow_extension` 변경도 기존 계약과 호환되지 않음. 새 메시지로 분리하거나 옛 version 지원을 끝냄
-- 호환되지 않는 스키마로 만든 프레임은 이름이나 지문 검사에서 거부됨
+- 호환되지 않는 스키마로 만든 프레임은 이름이나 fingerprint 검사에서 거부됨
 - 주석, `desc`, `namespace`는 직렬화 바이트에 영향 없음
 
 실제 개정 파일과 빌드 사이 교환은 [버전 관리 예제](examples/README.ko.md#6-버전-관리-예제)에 있습니다.
@@ -1106,7 +1106,7 @@ const auto& again = route.Serialize();   // 가변 필드와 ext가 그대로면
 - PC: Intel Core i9-13900H, Windows 11
 - 컴파일러: MSVC 14.16(v141) x64, `/O2 /MD`
 - 대상: protaco 0.6.0, protobuf 3.21.12 정적 라이브러리(같은 도구 집합으로 빌드)
-- 반복: 10,000회 예열 후 100,000회 호출 × 20라운드. 라운드별 호출당 시간의 평균과 표준편차. 세 번 실행해 사례마다 중앙값인 실행을 씀
+- 반복: 10,000회 warm-up 후 100,000회 호출 × 20라운드. 라운드별 호출당 시간의 평균과 표준편차. 세 번 실행해 사례마다 중앙값인 실행을 씀
 - 객체는 호출 사이에 재사용(두 라이브러리의 권장 방식)
 - Encoding: 모든 필드 setter와 직렬화. protobuf는 재사용 버퍼에 `SerializeToArray`
 - Decoding: 바이트를 객체로 바꾼 뒤 필드 하나 읽기. protaco `TryToObject`, protobuf는 재사용 메시지에 `ParseFromArray`
@@ -1119,8 +1119,8 @@ const auto& again = route.Serialize();   // 가변 필드와 ext가 그대로면
 
 결과 해석입니다. zero-copy로 빨라지는 이유는 [zero-copy라서 빠릅니다](#zero-copy라서-빠릅니다)에 있습니다.
 
-- 문자열이 있는 Decoding은 차이가 작음. protaco는 새 객체로 디코딩해서 15바이트(MSVC의 짧은 문자열 한도)를 넘는 문자열마다 할당이 생기고, protobuf는 재사용 메시지의 문자열 버퍼를 다시 씀
-- 정수는 고정 폭이고 헤더에 이름, version, 지문이 실리므로 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음(가변 길이 256 B: 300 B 대 268 B)
+- 문자열이 있는 Decoding은 차이가 작음. protaco는 새 객체로 디코딩해서 15바이트(MSVC의 짧은 문자열 limit)를 넘는 문자열마다 할당이 생기고, protobuf는 재사용 메시지의 문자열 버퍼를 다시 씀
+- 정수는 고정 폭이고 헤더에 이름, version, fingerprint가 실리므로 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음(가변 길이 256 B: 300 B 대 268 B)
 - 수치는 이 메시지와 이 PC의 결과. 데이터 구성과 하드웨어에 따라 달라짐
 
 스키마, 측정 코드, 재현 방법은 [docs/benchmark/README.ko.md](docs/benchmark/README.ko.md)에 있습니다.
@@ -1156,7 +1156,7 @@ pretty = route.ToString(protaco.TextStyle.Pretty())
 
 </details>
 
-C++ 예제 프로그램의 실제 출력입니다(봉투 시각은 실행마다 다르고, C#·Python 예제는 다른 봉투 id를 출력).
+C++ 예제 프로그램의 실제 출력입니다(Envelope 시각은 실행마다 다르고, C#·Python 예제는 다른 Envelope id를 출력).
 
 ```text
 DeliveryRoute{rider="rider-7", stops=[RouteStop{orderId="A-100", address="1 Pizza St", etaMin=15}], note="", ext{priority=5}}
@@ -1185,7 +1185,7 @@ Menu{store="NAPOLI-1", defaultSize=Large(3), prices={"margherita": 9.5, "marinar
 - map: 키를 정렬해서 출력
 - 값이 없는 선택 필드: `null`
 - `TextStyle` 기본값: `separator = ", "`, `open = "{"`, `close = "}"`, `indent = 0`(한 줄), `maxText = 64`, `envelope = false`
-- `TextStyle::Pretty(indentWidth = 2)`: 한 항목 한 줄, 들여쓰기, 맨 앞에 봉투. ts가 시각 범위 밖이면 정수 그대로(`ts=1000`)
+- `TextStyle::Pretty(indentWidth = 2)`: 한 항목 한 줄, 들여쓰기, 맨 앞에 Envelope. ts가 시각 범위 밖이면 정수 그대로(`ts=1000`)
 - ASCII 값은 세 언어가 같은 결과. 길이 제한은 C++은 바이트 수, C#과 Python은 문자 수 기준
 
 전체 흐름은 [예제 프로그램](examples/README.ko.md#45-텍스트-출력)에서 볼 수 있습니다.
@@ -1203,10 +1203,10 @@ Frame
   MsgVer   u16     메시지 version
   MinVer   u16     송신 측이 지원하는 가장 오래된 version
   Id       u32 ┐
-  Corr     u32 │   봉투
+  Corr     u32 │   Envelope
   Ts       i64 ┘
   BodyLen  u32     본문 크기, 잘림과 뒤에 붙은 바이트 검출
-  Schema   u32 × (MsgVer - MinVer + 1)   version MinVer..MsgVer의 지문
+  Schema   u32 × (MsgVer - MinVer + 1)   version MinVer..MsgVer의 fingerprint
   Body
 
 Body (중첩 메시지도 같은 모양)
@@ -1234,16 +1234,16 @@ TacoType
 
 enum은 Type 2(int)로 실립니다. 헤더 크기는 28바이트 + 이름 + 지원 version당 4바이트입니다. 모르는 Type 번호도 길이가 있으므로 건너뛰거나 ext로 보관할 수 있습니다.
 
-한도는 다음과 같습니다.
+limit은 다음과 같습니다.
 
-- 프레임: 4 GiB - 1(모든 길이 u32). C#은 배열 한도로 약 2 GiB
+- 프레임: 4 GiB - 1(모든 길이 u32). C#은 배열 limit으로 약 2 GiB
 - 중첩: 100단계. protacoc와 디코더가 모두 검사
 - 지원 version: 메시지당 255개
 - 가변 필드: 본문당 1,024개
 - 목록 원소 수: 남은 바이트를 4로 나눈 값 이하. map 항목 수: 남은 바이트를 8로 나눈 값 이하
 - 키: 255바이트
 
-지문 계산과 오류 목록은 [상세 참조](docs/reference.ko.md)에 있습니다.
+fingerprint 계산과 오류 목록은 [상세 참조](docs/reference.ko.md)에 있습니다.
 
 ## 11. 제약 사항
 
@@ -1251,7 +1251,7 @@ enum은 Type 2(int)로 실립니다. 헤더 크기는 28바이트 + 이름 + 지
 - 고정 길이 배열 없음. `list<T>`를 씀
 - 목록의 목록, 목록의 map 없음. 원소를 메시지로 감싸거나 map 값에 목록을 둠
 - 재귀는 `list<Self>`와 단일 `Self` 필드만. map 값의 자기 참조와 서로 참조하는 메시지는 없음
-- 프레임마다 헤더 28바이트, 이름, 지원 version당 4바이트 지문이 붙고 고정 문자열은 padding을 채움. 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음
+- 프레임마다 헤더 28바이트, 이름, 지원 version당 4바이트 fingerprint가 붙고 고정 문자열은 padding을 채움. 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음
 - map의 바이트 순서는 컨테이너 순회 순서. 같은 내용의 map이라도 바이트가 같다는 보장이 없으므로 바이트 비교로 같음을 판정하지 않음
 - C#이 읽고 쓰는 프레임은 약 2 GiB까지
 - 진단과 생성 코드의 고정 문구는 영어. docstring은 YAML 주석의 언어를 그대로 씀
