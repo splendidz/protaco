@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Filters follow the real folders. -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp_examples">
-      <UniqueIdentifier>{298CAD0B-5F19-52E0-97D7-F9CF41447FD1}</UniqueIdentifier>
+      <UniqueIdentifier>{4067BFE1-BBC6-5DA0-9986-2D77B4B77959}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas">
       <UniqueIdentifier>{7A83212D-2981-505E-B771-061E2EC7A548}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated">
-      <UniqueIdentifier>{EC778B83-D8E0-5BF9-87B7-5E59B37B4C98}</UniqueIdentifier>
+      <UniqueIdentifier>{473E224B-6FD9-5C06-8B81-CE035944AEE8}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp">
-      <UniqueIdentifier>{CB3E4266-40ED-516C-B846-3ED7478A92D7}</UniqueIdentifier>
+      <UniqueIdentifier>{408BAC6F-06F0-5D90-BBA9-89FC93C0D665}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

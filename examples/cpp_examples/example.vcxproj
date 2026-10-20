@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- C++ example using protacoc generated code. v141 x64, C++17. The only include path is the output folder (examples\taco_generated\cpp).
      A Pre-Build Event runs protacoc from bin\Release or bin\Debug (regenerates on yaml changes, leaves identical files untouched).
-     Output: bin\<Configuration>\protaco_example.exe. Intermediates: .IntermediateDirectory\example\. -->
+     Output: bin\<Configuration>\protaco_example.exe. Intermediates: .IntermediateDirectory\example\.
+     Items are listed one file each: Visual Studio applies .vcxproj.filters to explicit items only. New schema or generated file: add its item and its filter. -->
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -55,10 +56,32 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\schemas\*.yaml" />
-    <ClInclude Include="..\taco_generated\cpp\*.g.h" />
-    <ClInclude Include="..\taco_generated\cpp\*.enum.h" />
-    <ClInclude Include="..\taco_generated\cpp\*.const.h" />
+    <None Include="..\schemas\Board.yaml" />
+    <None Include="..\schemas\Category.yaml" />
+    <None Include="..\schemas\Delivery.yaml" />
+    <None Include="..\schemas\DeliveryProof.yaml" />
+    <None Include="..\schemas\DeliveryRoute.yaml" />
+    <None Include="..\schemas\Heartbeat.yaml" />
+    <None Include="..\schemas\Limits.const.yaml" />
+    <None Include="..\schemas\Menu.yaml" />
+    <None Include="..\schemas\PizzaOrder.yaml" />
+    <None Include="..\schemas\PizzaSize.enum.yaml" />
+    <None Include="..\schemas\RouteStop.yaml" />
+    <None Include="..\schemas\Spot.yaml" />
+    <None Include="..\schemas\Topping.yaml" />
+    <ClInclude Include="..\taco_generated\cpp\Board.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Category.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Delivery.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\DeliveryProof.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\DeliveryRoute.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Heartbeat.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Menu.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\PizzaOrder.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\RouteStop.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Spot.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Topping.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\PizzaSize.enum.h" />
+    <ClInclude Include="..\taco_generated\cpp\Limits.const.h" />
     <ClInclude Include="..\taco_generated\cpp\Protaco.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Filters follow the real folders. -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp_tests">
-      <UniqueIdentifier>{9A21A56A-123E-5BA0-9939-A92F5F65B7DC}</UniqueIdentifier>
+      <UniqueIdentifier>{CB6904C2-83C9-5BE9-BCA4-686C4B1FA7FB}</UniqueIdentifier>
     </Filter>
     <Filter Include="googletest">
       <UniqueIdentifier>{6673539F-D205-57D3-B9A1-2A3EE9529D0C}</UniqueIdentifier>
@@ -30,7 +29,7 @@
       <UniqueIdentifier>{C72D2DD9-C331-5768-BCAE-4E558A551A77}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas\arrays">
-      <UniqueIdentifier>{CB84DE01-292A-5E3D-9873-4515EC9DC9AF}</UniqueIdentifier>
+      <UniqueIdentifier>{FBC51C43-7D50-50B7-9A9E-7589FF90B064}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas\build1">
       <UniqueIdentifier>{5F4FD5E1-6923-5AFA-8A89-D107F44B19B0}</UniqueIdentifier>
@@ -87,55 +86,55 @@
       <UniqueIdentifier>{39F6911C-60C3-599C-9C86-CBFCA31784FD}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated">
-      <UniqueIdentifier>{C99319FD-483C-592A-BDF4-F8C85822C11D}</UniqueIdentifier>
+      <UniqueIdentifier>{7C19D585-5FBD-5412-A0E2-9CA4634C9479}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp">
-      <UniqueIdentifier>{99C687F9-87F9-5ADB-80C8-4E2542AF8DCC}</UniqueIdentifier>
+      <UniqueIdentifier>{8B990968-6164-51E6-A5D6-53777BD9F92A}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\alt">
-      <UniqueIdentifier>{45B521A6-F699-5A13-80A5-435C00E70419}</UniqueIdentifier>
+      <UniqueIdentifier>{6C0C2B5F-62D4-5FA7-BCC9-08FFF2867AA7}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\arrays">
-      <UniqueIdentifier>{8D47A25D-2538-5B79-8E1E-12DA9C0204DD}</UniqueIdentifier>
+      <UniqueIdentifier>{8E5085E1-E3C9-591B-BE4E-009ACD9A906F}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\build1">
-      <UniqueIdentifier>{894FB66F-435B-54CA-8AC3-D4DE60B38C25}</UniqueIdentifier>
+      <UniqueIdentifier>{16955E97-37A9-5EA1-B0C2-A82F68F285A4}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\build2">
-      <UniqueIdentifier>{91BE6FEB-DF55-5348-8CC9-198DF36A07A3}</UniqueIdentifier>
+      <UniqueIdentifier>{DF2E2BE0-B9F9-561B-9EEC-0D4E9C410179}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\build3">
-      <UniqueIdentifier>{6911A701-7174-506F-9EBF-295D8E120D82}</UniqueIdentifier>
+      <UniqueIdentifier>{77746971-7ADB-585D-B1D8-19F1A1FBE83A}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\build4">
-      <UniqueIdentifier>{FF05FA02-DDE8-5964-ACFC-A8586FB92FB9}</UniqueIdentifier>
+      <UniqueIdentifier>{34A1753A-5D3D-5BA4-9927-5932CE04CE55}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\deep">
-      <UniqueIdentifier>{3D992345-4483-5EAE-8617-43CCA99FA3ED}</UniqueIdentifier>
+      <UniqueIdentifier>{8CE3F9A6-6180-523B-BF0C-F775FF8980C5}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\demo">
-      <UniqueIdentifier>{EBC3CCA2-3493-5B16-BD6A-5C628AD64908}</UniqueIdentifier>
+      <UniqueIdentifier>{570B849A-1DE4-5AA1-A312-09257CF6A012}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\enums">
-      <UniqueIdentifier>{B6775DAE-09C3-5B17-9AD5-B6F26FC5075A}</UniqueIdentifier>
+      <UniqueIdentifier>{D330FE64-7C88-5D2E-9FF1-ADECC8BB8B67}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\maps">
-      <UniqueIdentifier>{B573B2D2-64E3-596F-9E71-DA2674C30852}</UniqueIdentifier>
+      <UniqueIdentifier>{AAD446E5-50FD-5CDA-9B93-AAA7D299428D}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\partial">
-      <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
+      <UniqueIdentifier>{85552FD8-6E4A-5945-97F8-6763BA937328}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\recursive">
-      <UniqueIdentifier>{E92BA104-1AE7-541C-AD1C-433520DC4A13}</UniqueIdentifier>
+      <UniqueIdentifier>{E294BBDB-032F-582A-8437-D2DB6CFFB1F3}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\scalars">
-      <UniqueIdentifier>{57E4C229-818C-5AAD-8514-3337D3FBA117}</UniqueIdentifier>
+      <UniqueIdentifier>{A4956E63-4A2A-5F04-9979-34FA78A9ECA7}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\ver_v1">
-      <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
+      <UniqueIdentifier>{A4458674-D8CF-5EA9-B2ED-9CD92BC95D06}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp\ver_v2">
-      <UniqueIdentifier>{0EB11328-CE63-5DA8-B8AB-0157B91C6317}</UniqueIdentifier>
+      <UniqueIdentifier>{8C3CB7D1-EB60-507A-A75C-9B173857DF20}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
