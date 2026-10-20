@@ -7,12 +7,14 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "taco_generated", "py"))
 
 import protaco  # noqa: E402
+from demo.Board_g import Board  # noqa: E402
 from demo.Category_g import Category  # noqa: E402
 from demo.DeliveryRoute_g import DeliveryRoute  # noqa: E402
 from demo.Heartbeat_g import Heartbeat  # noqa: E402
+from demo.Limits_const import Limits  # noqa: E402
 from demo.Menu_g import Menu  # noqa: E402
 from demo.PizzaOrder_g import PizzaOrder  # noqa: E402
-from demo.PizzaSize_enum import PizzaSizeNames  # noqa: E402
+from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames  # noqa: E402
 from demo.RouteStop_g import RouteStop  # noqa: E402
 from demo.Topping_g import Topping  # noqa: E402
 
@@ -88,6 +90,24 @@ def envelope():
         print("Envelope: request id=%d, reply id=%d corr=%d at %s %s" % (request.GetId(), reply.GetId(), reply.GetCorr(), date, time_text))
 
 
+# 8. Fixed-length arrays and fixed messages: Board is a fixed-length message of arrays and nested spots.
+def dispatch_board():
+    board = Board()
+    board.depot.label = "depot"
+    spot = board.spots[0]
+    spot.lat = 37.5665
+    spot.lon = 126.978
+    spot.label = "north gate"
+    board.ovens[1] = 230.0
+    board.queue[0] = PizzaSize.Large
+    board.busy[2] = True
+    data = board.Serialize()
+
+    got = protaco.ToObject(Board, data)
+    print("Board: %d spots, first %s at %.4f, %d bytes" % (Limits.MaxSpots, got.spots[0].label, got.spots[0].lat, len(data)))
+    print(got)
+
+
 if __name__ == "__main__":
     send_and_receive()
     fixed_only()
@@ -96,3 +116,4 @@ if __name__ == "__main__":
     logging()
     enums_maps_and_trees()
     envelope()
+    dispatch_board()

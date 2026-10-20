@@ -599,15 +599,15 @@ pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 
 ### 4.8 Constants
 
-Named integers that your code shares across languages go in a `<Name>.const.yaml` file. For example, `Limits.const.yaml`:
+Named integers that your code shares across languages go in a `<Name>.const.yaml` file, like [Limits.const.yaml](examples/schemas/Limits.const.yaml) in the examples:
 
 ```yaml
-# Limits shared by the C++ core and the C# UI.
+# Limits shared by every program of the demo.
 const: Limits
 namespace: demo
 values:
-  - {key: MaxStops, value: 16, desc: stops per route}
-  - {key: MaxRiders, value: 64}
+  - {key: MaxSpots, value: 4, desc: spots on a dispatch board}
+  - {key: MaxRiders, value: 8, desc: riders on duty}
 ```
 
 - Top-level keys: `const`, `namespace`, `desc`, `values`. Value attributes: `key`, `value` (int32), `desc`
@@ -616,58 +616,62 @@ values:
 
 Generated code per language:
 
-- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxStops = 16; ... }`. Namespace-scope `constexpr` works in C++14 without out-of-line definitions
-- C# `Limits.const.cs`: `public static class Limits { public const int MaxStops = 16; ... }`
+- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxSpots = 4; ... }`. Namespace-scope `constexpr` works in C++14 without out-of-line definitions
+- C# `Limits.const.cs`: `public static class Limits { public const int MaxSpots = 4; ... }`
 - Python `Limits_const.py`: `class Limits` with int class attributes (a Python keyword key gets a trailing `_`)
 
 ### 4.9 Fixed-length arrays
 
-`T[N]` is an array of N elements in the fixed block, with no length prefix. A message of fixed fields and arrays is still fixed-length, so `TryView` reads it in place.
+`T[N]` is an array of N elements in the fixed block, with no length prefix. A message of fixed fields and arrays is still fixed-length, so `TryView` reads it in place. [Board.yaml](examples/schemas/Board.yaml) in the examples:
 
 ```yaml
-# Slots of one panel. Every field is fixed, so TryView reads it in place.
-message: Panel
+# Dispatch board kept in shared memory. Every field is fixed, so programs read and write it in place.
+message: Board
 version: 1
 namespace: demo
 allow_extension: false
 fields:
-  - {key: temps, type: double[Limits.MaxStops], default: 20.5}
-  - {key: sizes, type: PizzaSize[3]}
-  - {key: names, type: string(8)[Limits.MaxStops]}
+  - {key: depot, type: Spot, desc: where riders start}
+  - {key: spots, type: Spot[Limits.MaxSpots], desc: delivery spots}
+  - {key: ovens, type: double[3], default: 220.5, desc: oven temperatures}
+  # The length comes from an enum value: PizzaSize.Large is 3.
+  - {key: queue, type: PizzaSize[PizzaSize.Large], desc: sizes of the next pizzas}
+  - {key: busy, type: bool[Limits.MaxRiders], desc: riders out on a delivery}
 ```
 
 - Elements: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enums, and messages with `fixed: true` ([Fixed messages](#410-fixed-messages)). Arrays of arrays and arrays inside lists or maps are PC404
-- N: a number, a const value (`Limits.MaxStops`), or an enum value (`PizzaSize.Large` is 3). It must be 1 or more (PC310). An unknown name is PC402
+- N: a number, a const value (`Limits.MaxSpots`), or an enum value (`PizzaSize.Large` is 3). It must be 1 or more (PC310). An unknown name is PC402
 - `default` fills every element. Without one, numbers are 0, strings are empty, and enums take their first value
-- The fingerprint holds the resolved number, `double[16]`. Renaming a const keeps the layout; changing its value changes the layout and the fingerprint
+- The fingerprint holds the resolved number: `bool[8]` for `bool[Limits.MaxRiders]`. Renaming a const keeps the layout; changing its value changes the layout and the fingerprint
 
 Generated access:
 
-- C++: `temps_size()` (constexpr), `get_temps(i)` and `set_temps(i, value)` in place, `get_temps()` and `set_temps(std::array)` for the whole array. `get_temps(i)` asserts the index in debug builds; `set_temps(i, ...)` returns `false` with the reason in `error` for an index out of range or a `string(N)` value that is too long
+- C++: `ovens_size()` (constexpr), `get_ovens(i)` and `set_ovens(i, value)` in place, `get_ovens()` and `set_ovens(std::array)` for the whole array. `get_ovens(i)` asserts the index in debug builds; `set_ovens(i, ...)` returns `false` with the reason in `error` for an index out of range or a `string(N)` value that is too long
 - C#: a get-only array of length N. `Serialize()` throws `ProtacoException` for a `string(N)` element that is too long
 - Python: a list of N values. `Serialize()` raises `ProtacoError` for another length or a value that does not fit
-- `View` (C++, C#): `get_temps(i)` and `get_temps()` in C++, `Temps(i)` and `Temps()` in C#
+- `View` (C++, C#): `get_ovens(i)` and `get_ovens()` in C++, `Ovens(i)` and `Ovens()` in C#
 
 **C++**
 
 ```cpp
-demo::Panel panel;                        // temps: 20.5 in every element
-panel.set_temps(0, 21.5);                 // written in place
+demo::Board board;                        // ovens: 220.5 in every element
+board.set_ovens(1, 230.0);                // written in place
+board.set_queue(0, demo::PizzaSize::Large);
 std::string error;
-if (!panel.set_names(16, "x", &error))   // names[16]: index out of range (size 16)
+if (!board.set_busy(8, true, &error))     // busy[8]: index out of range (size 8)
     std::printf("%s\n", error.c_str());
-double first = panel.get_temps(0);
-std::array<double, 16> all = panel.get_temps();
+double first = board.get_ovens(0);
+std::array<double, 3> all = board.get_ovens();
 ```
 
 <details>
 <summary>C#</summary>
 
 ```csharp
-var panel = new demo.Panel();             // Temps: a double[16] filled with 20.5
-panel.Temps[0] = 21.5;
-panel.Names[0] = "front";                 // checked by Serialize: string(8)
-byte[] bytes = panel.Serialize();
+var board = new demo.Board();             // Ovens: a double[3] filled with 220.5
+board.Ovens[1] = 230.0;
+board.Busy[2] = true;
+byte[] bytes = board.Serialize();
 ```
 
 </details>
@@ -676,19 +680,19 @@ byte[] bytes = panel.Serialize();
 <summary>Python</summary>
 
 ```python
-panel = Panel()                           # temps: [20.5] * 16
-panel.temps[0] = 21.5
-data = panel.Serialize()                  # length and elements are checked here
+board = Board()                           # ovens: [220.5] * 3
+board.ovens[1] = 230.0
+data = board.Serialize()                  # length and elements are checked here
 ```
 
 </details>
 
 ### 4.10 Fixed messages
 
-A message with `fixed: true` is a struct of fixed fields. Used as a field type, or as the element of `T[N]`, it sits inline in the fixed block of the message that uses it: no length, no nested body. A message built from fixed fields, arrays and fixed messages stays fixed-length, so `TryView` still reads it in place. This is how a C++ struct with nested structs and arrays of structs maps to Protaco.
+A message with `fixed: true` is a struct of fixed fields. Used as a field type, or as the element of `T[N]`, it sits inline in the fixed block of the message that uses it: no length, no nested body. A message built from fixed fields, arrays and fixed messages stays fixed-length, so `TryView` still reads it in place. This is how a C++ struct with nested structs and arrays of structs maps to Protaco. [Spot.yaml](examples/schemas/Spot.yaml) is the type of `depot` and `spots` in the `Board` above:
 
 ```yaml
-# A stop of a route, the same layout everywhere it appears.
+# A place on the dispatch board. fixed: true, so it sits inline in the board's fixed block.
 message: Spot
 version: 1
 namespace: demo
@@ -697,16 +701,6 @@ fields:
   - {key: lat, type: double}
   - {key: lon, type: double}
   - {key: label, type: string(16)}
-```
-
-```yaml
-message: Board
-version: 1
-namespace: demo
-allow_extension: false
-fields:
-  - {key: depot, type: Spot}
-  - {key: spots, type: Spot[Limits.MaxStops]}
 ```
 
 - A `fixed: true` message has fixed fields only: scalars, `string(N)`, enums, other fixed messages, and `T[N]` of those. A variable field, `min_version`, `added`, `removed`, `allow_extension: true`, or a field of its own type is PC408
@@ -738,7 +732,7 @@ board.set_spots(3, copy);                            // false with the reason fo
 ```csharp
 var board = new demo.Board();
 board.Depot.Lat = 37.5;                              // a demo.Spot object, written inline by Serialize
-board.Spots[2].Label = "north gate";                 // Spots: a demo.Spot[16], one object per element
+board.Spots[2].Label = "north gate";                 // Spots: a demo.Spot[4], one object per element
 byte[] bytes = board.Serialize();
 ```
 
@@ -750,7 +744,7 @@ byte[] bytes = board.Serialize();
 ```python
 board = Board()
 board.depot.lat = 37.5
-board.spots[2].label = "north gate"                  # spots: a list of 16 Spot objects
+board.spots[2].label = "north gate"                  # spots: a list of 4 Spot objects
 data = board.Serialize()
 ```
 

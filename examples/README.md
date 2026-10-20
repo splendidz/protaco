@@ -19,11 +19,11 @@ This folder contains YAML schemas, generated code, and C++, C#, and Python progr
 examples/
   schemas/
   taco_generated/
-    cpp/                  *.g.h, *.enum.h, Protaco.hpp
-    cs/                   *.g.cs, *.enum.cs, Protaco.cs
+    cpp/                  *.g.h, *.enum.h, *.const.h, Protaco.hpp
+    cs/                   *.g.cs, *.enum.cs, *.const.cs, Protaco.cs
     py/
       protaco.py
-      demo/               *_g.py, *_enum.py
+      demo/               *_g.py, *_enum.py, *_const.py
   cpp_examples/
     main.cpp
     example.vcxproj
@@ -107,6 +107,9 @@ The Windows script accepts `MSBUILD` and `PYTHON`; the Linux script accepts `DOT
 | [PizzaSize.enum](schemas/PizzaSize.enum.yaml) | Enum values and names | `Menu.defaultSize` |
 | [Menu](schemas/Menu.yaml) | Enum, `map<string, double>`, message list | Store menu |
 | [Category](schemas/Category.yaml) | Self-reference through `list<Category>` | Menu subsections |
+| [Limits.const](schemas/Limits.const.yaml) | Named constants for code and array lengths | `Board` array lengths |
+| [Spot](schemas/Spot.yaml) | `fixed: true` message | `Board.depot` and `Board.spots` |
+| [Board](schemas/Board.yaml) | Fixed-length arrays, fixed messages, a fixed-only frame | Shared memory with MutableView |
 
 These excerpts come from the actual schemas, with introductory comments omitted. In the program, `Heartbeat` reports the status of pizza oven `oven-1`.
 
@@ -165,11 +168,46 @@ values:
   - {key: Large, value: 3, desc: 14 inch}
 ```
 
-Quote `map<K, V>` inside YAML `{...}` because it contains a comma. `Category.subsections` is a list of the same message type. Comments on `PizzaOrder.woodFired` and `deepDishCm` explain their use by different stores; comments do not affect serialization.
+**YAML · Board.yaml, Spot.yaml, Limits.const.yaml**
+
+```yaml
+message: Board
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: depot, type: Spot, desc: where riders start}
+  - {key: spots, type: Spot[Limits.MaxSpots], desc: delivery spots}
+  - {key: ovens, type: double[3], default: 220.5, desc: oven temperatures}
+  # The length comes from an enum value: PizzaSize.Large is 3.
+  - {key: queue, type: PizzaSize[PizzaSize.Large], desc: sizes of the next pizzas}
+  - {key: busy, type: bool[Limits.MaxRiders], desc: riders out on a delivery}
+```
+
+```yaml
+message: Spot
+version: 1
+namespace: demo
+fixed: true
+fields:
+  - {key: lat, type: double}
+  - {key: lon, type: double}
+  - {key: label, type: string(16)}
+```
+
+```yaml
+const: Limits
+namespace: demo
+values:
+  - {key: MaxSpots, value: 4, desc: spots on a dispatch board}
+  - {key: MaxRiders, value: 8, desc: riders on duty}
+```
+
+Quote `map<K, V>` inside YAML `{...}` because it contains a comma. `Category.subsections` is a list of the same message type. Comments on `PizzaOrder.woodFired` and `deepDishCm` explain their use by different stores; comments do not affect serialization. `Board` is fixed-length: its arrays and its `Spot` fields live in the fixed block, so the whole board can sit in shared memory.
 
 ## 4. Program walkthrough
 
-The [C++ program](cpp_examples/main.cpp) runs the eight steps below. The [C# program](cs_examples/Program.cs) has seven steps, without the fixed-buffer step. The [Python program](python_examples/main.py) has seven steps, without the zero-copy step. This is actual C++ output. The envelope timestamps vary between runs; the ids follow the order in which the example creates messages.
+The [C++ program](cpp_examples/main.cpp) runs the nine steps below. The [C# program](cs_examples/Program.cs) has eight steps, without the fixed-buffer step. The [Python program](python_examples/main.py) has eight steps, without the zero-copy step. This is actual C++ output. The envelope timestamps vary between runs; the ids follow the order in which the example creates messages.
 
 ```text
 DeliveryRoute: 182 bytes
@@ -198,9 +236,12 @@ Menu{store="NAPOLI-1", defaultSize=Large(3), prices={"margherita": 9.5, "marinar
 Heartbeat view: node=oven-1 uptime=42
 DeliveryRoute adopted the buffer: yes
 Envelope: request id=15, reply id=16 corr=15 at 2026-10-20 03:07:13.941056
+Board: spots[4]: index out of range (size 4)
+Board: 4 spots, first north gate at 37.5665, 245 bytes in the region
+Board{depot=Spot{lat=0, lon=0, label="depot"}, spots=[Spot{lat=37.5665, lon=126.978, label="north gate"}, Spot{lat=0, lon=0, label=""}, Spot{lat=0, lon=0, label=""}, Spot{lat=0, lon=0, label=""}], ovens=[220.5, 230, 220.5], queue=[Large(3), Small(1), Small(1)], busy=[false, false, true, false, false, false, false, false]}
 ```
 
-C# omits `Heartbeat: received uptime=11, same buffer=yes` and `DeliveryRoute adopted the buffer: yes`. Python prints `Heartbeat: received uptime=10` for its fixed-field step and omits the `Heartbeat view: ...` and `DeliveryRoute adopted the buffer: ...` lines. The snippets below are excerpts from each program's function bodies. Use the includes, using directives, and imports from the original programs.
+C# omits `Heartbeat: received uptime=11, same buffer=yes` and `DeliveryRoute adopted the buffer: yes`. Python prints `Heartbeat: received uptime=10` for its fixed-field step and omits the `Heartbeat view: ...` and `DeliveryRoute adopted the buffer: ...` lines. In the last step, C# and Python fill a `Board` object instead of shared memory: they print `Board: 4 spots, first north gate at 37.5665, 245 bytes` without the out-of-range line, then the same `Board{...}` text. The snippets below are excerpts from each program's function bodies. Use the includes, using directives, and imports from the original programs.
 
 ### 4.1 Send and receive
 
@@ -581,6 +622,87 @@ if when:
 </details>
 
 A new message automatically gets an ID and the current timestamp in UTC microseconds. Set the reply's `corr` to the request ID. `TryGetTimeFromTimestamp` converts the timestamp to local date and time strings. Decoding and nested-field initialization do not consume new IDs.
+
+### 4.9 Shared memory: arrays and fixed messages
+
+**C++**
+
+```cpp
+std::vector<uint8_t> region(demo::Board::MutableView::FrameSize());
+const demo::Board fresh;   // fill the region once with a new frame
+std::memcpy(region.data(), fresh.Serialize().data(), region.size());
+
+demo::Board::MutableView board;   // valid while the region lives
+std::string error;
+if (!protaco::TryMutableView<demo::Board>(region.data(), region.size(), &board, &error))
+{
+    std::printf("Board: %s\n", error.c_str());
+    return;
+}
+board.mutable_depot().set_label("depot");
+demo::Spot::Ref spot = board.mutable_spots(0);   // written in place, nothing copied
+spot.set_lat(37.5665);
+spot.set_lon(126.978);
+spot.set_label("north gate");
+board.set_ovens(1, 230.0);
+board.set_queue(0, demo::PizzaSize::Large);
+board.set_busy(2, true);
+if (!board.set_spots(demo::Limits::MaxSpots, demo::Spot(), &error))
+    std::printf("Board: %s\n", error.c_str());
+
+demo::Board::View view;   // another reader of the same region
+if (protaco::TryView<demo::Board>(region, &view))
+    std::printf("Board: %d spots, first %s at %.4f, %u bytes in the region\n", demo::Limits::MaxSpots,
+        view.get_spots(0).get_label().c_str(), view.get_spots(0).get_lat(), static_cast<unsigned>(region.size()));
+std::printf("%s\n", protaco::ToObject<demo::Board>(region).ToString().c_str());
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+Board board = new Board();
+board.Depot.Label = "depot";
+board.Spots[0].Lat = 37.5665;
+board.Spots[0].Lon = 126.978;
+board.Spots[0].Label = "north gate";
+board.Ovens[1] = 230.0;
+board.Queue[0] = PizzaSize.Large;
+board.Busy[2] = true;
+byte[] bytes = board.Serialize();
+
+Board.View view;   // valid while bytes is unchanged
+if (Board.TryView(bytes, out view))
+    Console.WriteLine("Board: " + Limits.MaxSpots + " spots, first " + view.Spots(0).Label + " at " + view.Spots(0).Lat.ToString("F4")
+        + ", " + bytes.Length + " bytes");
+Console.WriteLine(Protaco.Codec.ToObject<Board>(bytes).ToString());
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+board = Board()
+board.depot.label = "depot"
+spot = board.spots[0]
+spot.lat = 37.5665
+spot.lon = 126.978
+spot.label = "north gate"
+board.ovens[1] = 230.0
+board.queue[0] = PizzaSize.Large
+board.busy[2] = True
+data = board.Serialize()
+
+got = protaco.ToObject(Board, data)
+print("Board: %d spots, first %s at %.4f, %d bytes" % (Limits.MaxSpots, got.spots[0].label, got.spots[0].lat, len(data)))
+print(got)
+```
+
+</details>
+
+`Board` has only fixed fields, so a frame of it has a fixed size, `FrameSize()`. The C++ step fills a region once with a new frame, then `TryMutableView` writes through it in place: `mutable_spots(0)` returns a `Spot::Ref` into the region, and `set_spots` rejects index 4 because `Limits.MaxSpots` is 4. A `View` over the same region sees the change at once. C# and Python fill a `Board` object and serialize it; C# reads it back in place with `View`. All three print the same `Board{...}` text and 245 bytes.
 
 ## 5. Generated code
 

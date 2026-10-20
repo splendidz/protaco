@@ -58,6 +58,7 @@
     <None Include="..\schemas\*.yaml" />
     <ClInclude Include="..\taco_generated\cpp\*.g.h" />
     <ClInclude Include="..\taco_generated\cpp\*.enum.h" />
+    <ClInclude Include="..\taco_generated\cpp\*.const.h" />
     <ClInclude Include="..\taco_generated\cpp\Protaco.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

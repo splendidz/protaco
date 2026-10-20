@@ -1,0 +1,9 @@
+# A place on the dispatch board. fixed: true, so it sits inline in the board's fixed block.
+message: Spot
+version: 1
+namespace: demo
+fixed: true
+fields:
+  - {key: lat, type: double}
+  - {key: lon, type: double}
+  - {key: label, type: string(16)}

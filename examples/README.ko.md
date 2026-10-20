@@ -19,11 +19,11 @@
 examples/
   schemas/
   taco_generated/
-    cpp/                  *.g.h, *.enum.h, Protaco.hpp
-    cs/                   *.g.cs, *.enum.cs, Protaco.cs
+    cpp/                  *.g.h, *.enum.h, *.const.h, Protaco.hpp
+    cs/                   *.g.cs, *.enum.cs, *.const.cs, Protaco.cs
     py/
       protaco.py
-      demo/               *_g.py, *_enum.py
+      demo/               *_g.py, *_enum.py, *_const.py
   cpp_examples/
     main.cpp
     example.vcxproj
@@ -107,6 +107,9 @@ Windows 스크립트는 `MSBUILD`·`PYTHON`, Linux 스크립트는 `DOTNET`·`CX
 | [PizzaSize.enum](schemas/PizzaSize.enum.yaml) | enum 값과 이름 | `Menu.defaultSize` |
 | [Menu](schemas/Menu.yaml) | enum, `map<string, double>`, 메시지 목록 | 매장 메뉴 |
 | [Category](schemas/Category.yaml) | `list<Category>` 자기 참조 | 메뉴의 하위 섹션 |
+| [Limits.const](schemas/Limits.const.yaml) | 코드와 배열 길이에 쓰는 이름 붙은 상수 | `Board` 배열 길이 |
+| [Spot](schemas/Spot.yaml) | `fixed: true` 메시지 | `Board.depot`, `Board.spots` |
+| [Board](schemas/Board.yaml) | 고정 길이 배열, fixed 메시지, fixed 전용 프레임 | MutableView로 다루는 shared memory |
 
 다음은 실제 스키마 발췌입니다. 맨 위 설명 주석은 생략했습니다. `Heartbeat`는 예제에서 피자 오븐 `oven-1`의 상태를 전달합니다.
 
@@ -165,11 +168,46 @@ values:
   - {key: Large, value: 3, desc: 14 inch}
 ```
 
-`map<K, V>`는 쉼표를 포함하므로 YAML의 `{...}` 안에서는 따옴표로 감쌉니다. `Category.subsections`는 자기 자신을 담는 목록입니다. `PizzaOrder`의 `woodFired`와 `deepDishCm`은 매장별 용도를 주석으로 설명하며, 주석은 직렬화 동작을 바꾸지 않습니다.
+**YAML · Board.yaml, Spot.yaml, Limits.const.yaml**
+
+```yaml
+message: Board
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: depot, type: Spot, desc: where riders start}
+  - {key: spots, type: Spot[Limits.MaxSpots], desc: delivery spots}
+  - {key: ovens, type: double[3], default: 220.5, desc: oven temperatures}
+  # The length comes from an enum value: PizzaSize.Large is 3.
+  - {key: queue, type: PizzaSize[PizzaSize.Large], desc: sizes of the next pizzas}
+  - {key: busy, type: bool[Limits.MaxRiders], desc: riders out on a delivery}
+```
+
+```yaml
+message: Spot
+version: 1
+namespace: demo
+fixed: true
+fields:
+  - {key: lat, type: double}
+  - {key: lon, type: double}
+  - {key: label, type: string(16)}
+```
+
+```yaml
+const: Limits
+namespace: demo
+values:
+  - {key: MaxSpots, value: 4, desc: spots on a dispatch board}
+  - {key: MaxRiders, value: 8, desc: riders on duty}
+```
+
+`map<K, V>`는 쉼표를 포함하므로 YAML의 `{...}` 안에서는 따옴표로 감쌉니다. `Category.subsections`는 자기 자신을 담는 목록입니다. `PizzaOrder`의 `woodFired`와 `deepDishCm`은 매장별 용도를 주석으로 설명하며, 주석은 직렬화 동작을 바꾸지 않습니다. `Board`는 고정 길이입니다. 배열과 `Spot` 필드가 모두 fixed 영역에 있으므로 보드 전체를 shared memory에 둘 수 있습니다.
 
 ## 4. 프로그램 설명
 
-[C++](cpp_examples/main.cpp)은 아래 8단계를 실행합니다. [C#](cs_examples/Program.cs)은 고정 버퍼 단계가 없는 7단계이고, [Python](python_examples/main.py)은 zero-copy 단계가 없는 7단계입니다. 다음은 C++의 실제 실행 출력입니다. Envelope 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
+[C++](cpp_examples/main.cpp)은 아래 9단계를 실행합니다. [C#](cs_examples/Program.cs)은 고정 버퍼 단계가 없는 8단계이고, [Python](python_examples/main.py)은 zero-copy 단계가 없는 8단계입니다. 다음은 C++의 실제 실행 출력입니다. Envelope 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
 
 ```text
 DeliveryRoute: 182 bytes
@@ -198,9 +236,12 @@ Menu{store="NAPOLI-1", defaultSize=Large(3), prices={"margherita": 9.5, "marinar
 Heartbeat view: node=oven-1 uptime=42
 DeliveryRoute adopted the buffer: yes
 Envelope: request id=15, reply id=16 corr=15 at 2026-10-20 03:07:13.941056
+Board: spots[4]: index out of range (size 4)
+Board: 4 spots, first north gate at 37.5665, 245 bytes in the region
+Board{depot=Spot{lat=0, lon=0, label="depot"}, spots=[Spot{lat=37.5665, lon=126.978, label="north gate"}, Spot{lat=0, lon=0, label=""}, Spot{lat=0, lon=0, label=""}, Spot{lat=0, lon=0, label=""}], ovens=[220.5, 230, 220.5], queue=[Large(3), Small(1), Small(1)], busy=[false, false, true, false, false, false, false, false]}
 ```
 
-C# 출력에는 `Heartbeat: received uptime=11, same buffer=yes`와 `DeliveryRoute adopted the buffer: yes` 줄이 없습니다. Python은 고정 필드 단계에서 `Heartbeat: received uptime=10`을 출력하며, `Heartbeat view: ...`와 `DeliveryRoute adopted the buffer: ...` 줄이 없습니다. 아래 코드는 각 프로그램의 함수 본문에서 발췌했습니다. include·using·import는 원본 프로그램을 따릅니다.
+C# 출력에는 `Heartbeat: received uptime=11, same buffer=yes`와 `DeliveryRoute adopted the buffer: yes` 줄이 없습니다. Python은 고정 필드 단계에서 `Heartbeat: received uptime=10`을 출력하며, `Heartbeat view: ...`와 `DeliveryRoute adopted the buffer: ...` 줄이 없습니다. 마지막 단계에서 C#과 Python은 shared memory 대신 `Board` 객체를 채우며, 범위 밖 줄 없이 `Board: 4 spots, first north gate at 37.5665, 245 bytes`와 같은 `Board{...}` 텍스트를 출력합니다. 아래 코드는 각 프로그램의 함수 본문에서 발췌했습니다. include·using·import는 원본 프로그램을 따릅니다.
 
 ### 4.1 송신과 수신
 
@@ -581,6 +622,87 @@ if when:
 </details>
 
 새 메시지는 id와 현재 UTC 마이크로초 타임스탬프를 자동으로 받습니다. 응답의 `corr`는 요청의 id로 설정합니다. `TryGetTimeFromTimestamp`는 로컬 날짜·시각 문자열로 변환합니다. 디코딩과 중첩 필드 초기화는 새 id를 소비하지 않습니다.
+
+### 4.9 shared memory: 배열과 fixed 메시지
+
+**C++**
+
+```cpp
+std::vector<uint8_t> region(demo::Board::MutableView::FrameSize());
+const demo::Board fresh;   // 새 프레임으로 영역을 한 번 채움
+std::memcpy(region.data(), fresh.Serialize().data(), region.size());
+
+demo::Board::MutableView board;   // 영역이 살아 있는 동안 유효
+std::string error;
+if (!protaco::TryMutableView<demo::Board>(region.data(), region.size(), &board, &error))
+{
+    std::printf("Board: %s\n", error.c_str());
+    return;
+}
+board.mutable_depot().set_label("depot");
+demo::Spot::Ref spot = board.mutable_spots(0);   // 제자리에 기록, 복사 없음
+spot.set_lat(37.5665);
+spot.set_lon(126.978);
+spot.set_label("north gate");
+board.set_ovens(1, 230.0);
+board.set_queue(0, demo::PizzaSize::Large);
+board.set_busy(2, true);
+if (!board.set_spots(demo::Limits::MaxSpots, demo::Spot(), &error))
+    std::printf("Board: %s\n", error.c_str());
+
+demo::Board::View view;   // 같은 영역의 다른 reader
+if (protaco::TryView<demo::Board>(region, &view))
+    std::printf("Board: %d spots, first %s at %.4f, %u bytes in the region\n", demo::Limits::MaxSpots,
+        view.get_spots(0).get_label().c_str(), view.get_spots(0).get_lat(), static_cast<unsigned>(region.size()));
+std::printf("%s\n", protaco::ToObject<demo::Board>(region).ToString().c_str());
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+Board board = new Board();
+board.Depot.Label = "depot";
+board.Spots[0].Lat = 37.5665;
+board.Spots[0].Lon = 126.978;
+board.Spots[0].Label = "north gate";
+board.Ovens[1] = 230.0;
+board.Queue[0] = PizzaSize.Large;
+board.Busy[2] = true;
+byte[] bytes = board.Serialize();
+
+Board.View view;   // bytes가 바뀌지 않는 동안 유효
+if (Board.TryView(bytes, out view))
+    Console.WriteLine("Board: " + Limits.MaxSpots + " spots, first " + view.Spots(0).Label + " at " + view.Spots(0).Lat.ToString("F4")
+        + ", " + bytes.Length + " bytes");
+Console.WriteLine(Protaco.Codec.ToObject<Board>(bytes).ToString());
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+board = Board()
+board.depot.label = "depot"
+spot = board.spots[0]
+spot.lat = 37.5665
+spot.lon = 126.978
+spot.label = "north gate"
+board.ovens[1] = 230.0
+board.queue[0] = PizzaSize.Large
+board.busy[2] = True
+data = board.Serialize()
+
+got = protaco.ToObject(Board, data)
+print("Board: %d spots, first %s at %.4f, %d bytes" % (Limits.MaxSpots, got.spots[0].label, got.spots[0].lat, len(data)))
+print(got)
+```
+
+</details>
+
+`Board`는 fixed 필드만 가지므로 프레임 크기가 `FrameSize()`로 고정됩니다. C++ 단계는 새 프레임으로 영역을 한 번 채운 뒤 `TryMutableView`로 제자리에서 씁니다. `mutable_spots(0)`은 영역 안을 가리키는 `Spot::Ref`를 돌려주고, `Limits.MaxSpots`가 4이므로 `set_spots`는 index 4를 거부합니다. 같은 영역 위의 `View`는 바뀐 값을 바로 봅니다. C#과 Python은 `Board` 객체를 채워 직렬화하고, C#은 `View`로 제자리에서 다시 읽습니다. 세 언어 모두 같은 `Board{...}` 텍스트와 245바이트를 출력합니다.
 
 ## 5. 생성 코드
 

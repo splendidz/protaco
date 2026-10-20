@@ -1,0 +1,6 @@
+# Limits shared by every program of the demo.
+const: Limits
+namespace: demo
+values:
+  - {key: MaxSpots, value: 4, desc: spots on a dispatch board}
+  - {key: MaxRiders, value: 8, desc: riders on duty}

@@ -1,11 +1,14 @@
 ﻿// main.cpp. How to use protacoc generated code.
 // Steps: include the generated header, set values and call Serialize(), receiver calls protaco::ToObject<T>(bytes).
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
+#include "Board.g.h"
 #include "DeliveryRoute.g.h"
 #include "Heartbeat.g.h"
+#include "Limits.const.h"
 #include "Menu.g.h"
 #include "PizzaOrder.g.h"
 
@@ -138,6 +141,39 @@ void Envelope()
             date.c_str(), time.c_str());
 }
 
+// 9. Shared memory: const lengths, fixed-length arrays and fixed messages keep Board fixed-length, so MutableView reads
+//    and writes it in place. A vector stands in for the shared memory region.
+void SharedMemory()
+{
+    std::vector<uint8_t> region(demo::Board::MutableView::FrameSize());
+    const demo::Board fresh;   // fill the region once with a new frame
+    std::memcpy(region.data(), fresh.Serialize().data(), region.size());
+
+    demo::Board::MutableView board;   // valid while the region lives
+    std::string error;
+    if (!protaco::TryMutableView<demo::Board>(region.data(), region.size(), &board, &error))
+    {
+        std::printf("Board: %s\n", error.c_str());
+        return;
+    }
+    board.mutable_depot().set_label("depot");
+    demo::Spot::Ref spot = board.mutable_spots(0);   // written in place, nothing copied
+    spot.set_lat(37.5665);
+    spot.set_lon(126.978);
+    spot.set_label("north gate");
+    board.set_ovens(1, 230.0);
+    board.set_queue(0, demo::PizzaSize::Large);
+    board.set_busy(2, true);
+    if (!board.set_spots(demo::Limits::MaxSpots, demo::Spot(), &error))
+        std::printf("Board: %s\n", error.c_str());
+
+    demo::Board::View view;   // another reader of the same region
+    if (protaco::TryView<demo::Board>(region, &view))
+        std::printf("Board: %d spots, first %s at %.4f, %u bytes in the region\n", demo::Limits::MaxSpots,
+            view.get_spots(0).get_label().c_str(), view.get_spots(0).get_lat(), static_cast<unsigned>(region.size()));
+    std::printf("%s\n", protaco::ToObject<demo::Board>(region).ToString().c_str());
+}
+
 }  // namespace
 
 int main()
@@ -150,5 +186,6 @@ int main()
     EnumsMapsAndTrees();
     ZeroCopy();
     Envelope();
+    SharedMemory();
     return 0;
 }

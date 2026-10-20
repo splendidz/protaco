@@ -5,14 +5,14 @@
     <Filter Include="cpp_examples">
       <UniqueIdentifier>{298CAD0B-5F19-52E0-97D7-F9CF41447FD1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="schemas">
+      <UniqueIdentifier>{7A83212D-2981-505E-B771-061E2EC7A548}</UniqueIdentifier>
+    </Filter>
     <Filter Include="taco_generated">
       <UniqueIdentifier>{EC778B83-D8E0-5BF9-87B7-5E59B37B4C98}</UniqueIdentifier>
     </Filter>
     <Filter Include="taco_generated\cpp">
       <UniqueIdentifier>{CB3E4266-40ED-516C-B846-3ED7478A92D7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="schemas">
-      <UniqueIdentifier>{7A83212D-2981-505E-B771-061E2EC7A548}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -21,6 +21,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\taco_generated\cpp\Board.g.h">
+      <Filter>taco_generated\cpp</Filter>
+    </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\Category.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
@@ -34,6 +37,9 @@
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\Heartbeat.g.h">
+      <Filter>taco_generated\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\Limits.const.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\Menu.g.h">
@@ -51,11 +57,17 @@
     <ClInclude Include="..\taco_generated\cpp\RouteStop.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\Spot.g.h">
+      <Filter>taco_generated\cpp</Filter>
+    </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\Topping.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\schemas\Board.yaml">
+      <Filter>schemas</Filter>
+    </None>
     <None Include="..\schemas\Category.yaml">
       <Filter>schemas</Filter>
     </None>
@@ -71,6 +83,9 @@
     <None Include="..\schemas\Heartbeat.yaml">
       <Filter>schemas</Filter>
     </None>
+    <None Include="..\schemas\Limits.const.yaml">
+      <Filter>schemas</Filter>
+    </None>
     <None Include="..\schemas\Menu.yaml">
       <Filter>schemas</Filter>
     </None>
@@ -81,6 +96,9 @@
       <Filter>schemas</Filter>
     </None>
     <None Include="..\schemas\RouteStop.yaml">
+      <Filter>schemas</Filter>
+    </None>
+    <None Include="..\schemas\Spot.yaml">
       <Filter>schemas</Filter>
     </None>
     <None Include="..\schemas\Topping.yaml">

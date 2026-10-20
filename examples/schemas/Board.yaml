@@ -1,0 +1,12 @@
+# Dispatch board kept in shared memory. Every field is fixed, so programs read and write it in place.
+message: Board
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: depot, type: Spot, desc: where riders start}
+  - {key: spots, type: Spot[Limits.MaxSpots], desc: delivery spots}
+  - {key: ovens, type: double[3], default: 220.5, desc: oven temperatures}
+  # The length comes from an enum value: PizzaSize.Large is 3.
+  - {key: queue, type: PizzaSize[PizzaSize.Large], desc: sizes of the next pizzas}
+  - {key: busy, type: bool[Limits.MaxRiders], desc: riders out on a delivery}

@@ -92,6 +92,26 @@ namespace ProtacoExample
                 Console.WriteLine("Envelope: request id=" + request.GetId() + ", reply id=" + reply.GetId() + " corr=" + reply.GetCorr() + " at " + date + " " + time);
         }
 
+        // 8. Fixed-length arrays and fixed messages: Board stays fixed-length, so View reads it in place.
+        private static void DispatchBoard()
+        {
+            Board board = new Board();
+            board.Depot.Label = "depot";
+            board.Spots[0].Lat = 37.5665;
+            board.Spots[0].Lon = 126.978;
+            board.Spots[0].Label = "north gate";
+            board.Ovens[1] = 230.0;
+            board.Queue[0] = PizzaSize.Large;
+            board.Busy[2] = true;
+            byte[] bytes = board.Serialize();
+
+            Board.View view;   // valid while bytes is unchanged
+            if (Board.TryView(bytes, out view))
+                Console.WriteLine("Board: " + Limits.MaxSpots + " spots, first " + view.Spots(0).Label + " at " + view.Spots(0).Lat.ToString("F4")
+                    + ", " + bytes.Length + " bytes");
+            Console.WriteLine(Protaco.Codec.ToObject<Board>(bytes).ToString());
+        }
+
         private static int Main()
         {
             SendAndReceive();
@@ -101,6 +121,7 @@ namespace ProtacoExample
             EnumsMapsAndTrees();
             ZeroCopy();
             Envelope();
+            DispatchBoard();
             return 0;
         }
     }

@@ -599,15 +599,15 @@ pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 
 ### 4.8 const
 
-여러 언어의 코드가 함께 쓰는 이름 붙은 정수는 `<Name>.const.yaml` 파일에 둡니다. 예를 들어 `Limits.const.yaml`:
+여러 언어의 코드가 함께 쓰는 이름 붙은 정수는 `<Name>.const.yaml` 파일에 둡니다. 예제의 [Limits.const.yaml](examples/schemas/Limits.const.yaml):
 
 ```yaml
-# Limits shared by the C++ core and the C# UI.
+# Limits shared by every program of the demo.
 const: Limits
 namespace: demo
 values:
-  - {key: MaxStops, value: 16, desc: stops per route}
-  - {key: MaxRiders, value: 64}
+  - {key: MaxSpots, value: 4, desc: spots on a dispatch board}
+  - {key: MaxRiders, value: 8, desc: riders on duty}
 ```
 
 - 최상위 키: `const`, `namespace`, `desc`, `values`. 값 속성: `key`, `value`(int32), `desc`
@@ -616,58 +616,62 @@ values:
 
 언어별 생성 결과입니다.
 
-- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxStops = 16; ... }`. namespace 범위 `constexpr`라서 C++14에서도 클래스 밖 정의가 필요 없음
-- C# `Limits.const.cs`: `public static class Limits { public const int MaxStops = 16; ... }`
+- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxSpots = 4; ... }`. namespace 범위 `constexpr`라서 C++14에서도 클래스 밖 정의가 필요 없음
+- C# `Limits.const.cs`: `public static class Limits { public const int MaxSpots = 4; ... }`
 - Python `Limits_const.py`: int 클래스 속성을 가진 `class Limits`(Python 키워드인 key는 끝에 `_`가 붙음)
 
 ### 4.9 고정 길이 배열
 
-`T[N]`은 fixed 영역에 놓이는 원소 N개짜리 배열이며 길이 접두가 없습니다. fixed 필드와 배열만 있는 메시지는 여전히 고정 길이라서 `TryView`로 제자리에서 읽습니다.
+`T[N]`은 fixed 영역에 놓이는 원소 N개짜리 배열이며 길이 접두가 없습니다. fixed 필드와 배열만 있는 메시지는 여전히 고정 길이라서 `TryView`로 제자리에서 읽습니다. 예제의 [Board.yaml](examples/schemas/Board.yaml):
 
 ```yaml
-# Slots of one panel. Every field is fixed, so TryView reads it in place.
-message: Panel
+# Dispatch board kept in shared memory. Every field is fixed, so programs read and write it in place.
+message: Board
 version: 1
 namespace: demo
 allow_extension: false
 fields:
-  - {key: temps, type: double[Limits.MaxStops], default: 20.5}
-  - {key: sizes, type: PizzaSize[3]}
-  - {key: names, type: string(8)[Limits.MaxStops]}
+  - {key: depot, type: Spot, desc: where riders start}
+  - {key: spots, type: Spot[Limits.MaxSpots], desc: delivery spots}
+  - {key: ovens, type: double[3], default: 220.5, desc: oven temperatures}
+  # The length comes from an enum value: PizzaSize.Large is 3.
+  - {key: queue, type: PizzaSize[PizzaSize.Large], desc: sizes of the next pizzas}
+  - {key: busy, type: bool[Limits.MaxRiders], desc: riders out on a delivery}
 ```
 
 - 원소: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enum, `fixed: true` 메시지([fixed 메시지](#410-fixed-메시지)). 배열의 배열, list·map 안의 배열은 PC404
-- N: 숫자, const 값(`Limits.MaxStops`), enum 값(`PizzaSize.Large`는 3). 1 이상이어야 함(PC310). 모르는 이름은 PC402
+- N: 숫자, const 값(`Limits.MaxSpots`), enum 값(`PizzaSize.Large`는 3). 1 이상이어야 함(PC310). 모르는 이름은 PC402
 - `default`는 모든 원소를 채움. 없으면 숫자는 0, 문자열은 빈 값, enum은 첫 값
-- fingerprint에는 해석된 숫자 `double[16]`이 들어감. const 이름을 바꾸면 layout은 그대로, 값을 바꾸면 layout과 fingerprint가 바뀜
+- fingerprint에는 해석된 숫자가 들어감: `bool[Limits.MaxRiders]`는 `bool[8]`. const 이름을 바꾸면 layout은 그대로, 값을 바꾸면 layout과 fingerprint가 바뀜
 
 생성되는 접근 방법입니다.
 
-- C++: `temps_size()`(constexpr), 제자리 읽기·쓰기 `get_temps(i)`·`set_temps(i, value)`, 배열 전체 `get_temps()`·`set_temps(std::array)`. `get_temps(i)`는 debug 빌드에서 index를 assert. `set_temps(i, ...)`는 index가 범위 밖이거나 `string(N)` 값이 길면 `false`와 이유를 `error`에 돌려줌
+- C++: `ovens_size()`(constexpr), 제자리 읽기·쓰기 `get_ovens(i)`·`set_ovens(i, value)`, 배열 전체 `get_ovens()`·`set_ovens(std::array)`. `get_ovens(i)`는 debug 빌드에서 index를 assert. `set_ovens(i, ...)`는 index가 범위 밖이거나 `string(N)` 값이 길면 `false`와 이유를 `error`에 돌려줌
 - C#: 길이 N인 get-only 배열. `string(N)` 원소가 길면 `Serialize()`가 `ProtacoException`을 던짐
 - Python: 값 N개짜리 list. 길이가 다르거나 맞지 않는 값이면 `Serialize()`가 `ProtacoError`를 냄
-- `View`(C++, C#): C++은 `get_temps(i)`·`get_temps()`, C#은 `Temps(i)`·`Temps()`
+- `View`(C++, C#): C++은 `get_ovens(i)`·`get_ovens()`, C#은 `Ovens(i)`·`Ovens()`
 
 **C++**
 
 ```cpp
-demo::Panel panel;                        // temps: 20.5 in every element
-panel.set_temps(0, 21.5);                 // written in place
+demo::Board board;                        // ovens: 220.5 in every element
+board.set_ovens(1, 230.0);                // written in place
+board.set_queue(0, demo::PizzaSize::Large);
 std::string error;
-if (!panel.set_names(16, "x", &error))   // names[16]: index out of range (size 16)
+if (!board.set_busy(8, true, &error))     // busy[8]: index out of range (size 8)
     std::printf("%s\n", error.c_str());
-double first = panel.get_temps(0);
-std::array<double, 16> all = panel.get_temps();
+double first = board.get_ovens(0);
+std::array<double, 3> all = board.get_ovens();
 ```
 
 <details>
 <summary>C#</summary>
 
 ```csharp
-var panel = new demo.Panel();             // Temps: a double[16] filled with 20.5
-panel.Temps[0] = 21.5;
-panel.Names[0] = "front";                 // checked by Serialize: string(8)
-byte[] bytes = panel.Serialize();
+var board = new demo.Board();             // Ovens: a double[3] filled with 220.5
+board.Ovens[1] = 230.0;
+board.Busy[2] = true;
+byte[] bytes = board.Serialize();
 ```
 
 </details>
@@ -676,19 +680,19 @@ byte[] bytes = panel.Serialize();
 <summary>Python</summary>
 
 ```python
-panel = Panel()                           # temps: [20.5] * 16
-panel.temps[0] = 21.5
-data = panel.Serialize()                  # length and elements are checked here
+board = Board()                           # ovens: [220.5] * 3
+board.ovens[1] = 230.0
+data = board.Serialize()                  # length and elements are checked here
 ```
 
 </details>
 
 ### 4.10 fixed 메시지
 
-`fixed: true`인 메시지는 fixed 필드로만 된 구조체입니다. 필드 타입이나 `T[N]`의 원소로 쓰면 그 메시지를 쓰는 메시지의 fixed 영역에 인라인으로 놓입니다. 길이도 중첩 본문도 없습니다. fixed 필드, 배열, fixed 메시지로만 된 메시지는 여전히 고정 길이라서 `TryView`로 제자리에서 읽습니다. 중첩 구조체와 구조체 배열을 가진 C++ 구조체를 Protaco로 옮기는 방법입니다.
+`fixed: true`인 메시지는 fixed 필드로만 된 구조체입니다. 필드 타입이나 `T[N]`의 원소로 쓰면 그 메시지를 쓰는 메시지의 fixed 영역에 인라인으로 놓입니다. 길이도 중첩 본문도 없습니다. fixed 필드, 배열, fixed 메시지로만 된 메시지는 여전히 고정 길이라서 `TryView`로 제자리에서 읽습니다. 중첩 구조체와 구조체 배열을 가진 C++ 구조체를 Protaco로 옮기는 방법입니다. 예제의 [Spot.yaml](examples/schemas/Spot.yaml)은 위 `Board`의 `depot`과 `spots` 타입입니다.
 
 ```yaml
-# A stop of a route, the same layout everywhere it appears.
+# A place on the dispatch board. fixed: true, so it sits inline in the board's fixed block.
 message: Spot
 version: 1
 namespace: demo
@@ -697,16 +701,6 @@ fields:
   - {key: lat, type: double}
   - {key: lon, type: double}
   - {key: label, type: string(16)}
-```
-
-```yaml
-message: Board
-version: 1
-namespace: demo
-allow_extension: false
-fields:
-  - {key: depot, type: Spot}
-  - {key: spots, type: Spot[Limits.MaxStops]}
 ```
 
 - `fixed: true` 메시지는 fixed 필드만 가짐: 스칼라, `string(N)`, enum, 다른 fixed 메시지, 이들의 `T[N]`. 가변 필드, `min_version`, `added`, `removed`, `allow_extension: true`, 자기 타입 필드는 PC408
@@ -738,7 +732,7 @@ board.set_spots(3, copy);                            // false with the reason fo
 ```csharp
 var board = new demo.Board();
 board.Depot.Lat = 37.5;                              // a demo.Spot object, written inline by Serialize
-board.Spots[2].Label = "north gate";                 // Spots: a demo.Spot[16], one object per element
+board.Spots[2].Label = "north gate";                 // Spots: a demo.Spot[4], one object per element
 byte[] bytes = board.Serialize();
 ```
 
@@ -750,7 +744,7 @@ byte[] bytes = board.Serialize();
 ```python
 board = Board()
 board.depot.lat = 37.5
-board.spots[2].label = "north gate"                  # spots: a list of 16 Spot objects
+board.spots[2].label = "north gate"                  # spots: a list of 4 Spot objects
 data = board.Serialize()
 ```
 
