@@ -11,6 +11,7 @@ This folder contains code and results comparing protaco 0.6.0 and protobuf 3.21.
 - [bench.cpp](bench.cpp): shared setter templates, round-trip checks, timing, and CSV output.
 - [results.csv](results.csv): published measurements and their environment.
 - [plot.py](plot.py): reads `results.csv` and generates the figure [benchmark.svg](../img/benchmark.svg) and the table [benchmark_table.svg](../img/benchmark_table.svg). Both READMEs use these English images.
+- [regress/](regress/): regression check of the C++, C# and Python runtimes against an older commit ([Regression check](#regression-check)).
 
 ## Messages
 
@@ -105,3 +106,21 @@ python plot.py
 ```
 
 To use the published aggregation method, retain three separate runs. For each `message`/`operation`/`library` combination, select the run with the median mean time. Copy that row's sd and frame size with it into `results.csv`, then run `python plot.py`.
+
+## Regression check
+
+[regress/](regress/) checks that a change does not slow down existing messages. It builds the same protaco-only cases, without protobuf, once against an older commit and once against the working tree, runs the two in turn, and prints the median of each side.
+
+- Cases: `Fixed512` and `Mixed256` encoding and decoding, `Fixed512` TryView (C++, C#), a new `DeliveryRoute` with two stops and its `Serialize()`, its decoding and `ToString()`, and a new `Heartbeat`
+- Languages: C++ (v141 x64 `/O2 /MD`), C# (.NET Framework 4.6.1), Python
+- The older commit needs `docs/benchmark/schemas`, `examples/schemas`, `include/` and `protaco_compiler/protacoc`
+- Work files go to `.IntermediateDirectory/regress`
+
+In an x64 Visual Studio developer command prompt, from any folder (git, python and the Windows tar on PATH):
+
+```bat
+docs\benchmark\regress\regress.cmd <git ref> [runs]
+docs\benchmark\regress\regress.cmd 1b38645 5
+```
+
+The output has one line per case: old ns, new ns and the change. A few percent either way is run-to-run noise or code placement in the compiled binary; run more times before reading a change into it.

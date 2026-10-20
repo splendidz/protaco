@@ -11,6 +11,7 @@
 - [bench.cpp](bench.cpp): 공통 setter 템플릿, 왕복 검사, 시간 측정, CSV 출력.
 - [results.csv](results.csv): 공개한 측정값과 실행 환경.
 - [plot.py](plot.py): `results.csv`를 읽어 그림 [benchmark.svg](../img/benchmark.svg)와 표 [benchmark_table.svg](../img/benchmark_table.svg)를 생성하는 스크립트. 두 README가 같은 영문 이미지를 씀.
+- [regress/](regress/): 옛 커밋과 비교하는 C++·C#·Python 런타임 회귀 측정([회귀 측정](#회귀-측정)).
 
 ## 메시지
 
@@ -105,3 +106,21 @@ python plot.py
 ```
 
 공개 결과와 같은 집계 방식으로 비교하려면 세 번의 실행을 각각 보관합니다. `message`·`operation`·`library`가 같은 행끼리 평균 시간의 중앙값 실행을 선택하고, 그 행의 sd와 프레임 크기도 함께 `results.csv`에 기록한 뒤 `python plot.py`를 실행합니다.
+
+## 회귀 측정
+
+[regress/](regress/)는 변경이 기존 메시지를 느리게 하지 않았는지 확인합니다. protobuf 없이 protaco만 쓰는 같은 측정 항목을 옛 커밋과 작업 트리에 대해 각각 빌드하고, 둘을 번갈아 실행해 양쪽의 중앙값을 출력합니다.
+
+- 항목: `Fixed512`·`Mixed256`의 Encoding과 Decoding, `Fixed512` TryView(C++, C#), 경유지 2개인 새 `DeliveryRoute`와 `Serialize()`, 그 Decoding과 `ToString()`, 새 `Heartbeat`
+- 언어: C++(v141 x64 `/O2 /MD`), C#(.NET Framework 4.6.1), Python
+- 옛 커밋에는 `docs/benchmark/schemas`, `examples/schemas`, `include/`, `protaco_compiler/protacoc`가 있어야 함
+- 작업 파일은 `.IntermediateDirectory/regress`
+
+x64 Visual Studio 개발자 명령 프롬프트에서 실행합니다. 작업 폴더는 상관없고 git, python, Windows tar가 PATH에 있어야 합니다.
+
+```bat
+docs\benchmark\regress\regress.cmd <git ref> [runs]
+docs\benchmark\regress\regress.cmd 1b38645 5
+```
+
+출력은 항목마다 한 줄이며 old ns, new ns, 변화율입니다. 몇 퍼센트 안팎의 차이는 실행마다 생기는 잡음이나 컴파일된 코드 배치 차이이므로, 변화로 읽기 전에 횟수를 늘려 다시 돌립니다.

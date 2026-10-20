@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="518.4pt" height="163.08pt" viewBox="0 0 518.4 163.08" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="720pt" height="236.16pt" viewBox="0 0 720 236.16" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -20,37 +20,37 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 163.08 
-L 518.4 163.08 
-L 518.4 0 
+   <path d="M 0 236.16 
+L 720 236.16 
+L 720 0 
 L 0 0 
 z
 " style="fill: #ffffff"/>
   </g>
   <g id="axes_1">
    <g id="line2d_1">
-    <path d="M 10.368 28.782 
-L 508.032 28.782 
-" clip-path="url(#p3c9b129227)" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: square"/>
+    <path d="M 14.4 40.968 
+L 705.6 40.968 
+" clip-path="url(#pda598e218c)" style="fill: none; stroke: #000000; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="line2d_2">
-    <path d="M 10.368 47.394 
-L 508.032 47.394 
-" clip-path="url(#p3c9b129227)" style="fill: none; stroke: #000000; stroke-width: 0.5; stroke-linecap: square"/>
+    <path d="M 14.4 67.896 
+L 705.6 67.896 
+" clip-path="url(#pda598e218c)" style="fill: none; stroke: #000000; stroke-width: 0.7; stroke-linecap: square"/>
    </g>
    <g id="line2d_3">
-    <path d="M 10.368 101.538 
-L 508.032 101.538 
-" clip-path="url(#p3c9b129227)" style="fill: none; stroke: #000000; stroke-width: 0.3; stroke-linecap: square"/>
+    <path d="M 14.4 146.232 
+L 705.6 146.232 
+" clip-path="url(#pda598e218c)" style="fill: none; stroke: #000000; stroke-width: 0.4; stroke-linecap: square"/>
    </g>
    <g id="line2d_4">
-    <path d="M 10.368 141.3 
-L 508.032 141.3 
-" clip-path="url(#p3c9b129227)" style="fill: none; stroke: #000000; stroke-width: 0.9; stroke-linecap: square"/>
+    <path d="M 14.4 203.76 
+L 705.6 203.76 
+" clip-path="url(#pda598e218c)" style="fill: none; stroke: #000000; stroke-width: 1.2; stroke-linecap: square"/>
    </g>
    <g id="text_1">
     <!-- Table 1. Time per call, mean ± s.d. over 20 rounds of 100,000 calls. Lower is better. -->
-    <g transform="translate(10.368 16.441992) scale(0.085 -0.085)">
+    <g transform="translate(14.4 23.283047) scale(0.13 -0.13)">
      <defs>
       <path id="TimesNewRomanPSMT-54" d="M 3703 4238 
 L 3750 3244 
@@ -930,7 +930,7 @@ z
    </g>
    <g id="text_2">
     <!-- Message -->
-    <g transform="translate(10.368 40.233234) scale(0.09 -0.09)">
+    <g transform="translate(14.4 57.769031) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-4d" d="M 2619 0 
 L 981 3566 
@@ -1044,7 +1044,7 @@ z
    </g>
    <g id="text_3">
     <!-- Operation -->
-    <g transform="translate(134.784 40.250109) scale(0.09 -0.09)">
+    <g transform="translate(187.2 57.795281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-4f" d="M 2341 4334 
 Q 3166 4334 3770 3707 
@@ -1081,7 +1081,7 @@ z
    </g>
    <g id="text_4">
     <!-- Protaco (ns) -->
-    <g transform="translate(295.087646 40.250109) scale(0.09 -0.09)">
+    <g transform="translate(402.554188 57.795281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-50" d="M 1313 1984 
 L 1313 750 
@@ -1171,7 +1171,7 @@ z
    </g>
    <g id="text_5">
     <!-- Protocol Buffers (ns) -->
-    <g transform="translate(362.531227 40.250109) scale(0.09 -0.09)">
+    <g transform="translate(490.877625 57.795281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-42" d="M 2956 2163 
 Q 3397 2069 3616 1863 
@@ -1245,7 +1245,7 @@ z
    </g>
    <g id="text_6">
     <!-- Speedup -->
-    <g transform="translate(477.036844 40.250109) scale(0.09 -0.09)">
+    <g transform="translate(657.385313 57.795281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-53" d="M 2934 4334 
 L 2934 2869 
@@ -1302,7 +1302,7 @@ z
    </g>
    <g id="text_7">
     <!-- Fixed-length, 512 B -->
-    <g transform="translate(10.368 58.853672) scale(0.09 -0.09)">
+    <g transform="translate(14.4 84.710156) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-46" d="M 1309 4006 
 L 1309 2341 
@@ -1487,7 +1487,7 @@ z
    </g>
    <g id="text_8">
     <!-- Encoding (zero-copy) -->
-    <g transform="translate(134.784 58.853672) scale(0.09 -0.09)">
+    <g transform="translate(187.2 84.710156) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-45" d="M 1338 4006 
 L 1338 2331 
@@ -1615,7 +1615,7 @@ z
    </g>
    <g id="text_9">
     <!-- 23.3 ± 0.2 -->
-    <g transform="translate(302.386084 58.717266) scale(0.09 -0.09)">
+    <g transform="translate(413.907313 84.497969) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPS-BoldMT-32" d="M 2650 0 
 L 156 0 
@@ -1750,7 +1750,7 @@ z
    </g>
    <g id="text_10">
     <!-- 200.1 ± 2.5 -->
-    <g transform="translate(397.418884 58.862109) scale(0.09 -0.09)">
+    <g transform="translate(545.147312 84.723281) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-32"/>
      <use xlink:href="#TimesNewRomanPSMT-30" transform="translate(50 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-30" transform="translate(100 0)"/>
@@ -1766,7 +1766,7 @@ z
    </g>
    <g id="text_11">
     <!-- 8.6× -->
-    <g transform="translate(491.706844 58.862109) scale(0.09 -0.09)">
+    <g transform="translate(680.205312 84.723281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-38" d="M 1228 2134 
 Q 725 2547 579 2797 
@@ -1864,7 +1864,7 @@ z
    </g>
    <g id="text_12">
     <!-- Decoding -->
-    <g transform="translate(134.784 75.773672) scale(0.09 -0.09)">
+    <g transform="translate(187.2 109.190156) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-44" d="M 109 0 
 L 109 116 
@@ -1907,7 +1907,7 @@ z
    </g>
    <g id="text_13">
     <!-- 55.4 ± 1.6 -->
-    <g transform="translate(302.386084 75.637266) scale(0.09 -0.09)">
+    <g transform="translate(413.907313 108.977969) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPS-BoldMT-35" d="M 975 4238 
 L 2959 4238 
@@ -2023,7 +2023,7 @@ z
    </g>
    <g id="text_14">
     <!-- 252.3 ± 9.2 -->
-    <g transform="translate(397.418884 75.782109) scale(0.09 -0.09)">
+    <g transform="translate(545.147312 109.203281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-33" d="M 325 3431 
 Q 506 3859 782 4092 
@@ -2106,7 +2106,7 @@ z
    </g>
    <g id="text_15">
     <!-- 4.6× -->
-    <g transform="translate(491.706844 75.782109) scale(0.09 -0.09)">
+    <g transform="translate(680.205312 109.203281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-34" d="M 2978 1563 
 L 2978 1119 
@@ -2136,7 +2136,7 @@ z
    </g>
    <g id="text_16">
     <!-- Decoding, TryView (zero-copy) -->
-    <g transform="translate(134.784 92.693672) scale(0.09 -0.09)">
+    <g transform="translate(187.2 133.670156) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-56" d="M 4544 4238 
 L 4544 4122 
@@ -2198,7 +2198,7 @@ z
    </g>
    <g id="text_17">
     <!-- 11.9 ± 0.5 -->
-    <g transform="translate(302.881084 92.557266) scale(0.09 -0.09)">
+    <g transform="translate(414.677313 133.457969) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPS-BoldMT-39" d="M 197 -88 
 L 197 0 
@@ -2246,7 +2246,7 @@ z
    </g>
    <g id="text_18">
     <!-- Not supported -->
-    <g style="fill: #555555" transform="translate(387.113884 92.702109) scale(0.09 -0.09)">
+    <g style="fill: #555555" transform="translate(529.117313 133.683281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-4e" d="M -84 4238 
 L 1066 4238 
@@ -2299,7 +2299,7 @@ z
    </g>
    <g id="text_19">
     <!-- 21.2×† -->
-    <g transform="translate(482.706844 92.702109) scale(0.09 -0.09)">
+    <g transform="translate(666.205312 133.683281) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPSMT-2020" d="M 1638 -1316 
 L 1522 -1316 
@@ -2353,7 +2353,7 @@ z
    </g>
    <g id="text_20">
     <!-- Variable-length, 256 B -->
-    <g transform="translate(10.368 116.381672) scale(0.09 -0.09)">
+    <g transform="translate(14.4 167.942156) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-56"/>
      <use xlink:href="#TimesNewRomanPSMT-61" transform="translate(61.091797 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-72" transform="translate(105.476562 0)"/>
@@ -2380,7 +2380,7 @@ z
    </g>
    <g id="text_21">
     <!-- Encoding -->
-    <g transform="translate(134.784 116.381672) scale(0.09 -0.09)">
+    <g transform="translate(187.2 167.942156) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-45"/>
      <use xlink:href="#TimesNewRomanPSMT-6e" transform="translate(61.083984 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-63" transform="translate(111.083984 0)"/>
@@ -2393,7 +2393,7 @@ z
    </g>
    <g id="text_22">
     <!-- 20.7 ± 0.5 -->
-    <g transform="translate(302.386084 116.245266) scale(0.09 -0.09)">
+    <g transform="translate(413.907313 167.729969) scale(0.14 -0.14)">
      <defs>
       <path id="TimesNewRomanPS-BoldMT-37" d="M 1134 -88 
 L 2288 3409 
@@ -2422,7 +2422,7 @@ z
    </g>
    <g id="text_23">
     <!-- 93.3 ± 3.4 -->
-    <g transform="translate(401.918884 116.390109) scale(0.09 -0.09)">
+    <g transform="translate(552.147312 167.955281) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-39"/>
      <use xlink:href="#TimesNewRomanPSMT-33" transform="translate(50 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-2e" transform="translate(100 0)"/>
@@ -2437,7 +2437,7 @@ z
    </g>
    <g id="text_24">
     <!-- 4.5× -->
-    <g transform="translate(491.706844 116.390109) scale(0.09 -0.09)">
+    <g transform="translate(680.205312 167.955281) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-34"/>
      <use xlink:href="#TimesNewRomanPSMT-2e" transform="translate(50 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-35" transform="translate(75 0)"/>
@@ -2446,7 +2446,7 @@ z
    </g>
    <g id="text_25">
     <!-- Decoding -->
-    <g transform="translate(134.784 133.301672) scale(0.09 -0.09)">
+    <g transform="translate(187.2 192.422156) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-44"/>
      <use xlink:href="#TimesNewRomanPSMT-65" transform="translate(72.216797 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-63" transform="translate(116.601562 0)"/>
@@ -2459,7 +2459,7 @@ z
    </g>
    <g id="text_26">
     <!-- 126.9 ± 1.4 -->
-    <g transform="translate(297.886084 133.165266) scale(0.09 -0.09)">
+    <g transform="translate(406.907313 192.209969) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPS-BoldMT-31"/>
      <use xlink:href="#TimesNewRomanPS-BoldMT-32" transform="translate(50 0)"/>
      <use xlink:href="#TimesNewRomanPS-BoldMT-36" transform="translate(100 0)"/>
@@ -2475,7 +2475,7 @@ z
    </g>
    <g id="text_27">
     <!-- 164.5 ± 4.9 -->
-    <g transform="translate(397.418884 133.310109) scale(0.09 -0.09)">
+    <g transform="translate(545.147312 192.435281) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-31"/>
      <use xlink:href="#TimesNewRomanPSMT-36" transform="translate(50 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-34" transform="translate(100 0)"/>
@@ -2491,7 +2491,7 @@ z
    </g>
    <g id="text_28">
     <!-- 1.3× -->
-    <g transform="translate(491.706844 133.310109) scale(0.09 -0.09)">
+    <g transform="translate(680.205312 192.435281) scale(0.14 -0.14)">
      <use xlink:href="#TimesNewRomanPSMT-31"/>
      <use xlink:href="#TimesNewRomanPSMT-2e" transform="translate(50 0)"/>
      <use xlink:href="#TimesNewRomanPSMT-33" transform="translate(75 0)"/>
@@ -2500,7 +2500,7 @@ z
    </g>
    <g id="text_29">
     <!-- Speedup: Protocol Buffers / Protaco. † Compared with Protocol Buffers decoding. -->
-    <g transform="translate(10.368 153.246727) scale(0.075 -0.075)">
+    <g transform="translate(14.4 221.319562) scale(0.12 -0.12)">
      <defs>
       <path id="TimesNewRomanPSMT-3a" d="M 903 2950 
 Q 1047 2950 1148 2848 
@@ -2643,8 +2643,8 @@ z
   </g>
  </g>
  <defs>
-  <clipPath id="p3c9b129227">
-   <rect x="10.368" y="0" width="497.664" height="163.08"/>
+  <clipPath id="pda598e218c">
+   <rect x="14.4" y="0" width="691.2" height="236.16"/>
   </clipPath>
  </defs>
 </svg>

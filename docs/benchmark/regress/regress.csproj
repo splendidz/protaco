@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Regress.cs against one runtime. regress.cmd builds it twice:
+     /p:Variant=old|new /p:RuntimeCs=<Protaco.cs> /p:GenDir=<generated C# root> /p:WorkDir=<output root> -->
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(WorkDir)\cs\obj\$(Variant)\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration>Release</Configuration>
+    <Platform>AnyCPU</Platform>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>regress_$(Variant)</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <OutputPath>$(WorkDir)\cs\$(Variant)\</OutputPath>
+    <IntermediateOutputPath>$(WorkDir)\cs\obj\$(Variant)\Release\</IntermediateOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Optimize>true</Optimize>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Regress.cs" />
+    <Compile Include="$(RuntimeCs)" />
+    <Compile Include="$(GenDir)\bench\*.cs" />
+    <Compile Include="$(GenDir)\demo\*.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
