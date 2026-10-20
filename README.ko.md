@@ -35,9 +35,9 @@ Protaco는 간단하면서 빠른 것을 원하는 사람을 위해 만들었습
 
 Protaco가 빠른 이유는 **zero-copy**입니다. C++에서 고정 길이 필드의 setter는 보낼 프레임 버퍼의 제자리에 바로 씁니다. 그래서 `Serialize()`는 그 버퍼를 복사도 인코딩도 없이 그대로 돌려줍니다. 받는 쪽은 `TryView`로 받은 바이트를 복사하지 않고 제자리에서 읽습니다. 아래는 같은 PC에서 Protocol Buffers와 같은 메시지를 Encoding·Decoding한 호출당 시간입니다.
 
-![고정 길이 512 B와 가변 길이 256 B 메시지의 Encoding·Decoding 시간 비교](docs/img/benchmark.ko.svg)
+![고정 길이 512 B와 가변 길이 256 B 메시지의 Encoding·Decoding 시간 비교](docs/img/benchmark.svg)
 
-![Protaco와 Protocol Buffers의 호출당 시간과 배율 표](docs/img/benchmark_table.ko.svg)
+![Protaco와 Protocol Buffers의 호출당 시간과 배율 표](docs/img/benchmark_table.svg)
 
 - 고정 길이 512 B Encoding 8.6배: **zero-copy** Encoding. 걸리는 시간은 거의 setter 호출뿐
 - **zero-copy** `TryView` 21.2배: 프레임만 검사하고 객체를 만들지 않고 제자리에서 읽음. Protocol Buffers에는 없는 방식

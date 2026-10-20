@@ -10,7 +10,7 @@
 - [bench.proto](bench.proto): 같은 메시지의 타입별 proto3 정의.
 - [bench.cpp](bench.cpp): 공통 setter 템플릿, 왕복 검사, 시간 측정, CSV 출력.
 - [results.csv](results.csv): 공개한 측정값과 실행 환경.
-- [plot.py](plot.py): `results.csv`를 읽어 그림 [benchmark.ko.svg](../img/benchmark.ko.svg)와 표 [benchmark_table.ko.svg](../img/benchmark_table.ko.svg), 영어판(`.ko` 없는 이름)을 생성하는 스크립트.
+- [plot.py](plot.py): `results.csv`를 읽어 그림 [benchmark.svg](../img/benchmark.svg)와 표 [benchmark_table.svg](../img/benchmark_table.svg)를 생성하는 스크립트. 두 README가 같은 영문 이미지를 씀.
 
 ## 메시지
 
@@ -37,7 +37,7 @@
 
 Intel Core i9-13900H, Windows 11, MSVC 14.16(v141) x64 `/O2 /MD` 환경입니다. protaco 0.6.0과 같은 도구 집합으로 빌드한 protobuf 3.21.12 Release 정적 라이브러리를 사용했습니다. 값의 원본은 [results.csv](results.csv)입니다.
 
-![Fixed512와 Mixed256의 Encoding·Decoding 시간](../img/benchmark.ko.svg)
+![Fixed512와 Mixed256의 Encoding·Decoding 시간](../img/benchmark.svg)
 
 막대는 호출당 평균 시간, error bar는 20라운드의 표준편차입니다. 괄호는 protobuf 시간을 protaco 시간으로 나눈 배율입니다. 패널마다 세로축 범위가 다릅니다.
 
