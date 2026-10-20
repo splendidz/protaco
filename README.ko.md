@@ -11,13 +11,9 @@ Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 
 
 ### 직렬화가 필요한 순간
 
-프로그램 안의 객체는 그 프로그램의 메모리 안에서만 뜻이 있습니다. 객체를 밖으로 내보내려면 정해진 순서의 바이트로 바꿔야 하고, 받는 쪽은 그 바이트를 다시 객체로 되돌려야 합니다. 이 일을 직렬화라고 합니다. 이럴 때 필요합니다.
-
 - 다른 프로그램, 다른 언어끼리 통신할 때: C++ 게임 서버와 C# 클라이언트, C++ 엔진과 Python 시험 스크립트
 - 파일로 저장했다가 다시 읽을 때: 세이브 데이터, 녹화한 입력, 작업 결과
 - 다른 PC나 장치와 데이터를 주고받을 때: TCP, UDP, 파이프, 공유 메모리
-
-구조체를 `memcpy`로 그대로 보내도 처음에는 동작합니다. 그러다 컴파일러가 넣는 padding, `std::string` 같은 포인터 멤버, 언어마다 다른 메모리 배치, 한쪽만 갱신된 구조체 때문에 조용히 깨집니다. 직렬화 도구는 바이트 배치를 약속으로 고정하고, 약속이 어긋나면 그 사실을 알려 줍니다.
 
 ### Protaco의 방식
 
@@ -35,13 +31,36 @@ Protaco는 간단하면서 빠른 것을 원하는 사람을 위해 만들었습
 
 이런 곳은 프로그램을 자주 고치고 자주 배포합니다. 새 빌드와 옛 빌드가 섞여 도는 기간이 늘 있으므로, 어떤 version끼리 통신할 수 있는지를 규약으로 관리하면 얻는 것이 큽니다. 반면 Protocol Buffers가 가진 많은 기능까지는 필요 없고, 명시적인 데이터를 빠르게 주고받으면 충분합니다. Protaco는 그 범위에 맞췄습니다.
 
-### 가볍고 빠릅니다
+### zero-copy라서 빠릅니다
+
+Protaco가 빠른 이유는 **zero-copy**입니다. C++에서 고정 길이 필드의 setter는 보낼 프레임 버퍼의 제자리에 바로 씁니다. 그래서 `Serialize()`는 그 버퍼를 복사도 인코딩도 없이 그대로 돌려줍니다. 받는 쪽은 `TryView`로 받은 바이트를 복사하지 않고 제자리에서 읽습니다. 아래는 같은 PC에서 Protocol Buffers와 같은 메시지를 Encoding·Decoding한 호출당 시간입니다.
+
+![고정 길이 512 B와 가변 길이 256 B 메시지의 Encoding·Decoding 시간 비교](docs/img/benchmark.ko.svg)
+
+![Protaco와 Protocol Buffers의 호출당 시간과 배율 표](docs/img/benchmark_table.ko.svg)
+
+- 고정 길이 512 B Encoding 8.6배: **zero-copy** Encoding. 걸리는 시간은 거의 setter 호출뿐
+- **zero-copy** `TryView` 21.2배: 프레임만 검사하고 객체를 만들지 않고 제자리에서 읽음. Protocol Buffers에는 없는 방식
+- 가변 길이 256 B Encoding 4.5배: 고정 필드는 zero-copy, 문자열은 전체 크기를 먼저 계산해 한 번에 기록. 정수는 varint 변환 없이 고정 폭
+
+측정 조건과 해석은 [8.4](#84-측정-조건과-해석)에, 측정 코드와 재현 방법은 [벤치마크 문서](docs/benchmark/README.ko.md)에 있습니다.
+
+### 가볍습니다
 
 C++ 런타임은 헤더 하나, C# 런타임은 소스 파일 하나, Python 런타임은 모듈 하나입니다. 복잡한 CMake 설정도, 패키지 설치도, lib/dll 링크도 없습니다. `protacoc`를 실행하면 생성 코드 옆에 같은 버전의 런타임이 함께 나오고, 생성 헤더를 include하면 끝입니다.
 
 ![Protocol Buffers와 Protaco의 도입 과정 비교](docs/img/setup.svg)
 
-빠른 이유도 단순합니다. C++에서는 고정 길이 필드의 setter가 프레임 버퍼의 제자리에 바로 기록하므로, 고정 필드만 있고 확장 데이터가 빈 메시지는 `Serialize()`에서 할 일이 없습니다. 받는 쪽은 `TryView`로 바이트를 복사하지 않고 제자리에서 읽을 수 있습니다(zero-copy). 측정에서 고정 필드 메시지의 인코딩은 Protocol Buffers보다 8.6배, `TryView` 읽기는 21배 빨랐습니다([1.2](#12-protocol-buffers와-비교)).
+### 옛 빌드와 섞여도 통신합니다
+
+메시지의 version을 올려도 아직 지원하는 옛 version의 클래스가 namespace로 나뉘어 같은 생성 파일에 함께 나옵니다. 새 빌드는 상대가 읽을 수 있는 배치의 클래스를 골라 보내고, 옛 빌드가 보낸 프레임도 그 version의 클래스로 그대로 읽습니다. 그래서 모든 프로그램과 장비를 한 번에 갱신하지 않아도 됩니다. 배포가 섞이는 기간에도 통신이 끊기지 않습니다.
+
+```cpp
+shop::Order order;          // 현재 version 3
+shop::v1::Order legacy;     // 같은 헤더에 생성된 version 1 클래스. 아직 v1인 상대와 주고받을 때
+```
+
+어떤 version끼리 통신할지는 YAML의 `min_version`과 필드별 `added`·`removed`로 정합니다. 지원이 끝난 상대는 잘못 읽는 대신 이유가 적힌 오류를 받습니다([7. 버전 관리](#7-버전-관리)).
 
 ### 안정적이고 강건합니다
 
@@ -159,7 +178,7 @@ if not ok:
 - 생성할 때마다 코드 옆에 같은 버전의 런타임을 씁니다. 생성기와 런타임 버전이 어긋날 일이 없습니다.
 - ⚡ C++에서는 고정 필드의 setter가 최종 바이트를 바로 기록하고, 바뀐 것이 없으면 `Serialize()`가 마지막 바이트를 그대로 돌려줍니다. 받는 쪽은 `TryView`로 복사 없이 읽습니다(C++, C#).
 - 🛡️ 받을 때 이름, version, 스키마 지문을 모두 확인합니다. 깨진 데이터가 조용히 읽히는 일이 없습니다.
-- 버전 관리가 필드 단위입니다. 필드마다 `added`와 `removed`로 이력을 남기고, 아직 지원하는 옛 version의 클래스도 함께 생성합니다.
+- 버전 관리가 필드 단위입니다. 필드마다 `added`와 `removed`로 이력을 남기고, 아직 지원하는 옛 version의 클래스도 `v1::Order`처럼 namespace로 나눠 함께 생성합니다.
 - 스키마에 없는 키-값도 확장 데이터(ext)로 실어 보낼 수 있습니다. 필요 없으면 `allow_extension: false`로 끕니다.
 - 예외 없는 API가 기본입니다. `Try*` 함수는 성공 여부를 돌려주고 실패 이유를 `경로: 이유` 형태의 문자열로 알려 줍니다.
 - 메시지마다 봉투(id, 상관 id, 마이크로초 시각)가 있습니다. 객체를 만들면 1씩 늘어나는 id와 현재 시각이 자동으로 찍히고, 응답에는 요청의 id를 상관 id로 담습니다.
@@ -175,21 +194,14 @@ Protaco는 Protocol Buffers보다 좁은 범위를 다룹니다. 지원 언어�
 | 런타임 | 헤더 하나, 약 69 KB, 링크 불필요 | libprotobuf CMake 대상 .cc 84개, 정적 라이브러리 약 20 MB |
 | 의존성 | C++ 표준 라이브러리 | 런타임 라이브러리 링크, 버전 22부터 Abseil 추가 |
 | 생성기와 런타임 | 생성 코드 옆에 같은 버전의 런타임 출력 | 설치한 런타임과 생성 코드 버전이 맞아야 함, 다르면 생성 헤더에서 컴파일 오류 |
-| 인코딩 | 고정 필드는 setter가 프레임에 직접 기록 | 직렬화할 때 필드마다 인코딩, 정수는 varint |
-| 디코딩 | 고정 필드 메시지는 `TryView`로 복사 없이 읽음(zero-copy) | 메시지 객체로 파싱 |
+| Encoding | 고정 필드는 setter가 프레임에 직접 기록(zero-copy) | 직렬화할 때 필드마다 인코딩, 정수는 varint |
+| Decoding | 고정 필드 메시지는 `TryView`로 복사 없이 읽음(zero-copy) | 메시지 객체로 파싱 |
 | 메시지 식별 | 이름, version, 스키마 지문 검사 | 데이터에 이름과 스키마가 없음, 없는 필드는 기본값 |
-| 버전 관리 | YAML 하나에 필드별 이력, 옛 version별 클래스 | 필드 번호로 관리, 메시지당 클래스 하나 |
+| 버전 관리 | YAML 하나에 필드별 이력, 옛 version 클래스를 namespace로 함께 생성 | 필드 번호로 관리, 메시지당 클래스 하나 |
 | 스키마 문법 | YAML, 구조체를 선언하듯 | `.proto` 언어 |
 | 언어 | C++, C#, Python(Windows, Linux) | 다수 |
 
-성능은 같은 PC에서 같은 메시지를 인코딩·디코딩한 호출당 시간으로 비교했습니다. 막대는 평균, 수염은 표준편차이고 짧을수록 좋습니다.
-
-![Fixed512와 Mixed256의 인코딩·디코딩 시간 비교](docs/img/benchmark.svg)
-
-- Fixed512(고정 필드만): 인코딩 23.3 ns 대 200.1 ns(8.6배), 디코딩 55.4 ns 대 252.3 ns(4.6배), `TryView` 11.9 ns(21.2배)
-- Mixed256(고정 필드와 문자열 2개): 인코딩 20.7 ns 대 93.3 ns(4.5배), 디코딩 126.9 ns 대 164.5 ns(1.3배)
-
-측정 조건과 해석은 [8.4](#84-protocol-buffers와-측정-비교)에, 측정 코드와 재현 방법은 [벤치마크 문서](docs/benchmark/README.ko.md)에 있습니다.
+측정 비교는 [zero-copy라서 빠릅니다](#zero-copy라서-빠릅니다)에 있습니다.
 
 ## 2. 동작 구조
 
@@ -973,26 +985,22 @@ fields:
 
 ### 7.6 수신 판정
 
-수신 클래스의 version을 R, 프레임의 version을 S라고 할 때 다음 순서로 검사합니다. `TryView`도 같은 검사를 합니다.
+version 3인 `Order` 클래스가 프레임을 받으면 다음 순서로 검사합니다. `TryView`도 같습니다.
 
-```mermaid
-flowchart TD
-    A["프레임"] --> B{"이름 일치?"}
-    B -- 아니오 --> E1["name mismatch"]
-    B -- 예 --> C{"S가 R 이상?"}
-    C -- 아니오 --> E2["too old"]
-    C -- 예 --> D{"송신 측이 R 지원?"}
-    D -- 아니오 --> E3["too new"]
-    D -- 예 --> H{"R 지문 일치?"}
-    H -- 아니오 --> E4["schema mismatch"]
-    H -- 예 --> F["R 배치로 디코딩"]
+```text
+if 프레임의 메시지 이름 != "Order"
+    거부: message name mismatch: expected Order, got Heartbeat
+if 프레임의 version < 3
+    거부: message version too old: Order reads version 3 or newer, got 1. Use the v1 type
+if 송신 측 min_version > 3
+    거부: message version too new: Order reads version 3, sender supports 4..5
+if 프레임에 실린 version 3 지문 != Order::MsgSchemaHash()
+    거부: schema mismatch: Order version 3 expected 0x..., got 0x...
+version 3 배치로 디코딩
+    더 새 version의 가변 필드는 열린 메시지면 ext에 보관, 닫힌 메시지면 버림
 ```
 
-1. 이름이 다르면 `message name mismatch: expected Order, got Heartbeat`
-2. S가 R보다 작으면 `message version too old: Order reads version 3 or newer, got 1. Use the v1 type`. 그 옛 클래스가 생성된 경우에만 타입 안내가 붙음. `PeekHeader()`로 version을 확인하고 `v1::Order`로 읽음
-3. 송신 측의 `min_version`이 R보다 크면 `message version too new: Order reads version 1, sender supports 2..4`
-4. 프레임에 실린 R의 지문이 수신 측 `MsgSchemaHash()`와 다르면 `schema mismatch: Order version 1 expected 0x..., got 0x...`
-5. 통과하면 R의 고정 영역과 가변 필드만 읽음. 더 새 가변 필드는 열린 메시지면 ext에 보관, 닫힌 메시지면 버림
+`Use the v1 type`은 그 version의 옛 클래스가 생성되어 있을 때만 붙습니다. 이때는 `PeekHeader()`로 version을 확인하고 `v1::Order`로 읽습니다.
 
 ### 7.7 송신
 
@@ -1000,46 +1008,24 @@ flowchart TD
 
 ### 7.8 배포 경우별 그림
 
-새 빌드에서 옛 빌드로 보내는 경우입니다.
+네 빌드가 `Order`를 주고받는 경우를 한 그림에 모았습니다. 개편 빌드는 version 4에서 필수 필드 `color`를 제거하고 `min_version`을 2로 올린 빌드입니다.
 
 ```mermaid
+%%{init: {"sequence": {"mirrorActors": false}}}%%
 sequenceDiagram
-    participant N as 새 빌드 (v3, 1..3 지원)
-    participant O as 옛 빌드 (v1)
-    N->>O: Order version 3
-    Note over O: v1 배치로 읽기<br/>새 가변 필드는 ext에 보관
-```
-
-옛 빌드에서 새 빌드로 보내는 경우입니다.
-
-```mermaid
-sequenceDiagram
-    participant O as 옛 빌드 (v1)
-    participant N as 새 빌드 (v3)
-    O->>N: Order version 1
-    Note over N: Order는 too old<br/>Use the v1 type
-    Note over N: PeekHeader로 version 확인<br/>v1::Order로 디코딩
-```
-
-개편 뒤 지원이 끝난 상대가 받는 경우입니다.
-
-```mermaid
-sequenceDiagram
-    participant N as 개편 빌드 (v4, 2..4 지원)
-    participant O as 옛 빌드 (v1)
-    N->>O: Order version 4
-    Note over O: message version too new<br/>sender supports 2..4
-```
-
-새 빌드가 옛 배치를 골라 보내는 경우입니다. version 4에서 제거한 필수 필드 `color`가 필요한 상대에게 version 3 클래스로 보냅니다.
-
-```mermaid
-sequenceDiagram
-    participant N as 새 빌드 (v4)
-    participant O as 옛 빌드 (v2)
-    Note over N: v3::Order에 color 포함
-    N->>O: Order version 3
-    Note over O: v2 배치로 읽기
+    autonumber
+    participant V1 as 옛 빌드 v1
+    participant V2 as 옛 빌드 v2
+    participant V3 as 새 빌드 v3 (1..3 지원)
+    participant V4 as 개편 빌드 v4 (2..4 지원)
+    V3->>V1: Order version 3
+    Note over V1: v1 배치로 읽음<br/>새 가변 필드는 ext에 보관
+    V1->>V3: Order version 1
+    Note over V3: Order로는 too old<br/>PeekHeader 확인 후 v1::Order로 읽음
+    V4->>V1: Order version 4
+    Note over V1: too new<br/>sender supports 2..4
+    V4->>V2: v3::Order로 보냄 (color 포함)
+    Note over V2: v2 배치로 읽음
 ```
 
 ### 7.9 배치 규칙
@@ -1093,7 +1079,9 @@ beat.set_uptimeSec(11);                  // bytes에도 바로 11이 보임
 
 ### 8.3 Serialize 재사용
 
-C++은 마지막 `Serialize()` 이후 가변 필드와 ext가 바뀌지 않았다면 가변 블록을 다시 만들지 않습니다.
+C++은 마지막 `Serialize()` 이후 가변 필드와 ext가 바뀌지 않았다면 가변 블록을 다시 만들지 않습니다. 이때 `Serialize()`는 크기 계산, 할당, 복사, 인코딩을 하나도 하지 않고 지난번 바이트를 그대로 돌려줍니다. 같은 메시지를 여러 상대에게 보내거나 다시 보낼 때 직렬화 비용이 사실상 없습니다.
+
+경유지 2개인 `DeliveryRoute`(258 B)에서 다시 `Serialize()`는 호출당 약 1.3 ns입니다. `set_note` 뒤 가변 블록을 다시 만들면 약 22 ns로, 재사용이 약 17배 빠릅니다. 측정 PC와 컴파일러는 [8.4](#84-측정-조건과-해석)와 같고, 값은 C++ 시험 `SerializeReuseCostsLittle`의 5라운드 중 최솟값입니다.
 
 - 가변 필드의 `set_` 호출, ext의 변경, 복사 디코딩 뒤 다시 만듦. 이동 버퍼를 그대로 넘겨받은 경우는 [6.6](#66-zero-copy)의 재사용 조건 적용
 - `mutable_<k>()`를 한 번이라도 부른 객체는 그 참조를 통한 수정을 추적할 수 없으므로 매번 가변 블록을 다시 만듦
@@ -1111,49 +1099,28 @@ const auto& again = route.Serialize();   // 가변 필드와 ext가 그대로면
 
 위 예는 `mutable_stops()`를 부르지 않은 객체를 전제로 합니다. 디코더는 본문당 가변 필드가 16개 이하면 필드 목록을 스택에 두어 힙 할당을 줄입니다.
 
-### 8.4 Protocol Buffers와 측정 비교
+### 8.4 측정 조건과 해석
 
-측정 조건입니다.
+[zero-copy라서 빠릅니다](#zero-copy라서-빠릅니다)의 그림과 표는 아래 조건에서 측정했습니다.
 
 - PC: Intel Core i9-13900H, Windows 11
 - 컴파일러: MSVC 14.16(v141) x64, `/O2 /MD`
 - 대상: protaco 0.6.0, protobuf 3.21.12 정적 라이브러리(같은 도구 집합으로 빌드)
 - 반복: 10,000회 예열 후 100,000회 호출 × 20라운드. 라운드별 호출당 시간의 평균과 표준편차. 세 번 실행해 사례마다 중앙값인 실행을 씀
 - 객체는 호출 사이에 재사용(두 라이브러리의 권장 방식)
-- 인코딩: 모든 필드 setter와 직렬화. protobuf는 재사용 버퍼에 `SerializeToArray`
-- 디코딩: 바이트를 객체로 바꾼 뒤 필드 하나 읽기. protaco `TryToObject`, protobuf는 재사용 메시지에 `ParseFromArray`
-- `TryView`: 같은 프레임 검사 후 제자리에서 필드 하나 읽기
+- Encoding: 모든 필드 setter와 직렬화. protobuf는 재사용 버퍼에 `SerializeToArray`
+- Decoding: 바이트를 객체로 바꾼 뒤 필드 하나 읽기. protaco `TryToObject`, protobuf는 재사용 메시지에 `ParseFromArray`
+- `TryView`: 같은 프레임 검사 후 제자리에서 필드 하나 읽기. 배율은 protobuf Decoding과 비교
 
-메시지입니다.
+메시지입니다. 스키마 이름은 `Fixed512`, `Mixed256`입니다.
 
-- Fixed512: 고정 필드만, 고정 영역 512바이트(고정 문자열 2개, int64 4개, int 32개, double 32개, bool 8개). 프레임 protaco 556 B, protobuf 571 B
-- Mixed256: 고정 영역 196바이트와 가변 문자열 2개(24, 16바이트), 키 포함 256바이트. 프레임 protaco 300 B, protobuf 268 B
+- 고정 길이 512 B: 고정 필드만, 고정 영역 512바이트(고정 문자열 2개, int64 4개, int 32개, double 32개, bool 8개). 프레임 protaco 556 B, protobuf 571 B
+- 가변 길이 256 B: 고정 영역 196바이트와 가변 문자열 2개(24, 16바이트), 키 포함 256바이트. 프레임 protaco 300 B, protobuf 268 B
 
-Fixed512 결과입니다(평균 ± 표준편차, 괄호는 protobuf 대비 배율).
+결과 해석입니다. zero-copy로 빨라지는 이유는 [zero-copy라서 빠릅니다](#zero-copy라서-빠릅니다)에 있습니다.
 
-| 동작 | protaco | protobuf |
-|---|---|---|
-| 인코딩 | 23.3 ± 0.2 ns (8.6배) | 200.1 ± 2.5 ns |
-| 디코딩 | 55.4 ± 1.6 ns (4.6배) | 252.3 ± 9.2 ns |
-| 디코딩, `TryView` | 11.9 ± 0.5 ns (21.2배) | 해당 없음 |
-
-Mixed256 결과입니다.
-
-| 동작 | protaco | protobuf |
-|---|---|---|
-| 인코딩 | 20.7 ± 0.5 ns (4.5배) | 93.3 ± 3.4 ns |
-| 디코딩 | 126.9 ± 1.4 ns (1.3배) | 164.5 ± 4.9 ns |
-
-`TryView` 배율은 protobuf 디코딩(252.3 ns)과 비교한 값입니다.
-
-![Fixed512와 Mixed256의 인코딩·디코딩 시간 비교](docs/img/benchmark.svg)
-
-결과 해석입니다.
-
-- 고정 필드는 setter가 프레임에 바로 쓰므로 인코딩 비용이 거의 setter 호출뿐
-- `TryView`는 프레임만 검사하고 객체를 만들지 않음
-- 문자열이 있는 디코딩은 차이가 작음. protaco는 새 객체로 디코딩해서 15바이트(MSVC의 짧은 문자열 한도)를 넘는 문자열마다 할당이 생기고, protobuf는 재사용 메시지의 문자열 버퍼를 다시 씀
-- 정수는 고정 폭이고 헤더에 이름, version, 지문이 실리므로 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음(Mixed256: 300 B 대 268 B)
+- 문자열이 있는 Decoding은 차이가 작음. protaco는 새 객체로 디코딩해서 15바이트(MSVC의 짧은 문자열 한도)를 넘는 문자열마다 할당이 생기고, protobuf는 재사용 메시지의 문자열 버퍼를 다시 씀
+- 정수는 고정 폭이고 헤더에 이름, version, 지문이 실리므로 작은 정수가 많은 데이터는 varint 형식보다 클 수 있음(가변 길이 256 B: 300 B 대 268 B)
 - 수치는 이 메시지와 이 PC의 결과. 데이터 구성과 하드웨어에 따라 달라짐
 
 스키마, 측정 코드, 재현 방법은 [docs/benchmark/README.ko.md](docs/benchmark/README.ko.md)에 있습니다.

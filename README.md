@@ -11,13 +11,9 @@ Protaco is a light serialization tool that lets C++, C#, and Python programs exc
 
 ### When you need serialization
 
-An object only means something inside the memory of the program that holds it. To send it anywhere else, you turn it into bytes in an agreed order, and the receiver turns those bytes back into an object. That is serialization. You need it when:
-
-- different programs or languages talk to each other: a C++ game server and a C# client, a C++ engine and a Python test script
-- you save data to a file and load it later: save games, recorded input, work results
-- you exchange data with another PC or device: TCP, UDP, pipes, shared memory
-
-Sending a struct with `memcpy` works at first. Then compiler padding, pointer members such as `std::string`, different memory layouts in each language, and a struct updated on only one side break it without a word. A serialization tool fixes the byte layout as a contract and tells you when the two sides disagree.
+- Programs or languages talking to each other: a C++ game server and a C# client, a C++ engine and a Python test script
+- Saving data to a file and loading it later: save games, recorded input, work results
+- Exchanging data with another PC or device: TCP, UDP, pipes, shared memory
 
 ### The Protaco way
 
@@ -35,13 +31,36 @@ Protaco is for people who want something simple and fast.
 
 Programs like these change and ship often. New and old builds always run side by side for a while, so it pays to manage which versions can talk to each other as part of the contract. On the other hand, they do not need everything Protocol Buffers offers. Exchanging explicit data quickly is enough. Protaco is built for exactly that scope.
 
-### Light and fast
+### Fast because it is zero-copy
+
+Protaco is fast because it is **zero-copy**. In C++, fixed-length setters write straight into their place in the frame buffer you will send. `Serialize()` then hands back that buffer as it is, with no copy and no encoding pass. The receiver reads the received bytes in place with `TryView`, again without a copy. Below is the time per call to encode and decode the same messages with Protocol Buffers on the same PC.
+
+![Encoding and decoding times for the fixed-length 512 B and variable-length 256 B messages](docs/img/benchmark.svg)
+
+![Time per call and speedup of Protaco and Protocol Buffers](docs/img/benchmark_table.svg)
+
+- Fixed-length 512 B, encoding 8.6× faster: **zero-copy** encoding. The time is almost all setter calls
+- **Zero-copy** `TryView`, 21.2× faster: it only checks the frame and reads in place without building an object. Protocol Buffers has no such path
+- Variable-length 256 B, encoding 4.5× faster: fixed fields are zero-copy, and strings are written in one pass after the total size is computed. Integers have fixed widths, with no varint conversion
+
+Measurement conditions and notes are in [8.4](#84-measurement-conditions-and-notes); the benchmark code and how to reproduce it are in the [benchmark guide](docs/benchmark/README.md).
+
+### Light
 
 The C++ runtime is one header, the C# runtime is one source file, and the Python runtime is one module. There is no complicated CMake setup, no package to install, and no lib/dll to link. Run `protacoc`, and the matching runtime lands next to the generated code. Include the generated header and you are done.
 
 ![Getting started with Protocol Buffers compared with Protaco](docs/img/setup.svg)
 
-The reason it is fast is simple, too. In C++, fixed-length setters write straight into their place in the frame buffer, so a message with only fixed fields and empty extension data has nothing left to do in `Serialize()`. The receiver can read the bytes in place with `TryView`, without copying (zero-copy). In our measurements, encoding a fixed-field message was 8.6 times faster than with Protocol Buffers, and reading it with `TryView` was 21 times faster ([1.2](#12-compared-with-protocol-buffers)).
+### Old and new builds keep talking
+
+When you raise a message's version, the classes for the older versions you still support come out in the same generated file, each in its own namespace. A new build picks the class whose layout the peer can read, and it reads frames from an old build with the class of that version. You do not have to update every program and device at once, and communication keeps working while deployments are mixed.
+
+```cpp
+shop::Order order;          // current version 3
+shop::v1::Order legacy;     // version 1 class from the same header, for peers still on v1
+```
+
+Which versions can talk to each other is set by `min_version` and the per-field `added` and `removed` in the YAML. A peer whose support has ended gets an error that says why instead of misreading the data ([7. Version management](#7-version-management)).
 
 ### Stable and robust
 
@@ -159,7 +178,7 @@ if not ok:
 - Every run writes the matching runtime next to the generated code, so the generator and runtime versions can never drift apart.
 - ⚡ In C++, fixed-field setters write the final bytes directly, and when nothing has changed, `Serialize()` hands back the last bytes as they are. Receivers read them without a copy through `TryView` (C++ and C#).
 - 🛡️ Receivers check the name, version, and schema fingerprint. Broken data is never read silently.
-- Versioning works per field. Each field records its history with `added` and `removed`, and the generator also produces classes for the older versions you still support.
+- Versioning works per field. Each field records its history with `added` and `removed`, and the generator also produces classes for the older versions you still support, each in its own namespace such as `v1::Order`.
 - Extension data (ext) carries key-value pairs that are not in the schema. Turn it off with `allow_extension: false` when you do not need it.
 - The API is exception-free by default. `Try*` functions return success or failure and report the reason as a `path: reason` string.
 - Every message has an envelope: an id, a correlation id, and a microsecond timestamp. A new object gets the next id and the current time automatically, and a reply carries the request's id as its correlation id.
@@ -175,21 +194,14 @@ Protaco covers a narrower scope than Protocol Buffers. It supports fewer languag
 | Runtime | One header, about 69 KB, nothing to link | 84 .cc files in the libprotobuf CMake target, static library about 20 MB |
 | Dependencies | C++ standard library | Runtime library to link; version 22 adds Abseil |
 | Generator and runtime | Matching runtime written next to the generated code | Installed runtime and generated code must match; a mismatch is a compile error in the generated header |
-| Encoding | Fixed-field setters write directly into the frame | Each field encoded at serialization, integers as varints |
+| Encoding | Fixed-field setters write directly into the frame (zero-copy) | Each field encoded at serialization, integers as varints |
 | Decoding | Fixed-field messages read in place with `TryView` (zero-copy) | Parsed into a message object |
 | Message identity | Name, version, and schema fingerprint checked | No name or schema in the data; absent fields take defaults |
-| Versioning | Per-field history in one YAML file, a class per older version | Field numbers, one class per message |
+| Versioning | Per-field history in one YAML file, older version classes generated in their own namespaces | Field numbers, one class per message |
 | Schema syntax | YAML, like declaring a struct | The `.proto` language |
 | Languages | C++, C#, Python (Windows, Linux) | Many |
 
-Performance was compared as time per call to encode and decode the same messages on the same PC. Bars are means, whiskers are standard deviations, and shorter is better.
-
-![Encode and decode times for Fixed512 and Mixed256](docs/img/benchmark.svg)
-
-- Fixed512 (fixed fields only): encode 23.3 ns vs 200.1 ns (8.6x), decode 55.4 ns vs 252.3 ns (4.6x), `TryView` 11.9 ns (21.2x)
-- Mixed256 (fixed fields and two strings): encode 20.7 ns vs 93.3 ns (4.5x), decode 126.9 ns vs 164.5 ns (1.3x)
-
-Measurement conditions and notes are in [8.4](#84-measured-against-protocol-buffers); the benchmark code and how to reproduce it are in the [benchmark guide](docs/benchmark/README.md).
+The measured comparison is in [Fast because it is zero-copy](#fast-because-it-is-zero-copy).
 
 ## 2. How it works
 
@@ -973,26 +985,22 @@ There is one older class per supported version, with the fields of that version.
 
 ### 7.6 Receive checks
 
-With R as the version of the receiving class and S as the version of the frame, the checks run in this order. `TryView` runs the same checks.
+When the version 3 `Order` class receives a frame, it checks in this order. `TryView` does the same.
 
-```mermaid
-flowchart TD
-    A["Frame"] --> B{"Same name?"}
-    B -- No --> E1["name mismatch"]
-    B -- Yes --> C{"S at least R?"}
-    C -- No --> E2["too old"]
-    C -- Yes --> D{"Sender supports R?"}
-    D -- No --> E3["too new"]
-    D -- Yes --> H{"R fingerprint matches?"}
-    H -- No --> E4["schema mismatch"]
-    H -- Yes --> F["Decode with the R layout"]
+```text
+if the frame's message name != "Order"
+    reject: message name mismatch: expected Order, got Heartbeat
+if the frame's version < 3
+    reject: message version too old: Order reads version 3 or newer, got 1. Use the v1 type
+if the sender's min_version > 3
+    reject: message version too new: Order reads version 3, sender supports 4..5
+if the version 3 fingerprint in the frame != Order::MsgSchemaHash()
+    reject: schema mismatch: Order version 3 expected 0x..., got 0x...
+decode with the version 3 layout
+    newer variable fields go into ext for an open message and are dropped for a closed one
 ```
 
-1. A different name: `message name mismatch: expected Order, got Heartbeat`
-2. S lower than R: `message version too old: Order reads version 3 or newer, got 1. Use the v1 type`. The type hint appears only when that older class was generated. Check the version with `PeekHeader()` and read with `v1::Order`
-3. The sender's `min_version` higher than R: `message version too new: Order reads version 1, sender supports 2..4`
-4. The R fingerprint in the frame differs from the receiver's `MsgSchemaHash()`: `schema mismatch: Order version 1 expected 0x..., got 0x...`
-5. After these checks, only the fixed block and variable fields of R are read. Newer variable fields go into ext for an open message and are dropped for a closed one
+`Use the v1 type` appears only when the older class of that version was generated. In that case, check the version with `PeekHeader()` and read with `v1::Order`.
 
 ### 7.7 Sending
 
@@ -1000,46 +1008,24 @@ A class always sends its own version. It puts the fingerprints from `min_version
 
 ### 7.8 Deployment cases
 
-A new build sends to an old build.
+One diagram shows four builds exchanging `Order`. The revised build removed the required field `color` in version 4 and raised `min_version` to 2.
 
 ```mermaid
+%%{init: {"sequence": {"mirrorActors": false}}}%%
 sequenceDiagram
-    participant N as New build (v3, supports 1..3)
-    participant O as Old build (v1)
-    N->>O: Order version 3
-    Note over O: Read with the v1 layout<br/>New variable fields kept in ext
-```
-
-An old build sends to a new build.
-
-```mermaid
-sequenceDiagram
-    participant O as Old build (v1)
-    participant N as New build (v3)
-    O->>N: Order version 1
-    Note over N: Order says too old<br/>Use the v1 type
-    Note over N: Check the version with PeekHeader<br/>Decode with v1::Order
-```
-
-A peer whose support ended with a breaking change receives a frame.
-
-```mermaid
-sequenceDiagram
-    participant N as Revised build (v4, supports 2..4)
-    participant O as Old build (v1)
-    N->>O: Order version 4
-    Note over O: message version too new<br/>sender supports 2..4
-```
-
-A new build picks an older layout to send. The peer needs the required field `color`, which version 4 removed, so the new build sends with the version 3 class.
-
-```mermaid
-sequenceDiagram
-    participant N as New build (v4)
-    participant O as Old build (v2)
-    Note over N: v3::Order includes color
-    N->>O: Order version 3
-    Note over O: Read with the v2 layout
+    autonumber
+    participant V1 as Old build v1
+    participant V2 as Old build v2
+    participant V3 as New build v3 (supports 1..3)
+    participant V4 as Revised build v4 (supports 2..4)
+    V3->>V1: Order version 3
+    Note over V1: Read with the v1 layout<br/>New variable fields kept in ext
+    V1->>V3: Order version 1
+    Note over V3: Order says too old<br/>Check PeekHeader, read with v1::Order
+    V4->>V1: Order version 4
+    Note over V1: too new<br/>sender supports 2..4
+    V4->>V2: Sent with v3::Order (has color)
+    Note over V2: Read with the v2 layout
 ```
 
 ### 7.9 Layout rules
@@ -1093,7 +1079,9 @@ Fixed fields gather at the front of the body. When variable fields are added, th
 
 ### 8.3 Serialize reuse
 
-In C++, if no variable field and no ext entry has changed since the last `Serialize()`, the variable block is not rebuilt.
+In C++, if no variable field and no ext entry has changed since the last `Serialize()`, the variable block is not rebuilt. `Serialize()` then does no size computation, allocation, copy, or encoding and hands back the last bytes as they are. Sending the same message to several peers, or sending it again, costs practically nothing.
+
+For a `DeliveryRoute` with two stops (258 B), calling `Serialize()` again takes about 1.3 ns. Rebuilding the variable block after `set_note` takes about 22 ns, so reuse is about 17× faster. The PC and compiler are those in [8.4](#84-measurement-conditions-and-notes); the values are the best of 5 rounds in the C++ test `SerializeReuseCostsLittle`.
 
 - A `set_` call on a variable field, a change to ext, or decoding with a copy rebuilds it. An adopted buffer follows the reuse conditions in [6.6](#66-zero-copy)
 - After any call to `mutable_<k>()`, changes through that reference cannot be tracked, so the variable block is rebuilt every time
@@ -1111,49 +1099,28 @@ const auto& again = route.Serialize();   // reused while variable fields and ext
 
 The example assumes an object on which `mutable_stops()` was never called. The decoder keeps the field list on the stack when a body has 16 variable fields or fewer, which saves a heap allocation.
 
-### 8.4 Measured against Protocol Buffers
+### 8.4 Measurement conditions and notes
 
-Measurement conditions:
+The figure and table in [Fast because it is zero-copy](#fast-because-it-is-zero-copy) were measured under these conditions.
 
 - PC: Intel Core i9-13900H, Windows 11
 - Compiler: MSVC 14.16 (v141) x64, `/O2 /MD`
 - Libraries: protaco 0.6.0, protobuf 3.21.12 static library (built with the same toolset)
 - Repetitions: 10,000 warm-up calls, then 20 rounds of 100,000 calls. Mean and standard deviation of time per call across rounds. Three runs; the median run is used for each case
 - Objects are reused between calls (the recommended way for both libraries)
-- Encode: every field setter plus serialization. protobuf uses `SerializeToArray` into a reused buffer
-- Decode: bytes to object, then one field read. protaco `TryToObject`, protobuf `ParseFromArray` into a reused message
-- `TryView`: the same frame checks, then one field read in place
+- Encoding: every field setter plus serialization. protobuf uses `SerializeToArray` into a reused buffer
+- Decoding: bytes to object, then one field read. protaco `TryToObject`, protobuf `ParseFromArray` into a reused message
+- `TryView`: the same frame checks, then one field read in place. Its speedup is relative to protobuf decoding
 
-Messages:
+Messages. The schema names are `Fixed512` and `Mixed256`.
 
-- Fixed512: fixed fields only, a 512-byte fixed block (2 fixed strings, 4 int64, 32 int, 32 double, 8 bool). Frame: protaco 556 B, protobuf 571 B
-- Mixed256: a 196-byte fixed block plus two variable strings (24 and 16 bytes), 256 bytes with keys. Frame: protaco 300 B, protobuf 268 B
+- Fixed-length 512 B: fixed fields only, a 512-byte fixed block (2 fixed strings, 4 int64, 32 int, 32 double, 8 bool). Frame: protaco 556 B, protobuf 571 B
+- Variable-length 256 B: a 196-byte fixed block plus two variable strings (24 and 16 bytes), 256 bytes with keys. Frame: protaco 300 B, protobuf 268 B
 
-Fixed512 results (mean ± standard deviation; the parentheses show the speedup over protobuf):
+Reading the results. Why zero-copy makes it fast is in [Fast because it is zero-copy](#fast-because-it-is-zero-copy).
 
-| Operation | protaco | protobuf |
-|---|---|---|
-| Encode | 23.3 ± 0.2 ns (8.6x) | 200.1 ± 2.5 ns |
-| Decode | 55.4 ± 1.6 ns (4.6x) | 252.3 ± 9.2 ns |
-| Decode, `TryView` | 11.9 ± 0.5 ns (21.2x) | n/a |
-
-Mixed256 results:
-
-| Operation | protaco | protobuf |
-|---|---|---|
-| Encode | 20.7 ± 0.5 ns (4.5x) | 93.3 ± 3.4 ns |
-| Decode | 126.9 ± 1.4 ns (1.3x) | 164.5 ± 4.9 ns |
-
-The `TryView` speedup is relative to protobuf decoding (252.3 ns).
-
-![Encode and decode times for Fixed512 and Mixed256](docs/img/benchmark.svg)
-
-Reading the results:
-
-- Fixed-field setters write straight into the frame, so encoding costs little more than the setter calls
-- `TryView` only checks the frame and builds no object
 - Decoding with strings shows a smaller gap. protaco decodes into a fresh object, so every string longer than 15 bytes (the MSVC short-string limit) allocates, while protobuf reuses the string buffers of its reused message
-- Integers use fixed widths, and the header carries the name, version, and fingerprint, so data with many small integers can be larger than a varint format (Mixed256: 300 B vs 268 B)
+- Integers use fixed widths, and the header carries the name, version, and fingerprint, so data with many small integers can be larger than a varint format (variable-length 256 B: 300 B vs 268 B)
 - These numbers are for these messages on this PC. They vary with the data and the hardware
 
 Schemas, measurement code, and how to reproduce the run are in [docs/benchmark/README.md](docs/benchmark/README.md).

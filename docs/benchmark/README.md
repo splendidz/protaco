@@ -10,7 +10,7 @@ This folder contains code and results comparing protaco 0.6.0 and protobuf 3.21.
 - [bench.proto](bench.proto): the same messages mapped type for type to proto3.
 - [bench.cpp](bench.cpp): shared setter templates, round-trip checks, timing, and CSV output.
 - [results.csv](results.csv): published measurements and their environment.
-- [plot.py](plot.py): reads `results.csv` and generates [benchmark.svg](../img/benchmark.svg).
+- [plot.py](plot.py): reads `results.csv` and generates the figure [benchmark.svg](../img/benchmark.svg) and the table [benchmark_table.svg](../img/benchmark_table.svg), plus their Korean versions (`.ko.svg`).
 
 ## Messages
 

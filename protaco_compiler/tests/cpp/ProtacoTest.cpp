@@ -1154,6 +1154,30 @@ TEST(Protaco, RoundTripBytes)
     EXPECT_FALSE(got.GetExt().TryGetValue("thumbnail", &asString));
 }
 
+// Serialize() again with nothing changed returns the kept bytes; after a set_ it rebuilds the variable block.
+// The bound holds in Release; Debug timings only print. README 8.3 quotes these numbers.
+TEST(Protaco, SerializeReuseCostsLittle)
+{
+    DeliveryRoute route;
+    route.set_rider("rider-7");
+    route.set_stops({ MakeStop("A-100", "1 Pizza St", 10), MakeStop("A-101", "2 Pasta Ave", 25) });
+    route.set_note("closest-first");
+    const size_t size = route.Serialize().size();
+    const double reuseNs = BestNs(1000000, [&]()
+    {
+        g_sink = g_sink + static_cast<uint32_t>(route.Serialize().size());
+    });
+    const double rebuildNs = BestNs(200000, [&]()
+    {
+        route.set_note("closest-first");
+        g_sink = g_sink + static_cast<uint32_t>(route.Serialize().size());
+    });
+    std::printf("[ PERF     ] DeliveryRoute %zu B: Serialize again %.1f ns, set_note then Serialize %.1f ns\n", size, reuseNs, rebuildNs);
+#ifdef NDEBUG
+    EXPECT_LT(reuseNs, rebuildNs * 0.1);
+#endif
+}
+
 // The contract checks on receive cost under 10% of a decode, smallest message (fixed only) included.
 TEST(Protaco, ContractCheckCostIsNegligible)
 {
