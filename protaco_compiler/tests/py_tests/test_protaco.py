@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.join(TESTS, "taco_generated", "py"))
 
 import protaco  # noqa: E402
 from alt.Recipe_g import Recipe as AltRecipe  # noqa: E402
+from arrays.Level_enum import Level  # noqa: E402
+from arrays.Panel_g import Panel  # noqa: E402
 from arrays.Sizes_const import Sizes  # noqa: E402
 from build1.Order_g import Order as Order1  # noqa: E402
 from build1.Ping_g import Ping as Ping1  # noqa: E402
@@ -113,6 +115,20 @@ def make_pie():
     pie.sizes.extend([PizzaSize.Small, PizzaSize.Family, 5, 9])
     pie.SetEnvelope(protaco.Envelope())
     return pie
+
+
+def make_panel():
+    panel = Panel(total=42)
+    panel.temps = [20.5 + i for i in range(4)]
+    panel.counts = [1, -2, 3, -4]
+    panel.ids = [1, 18446744073709551615, 7]
+    panel.masks[1] = 4294967295
+    panel.ticks[0] = -9000000000
+    panel.flags[1] = True
+    panel.names[0] = "alpha"
+    panel.levels[2] = Level.High
+    panel.SetEnvelope(protaco.Envelope())
+    return panel
 
 
 def make_menu():
@@ -440,6 +456,27 @@ class ProtacoTest(unittest.TestCase):
         self.assertEqual("unknown PizzaSize name: Kids", PizzaSizeNames.TryParse("Kids").error)
         self.assertEqual("Kids", PizzaSizeNames.Name(5))
         self.assertIsNone(PizzaSizeNames.Name(9))
+
+    def test_fixed_arrays(self):
+        defaults = Panel()
+        self.assertEqual([-1] * 4, defaults.counts)
+        self.assertEqual("none", defaults.names[1])
+        self.assertEqual(Level.Low, defaults.levels[2])
+        self.assertEqual(Sizes.Slots, len(defaults.temps))
+        self.assertEqual(golden("Panel.bin"), make_panel().Serialize())
+        got = protaco.ToObject(Panel, golden("Panel.bin"))
+        self.assertEqual(-9000000000, got.ticks[0])
+        self.assertEqual('Panel{temps=[20.5, 21.5, 22.5, 23.5], counts=[1, -2, 3, -4], ids=[1, 18446744073709551615, 7], masks=[0, 4294967295], ticks=[-9000000000, 0], flags=[false, true], names=["alpha", "none"], levels=[Low(1), Low(1), High(2)], total=42}', got.ToString())
+        bad = make_panel()
+        bad.names[1] = "123456789"
+        with self.assertRaises(protaco.ProtacoError) as caught:
+            bad.Serialize()
+        self.assertEqual("names[1]: 9 bytes, longer than string(8)", str(caught.exception))
+        short = make_panel()
+        short.counts = [1, 2]
+        with self.assertRaises(protaco.ProtacoError) as caught:
+            short.Serialize()
+        self.assertEqual("counts: 2 elements, the array has 4", str(caught.exception))
 
     def test_map_fields(self):
         got = protaco.ToObject(Menu, golden("Menu.bin"))

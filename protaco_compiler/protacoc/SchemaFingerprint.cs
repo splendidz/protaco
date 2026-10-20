@@ -59,6 +59,9 @@ namespace Protacoc
                 case TypeKind.Enum:
                     // Only the enum name: values are append-only and receivers keep unknown numbers.
                     return "enum(" + type.TypeName + ")";
+                case TypeKind.Array:
+                    // The resolved element count, not the const name: renaming a const keeps the layout, a new value does not.
+                    return TypeText(type.Element, owner) + "[" + type.ArrayLength + "]";
                 default:
                     return type.ToString();
             }

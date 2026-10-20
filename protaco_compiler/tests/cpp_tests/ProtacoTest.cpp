@@ -27,6 +27,7 @@
 #include "build2/Ping.g.h"
 #include "build3/Order.g.h"
 #include "build4/Order.g.h"
+#include "arrays/Panel.g.h"
 #include "arrays/Sizes.const.h"
 #include "deep/D8.g.h"
 #include "partial/PizzaOrder.g.h"
@@ -131,6 +132,24 @@ enums::Pie MakePie()
 }
 
 // Golden values. Same as the C# test MakeMenu. One entry per map: map bytes follow the container's iteration order.
+// Golden values. Same as the C# test MakePanel and Python make_panel.
+arrays::Panel MakePanel()
+{
+    arrays::Panel panel;
+    for (size_t i = 0; i < arrays::Panel::temps_size(); ++i)
+        panel.set_temps(i, 20.5 + static_cast<double>(i));
+    panel.set_counts({ 1, -2, 3, -4 });
+    panel.set_ids({ 1, 18446744073709551615ull, 7 });
+    panel.set_masks(1, 4294967295u);
+    panel.set_ticks(0, -9000000000ll);
+    panel.set_flags(1, true);
+    panel.set_names(0, "alpha");
+    panel.set_levels(2, arrays::Level::High);
+    panel.set_total(42);
+    panel.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
+    return panel;
+}
+
 maps::Menu MakeMenu()
 {
     maps::Menu menu;
@@ -742,6 +761,42 @@ TEST(Protaco, ConstValues)
     int32_t slots[arrays::Sizes::Slots] = {};
     EXPECT_EQ(4u, sizeof(slots) / sizeof(slots[0]));
     EXPECT_EQ(4, std::max(arrays::Sizes::Slots, arrays::Sizes::Names));
+}
+
+// T[N]: a default fills every element, elements are read and written in place, set checks the index and the length.
+TEST(Protaco, FixedArrays)
+{
+    static_assert(arrays::Panel::counts_size() == arrays::Sizes::Slots, "length from a const");
+    static_assert(arrays::Panel::levels_size() == 3, "length from an enum value");
+    const arrays::Panel defaults;
+    EXPECT_EQ((std::array<double, 4>{ { 20.5, 20.5, 20.5, 20.5 } }), defaults.get_temps());
+    EXPECT_EQ((std::array<int32_t, 4>{ { -1, -1, -1, -1 } }), defaults.get_counts());
+    EXPECT_EQ("none", defaults.get_names(1));
+    EXPECT_EQ(arrays::Level::Low, defaults.get_levels(2));
+
+    arrays::Panel panel = MakePanel();
+    std::string error;
+    EXPECT_FALSE(panel.set_counts(4, 9, &error));
+    EXPECT_EQ("counts[4]: index out of range (size 4)", error);
+    EXPECT_FALSE(panel.set_names(1, "123456789", &error));
+    EXPECT_EQ("names[1]: 9 bytes, longer than string(8)", error);
+    EXPECT_EQ("none", panel.get_names(1));
+    EXPECT_FALSE(panel.set_names(std::array<std::string, 2>{ { "ok", "123456789" } }, &error));
+    EXPECT_EQ("alpha", panel.get_names(0));   // nothing written
+
+    const std::vector<uint8_t> bytes = panel.Serialize();
+    const arrays::Panel got = protaco::ToObject<arrays::Panel>(bytes);
+    EXPECT_EQ(panel.get_ids(), got.get_ids());
+    EXPECT_EQ(-9000000000ll, got.get_ticks(0));
+    EXPECT_EQ("Panel{temps=[20.5, 21.5, 22.5, 23.5], counts=[1, -2, 3, -4], ids=[1, 18446744073709551615, 7], masks=[0, 4294967295], ticks=[-9000000000, 0], flags=[false, true], names=[\"alpha\", \"none\"], levels=[Low(1), Low(1), High(2)], total=42}", got.ToString());
+    ExpectGolden("Panel.bin", bytes);
+
+    arrays::Panel::View view;
+    ASSERT_TRUE(protaco::TryView<arrays::Panel>(bytes, &view));
+    EXPECT_EQ(-2, view.get_counts(1));
+    EXPECT_EQ("alpha", view.get_names(0));
+    EXPECT_EQ(arrays::Level::High, view.get_levels(2));
+    EXPECT_EQ(got.get_temps(), view.get_temps());
 }
 
 TEST(Protaco, EnumFields)

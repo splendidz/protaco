@@ -162,6 +162,12 @@
     <ClInclude Include="..\taco_generated\cpp\alt\Recipe.g.h">
       <Filter>taco_generated\cpp\alt</Filter>
     </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Level.enum.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Panel.g.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
+    </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.h">
       <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
@@ -280,6 +286,12 @@
   <ItemGroup>
     <None Include="..\schemas\alt\Recipe.yaml">
       <Filter>schemas\alt</Filter>
+    </None>
+    <None Include="..\schemas\arrays\Level.enum.yaml">
+      <Filter>schemas\arrays</Filter>
+    </None>
+    <None Include="..\schemas\arrays\Panel.yaml">
+      <Filter>schemas\arrays</Filter>
     </None>
     <None Include="..\schemas\arrays\Sizes.const.yaml">
       <Filter>schemas\arrays</Filter>
@@ -449,16 +461,25 @@
     <None Include="..\schemas\errors\PC303_prefix.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC304_arraylength.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC304_mapvalue.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC304_type.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC305_reqarray.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC305_reqfixed.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC306_self.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC308_arraydefault.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC308_bytes.yaml">
@@ -477,6 +498,9 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC308_uint.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC310_arrayzero.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC310_length.yaml">
@@ -503,10 +527,22 @@
     <None Include="..\schemas\errors\PC318_number.enum.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC402_arrayconst.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC402_ref.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC403_selfmap.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_arrayarray.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_arraylist.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC404_arraystring.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC404_element.yaml">

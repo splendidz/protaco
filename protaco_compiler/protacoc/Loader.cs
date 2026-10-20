@@ -20,6 +20,8 @@ namespace Protacoc
         private static readonly Regex FixedStringType = new Regex("^string\\(([0-9]+)\\)$");
         private static readonly Regex ListType = new Regex("^list<(.+)>$");
         private static readonly Regex MapType = new Regex("^map<(.+)>$");
+        private static readonly Regex ArrayType = new Regex("^(.+)\\[([^\\[\\]]*)\\]$");
+        private static readonly Regex QualifiedName = new Regex("^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$");
 
         private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "auto_envelope", "desc", "fields" };
         private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
@@ -389,7 +391,8 @@ namespace Protacoc
             return text;
         }
 
-        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | map<K, V> | message or enum name
+        // Type syntax: bool | int | int64 | uint | uint64 | double | string | string(N) | bytes | list<T> | map<K, V> | T[N]
+        // | message or enum name. N of T[N]: a number, Const.Key or Enum.Value (resolved by the linker).
         public static TypeRef ParseType(string text, SourcePos pos, Diag diag)
         {
             if (text == null)
@@ -449,10 +452,24 @@ namespace Protacoc
                     return null;
                 return new TypeRef { Kind = TypeKind.Map, Key = key, Element = value };
             }
+            Match arrayMatch = ArrayType.Match(text);
+            if (arrayMatch.Success)
+            {
+                string length = arrayMatch.Groups[2].Value.Trim();
+                if (!IntText.IsMatch(length) && !QualifiedName.IsMatch(length))
+                {
+                    diag.Error(pos, Codes.BadType, "array length must be a number, Const.Key or Enum.Value: '" + text + "'");
+                    return null;
+                }
+                TypeRef element = ParseType(arrayMatch.Groups[1].Value.Trim(), pos, diag);
+                if (element == null)
+                    return null;
+                return new TypeRef { Kind = TypeKind.Array, Element = element, LengthText = length };
+            }
             // A message or an enum: the linker decides which.
             if (Ident.IsMatch(text))
                 return new TypeRef { Kind = TypeKind.Message, TypeName = text };
-            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, map<K, V>, message or enum name");
+            diag.Error(pos, Codes.BadType, "cannot parse type '" + text + "'. Allowed: bool, int, int64, uint, uint64, double, string, string(N), bytes, list<T>, map<K, V>, T[N], message or enum name");
             return null;
         }
 

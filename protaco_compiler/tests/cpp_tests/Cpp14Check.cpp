@@ -7,6 +7,7 @@
 #include "DeliveryRoute.g.h"
 #include "Heartbeat.g.h"
 #include "PizzaOrder.g.h"
+#include "arrays/Panel.g.h"
 #include "arrays/Sizes.const.h"
 #include "enums/Pie.g.h"
 #include "maps/Menu.g.h"
@@ -19,6 +20,16 @@ static_assert(__cplusplus == 201402L, "must be compiled as C++14");
 #endif
 
 using namespace demo;
+
+bool Cpp14Arrays()
+{
+    arrays::Panel panel;
+    panel.set_counts(0, 1);
+    panel.set_names(std::array<std::string, 2>{ { "a", "b" } });
+    arrays::Panel::View view;
+    return protaco::TryView<arrays::Panel>(panel.Serialize(), &view) && view.get_counts(0) == 1 && view.get_names()[1] == "b"
+        && panel.get_temps()[3] == 20.5 && !panel.ToString().empty();
+}
 
 bool Cpp14RoundTrip()
 {
@@ -52,5 +63,6 @@ bool Cpp14RoundTrip()
         && protaco::ToObject<enums::Pie>(pie.Serialize()).get_size() == enums::PizzaSize::Medium
         && !routeBack.ToString().empty() && !orderBack.ToString(protaco::TextStyle::Pretty()).empty()
         && !beatBack.ToString().empty()
-        && std::max(arrays::Sizes::Slots, arrays::Sizes::Names) == 4;
+        && std::max(arrays::Sizes::Slots, arrays::Sizes::Names) == 4
+        && Cpp14Arrays();
 }

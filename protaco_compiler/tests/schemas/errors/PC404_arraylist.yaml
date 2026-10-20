@@ -1,0 +1,6 @@
+# expect: PC404
+message: PC404_arraylist
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: list<int[2]>}

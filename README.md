@@ -376,6 +376,7 @@ Fixed-length types go into the fixed block at the front of the body.
 | `double` | 8 bytes, IEEE 754 | `double` / `double` / `float` |
 | `string(N)` | N bytes of UTF-8, N in 1..4096, zero padded | `std::string` / `string` / `str` |
 | enum name | 4 bytes (int32) | `enum class` / `enum` / `enum.IntEnum` |
+| `T[N]` | N elements of a fixed type in a row, no length prefix. See [Fixed-length arrays](#49-fixed-length-arrays) | `std::array<T, N>` / `T[]` of length N / `list` |
 
 If a value is longer than N bytes, the C++ `string(N)` setter returns `false` and keeps the old value. The C# setter throws `ArgumentException`. Python raises `protaco.ProtacoError` from `Serialize()`. A Python `int` has no size limit, so an integer out of range for its type fails in `Serialize()` the same way.
 
@@ -616,6 +617,69 @@ Generated code per language:
 - C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxStops = 16; ... }`. Namespace-scope `constexpr` works in C++14 without out-of-line definitions
 - C# `Limits.const.cs`: `public static class Limits { public const int MaxStops = 16; ... }`
 - Python `Limits_const.py`: `class Limits` with int class attributes (a Python keyword key gets a trailing `_`)
+
+### 4.9 Fixed-length arrays
+
+`T[N]` is an array of N elements in the fixed block, with no length prefix. A message of fixed fields and arrays is still fixed-length, so `TryView` reads it in place.
+
+```yaml
+# Slots of one panel. Every field is fixed, so TryView reads it in place.
+message: Panel
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: temps, type: double[Limits.MaxStops], default: 20.5}
+  - {key: sizes, type: PizzaSize[3]}
+  - {key: names, type: string(8)[Limits.MaxStops]}
+```
+
+- Elements: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enums. Arrays of arrays and arrays inside lists or maps are PC404
+- N: a number, a const value (`Limits.MaxStops`), or an enum value (`PizzaSize.Large` is 3). It must be 1 or more (PC310). An unknown name is PC402
+- `default` fills every element. Without one, numbers are 0, strings are empty, and enums take their first value
+- The fingerprint holds the resolved number, `double[16]`. Renaming a const keeps the layout; changing its value changes the layout and the fingerprint
+
+Generated access:
+
+- C++: `temps_size()` (constexpr), `get_temps(i)` and `set_temps(i, value)` in place, `get_temps()` and `set_temps(std::array)` for the whole array. `get_temps(i)` asserts the index in debug builds; `set_temps(i, ...)` returns `false` with the reason in `error` for an index out of range or a `string(N)` value that is too long
+- C#: a get-only array of length N. `Serialize()` throws `ProtacoException` for a `string(N)` element that is too long
+- Python: a list of N values. `Serialize()` raises `ProtacoError` for another length or a value that does not fit
+- `View` (C++, C#): `get_temps(i)` and `get_temps()` in C++, `Temps(i)` and `Temps()` in C#
+
+**C++**
+
+```cpp
+demo::Panel panel;                        // temps: 20.5 in every element
+panel.set_temps(0, 21.5);                 // written in place
+std::string error;
+if (!panel.set_names(16, "x", &error))   // names[16]: index out of range (size 16)
+    std::printf("%s\n", error.c_str());
+double first = panel.get_temps(0);
+std::array<double, 16> all = panel.get_temps();
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+var panel = new demo.Panel();             // Temps: a double[16] filled with 20.5
+panel.Temps[0] = 21.5;
+panel.Names[0] = "front";                 // checked by Serialize: string(8)
+byte[] bytes = panel.Serialize();
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+panel = Panel()                           # temps: [20.5] * 16
+panel.temps[0] = 21.5
+data = panel.Serialize()                  # length and elements are checked here
+```
+
+</details>
 
 ## 5. Extension data
 
@@ -1066,6 +1130,7 @@ Before shipping, change anything and keep the version. Once a version ships, its
 
 - Adding a field (`added`), removing a field (`removed`), and raising `min_version` each take a `version` bump. You can always add new messages
 - Changing an existing field's type, `required`, `default`, name, or order, or reusing a removed key, breaks compatibility with the old contract. Remove the old field and add one with a new key
+- An array length is part of the field type. Changing N, or the const or enum value it names, breaks the contract like any type change
 - Changing the message name or `allow_extension` also breaks the existing contract. Split it into a new message or end support for old versions
 - Frames built from an incompatible schema are rejected by the name or fingerprint check
 - Comments, `desc`, and `namespace` do not affect the serialized bytes

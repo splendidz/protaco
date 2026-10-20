@@ -121,6 +121,8 @@ namespace Protacoc
                     return "List<" + CsType(type.Element) + ">";
                 case TypeKind.Map:
                     return "Dictionary<" + CsType(type.Key) + ", " + CsType(type.Element) + ">";
+                case TypeKind.Array:
+                    return CsType(type.Element) + "[]";
                 default:
                     return type.TypeName;
             }
@@ -206,10 +208,29 @@ namespace Protacoc
             return w.ToString();
         }
 
+        // A default fills every element of an array. Zero defaults need no fill.
         private static string Initializer(FieldDef field)
         {
-            string text = field.DefaultText;
-            switch (field.Type.Kind)
+            if (field.Type.Kind == TypeKind.Array)
+            {
+                TypeRef element = field.Type.Element;
+                string value = ElementInitializer(element, field.DefaultText);
+                bool zero = element.Kind == TypeKind.Enum ? ElementDefault(element, field.DefaultText).Number == 0
+                    : element.Kind != TypeKind.FixedString && (value == "0" || value == "false");
+                return zero ? "new " + CsType(element) + "[" + field.Type.ArrayLength + "]"
+                    : "Protaco.Codec.Filled(" + field.Type.ArrayLength + ", " + value + ")";
+            }
+            return ElementInitializer(field.Type, field.DefaultText, field.Optional);
+        }
+
+        private static EnumValueDef ElementDefault(TypeRef type, string text)
+        {
+            return text == null ? type.ResolvedEnum.First : type.ResolvedEnum.Values.First(v => v.Key == text);
+        }
+
+        private static string ElementInitializer(TypeRef type, string text, bool optional = false)
+        {
+            switch (type.Kind)
             {
                 case TypeKind.String:
                 case TypeKind.FixedString:
@@ -218,11 +239,11 @@ namespace Protacoc
                     return "new byte[0]";
                 case TypeKind.List:
                 case TypeKind.Map:
-                    return "new " + CsType(field.Type) + "()";
+                    return "new " + CsType(type) + "()";
                 case TypeKind.Message:
-                    return field.Optional ? "null" : "new " + CsType(field.Type) + "(Protaco.NoStamp.Value)";
+                    return optional ? "null" : "new " + CsType(type) + "(Protaco.NoStamp.Value)";
                 case TypeKind.Enum:
-                    return field.Type.TypeName + "." + (text ?? field.Type.ResolvedEnum.First.Key);
+                    return type.TypeName + "." + (text ?? type.ResolvedEnum.First.Key);
                 case TypeKind.Bool:
                     return text ?? "false";
                 default:
@@ -235,6 +256,13 @@ namespace Protacoc
             string name = Naming.CsProperty(field.Key);
             string type = CsType(field.Type);
             Doc(w, Naming.FieldDoc(field));
+            if (field.Type.Kind == TypeKind.Array)
+            {
+                // Get-only: the length never changes. Serialize checks string(N) elements.
+                w.Line("public " + type + " " + name + " { get; } = " + Initializer(field) + ";");
+                w.Line();
+                return;
+            }
             if (field.Type.Kind != TypeKind.FixedString)
             {
                 w.Line("public " + type + " " + name + " { get; set; } = " + Initializer(field) + ";");
@@ -298,7 +326,7 @@ namespace Protacoc
             w.Open("void Protaco.IMessage.WriteText(Protaco.TextBuilder builder)");
             foreach (FieldDef field in view.Alive)
             {
-                TypeRef type = field.Type.Kind == TypeKind.List ? field.Type.Element : field.Type;
+                TypeRef type = field.Type.Kind == TypeKind.List || field.Type.Kind == TypeKind.Array ? field.Type.Element : field.Type;
                 string names = type.Kind == TypeKind.Map ? ", " + ItemField(field) : type.Kind == TypeKind.Enum ? ", " + type.TypeName + "Names.Name" : "";
                 w.Line("builder.Field(\"" + field.Key + "\", " + Naming.CsProperty(field.Key) + names + ");");
             }
@@ -311,7 +339,7 @@ namespace Protacoc
             {
                 if (field.AliveAt(view.Version))
                     w.Line(FixedWrite(field, Naming.CsProperty(field.Key)));
-                else if (field.DefaultText != null || field.Type.Kind == TypeKind.Enum)
+                else if (field.DefaultText != null || field.Type.Kind == TypeKind.Enum || (field.Type.Kind == TypeKind.Array && field.Type.Element.Kind == TypeKind.Enum))
                     w.Line(FixedWrite(field, Initializer(field)) + "   // removed in " + field.Removed + ": default for older readers");
             }
             w.Close();
@@ -401,8 +429,26 @@ namespace Protacoc
 
         private static string FixedWrite(FieldDef field, string value)
         {
-            string at = field.FixedOffset.ToString();
-            switch (field.Type.Kind)
+            if (field.Type.Kind == TypeKind.Array)
+                return ArrayWrite(field, value);
+            return FixedWriteAt(field.Type, field.FixedOffset.ToString(), value);
+        }
+
+        // One line: for (int i = 0; i < N; ++i) writer.X(offset + size * i, value[i]). A removed field writes the default.
+        private static string ArrayWrite(FieldDef field, string value)
+        {
+            TypeRef element = field.Type.Element;
+            string at = field.FixedOffset + " + " + element.FixedSize + " * i";
+            string item = value == Naming.CsProperty(field.Key) ? value + "[i]" : ElementInitializer(element, field.DefaultText);
+            string write = element.Kind == TypeKind.FixedString
+                ? "writer.Chars(" + at + ", " + element.FixedLength + ", " + item + ", \"" + field.Key + "\", i);"
+                : FixedWriteAt(element, at, item);
+            return "for (int i = 0; i < " + field.Type.ArrayLength + "; ++i) " + write;
+        }
+
+        private static string FixedWriteAt(TypeRef type, string at, string value)
+        {
+            switch (type.Kind)
             {
                 case TypeKind.Enum:
                     return "writer.Int(" + at + ", (int)" + value + ");";
@@ -419,43 +465,57 @@ namespace Protacoc
                 case TypeKind.Double:
                     return "writer.Double(" + at + ", " + value + ");";
                 default:
-                    return "writer.Chars(" + at + ", " + field.Type.FixedLength + ", " + value + ");";
+                    return "writer.Chars(" + at + ", " + type.FixedLength + ", " + value + ");";
             }
         }
 
         private static string FixedRead(FieldDef field)
         {
             string name = Naming.CsProperty(field.Key);
-            string at = field.FixedOffset.ToString();
-            switch (field.Type.Kind)
+            if (field.Type.Kind == TypeKind.Array)
+            {
+                TypeRef element = field.Type.Element;
+                return "for (int i = 0; i < " + field.Type.ArrayLength + "; ++i) " + name + "[i] = "
+                    + FixedReadAt(element, field.FixedOffset + " + " + element.FixedSize + " * i") + ";";
+            }
+            return name + " = " + FixedReadAt(field.Type, field.FixedOffset.ToString()) + ";";
+        }
+
+        private static string FixedReadAt(TypeRef type, string at)
+        {
+            switch (type.Kind)
             {
                 case TypeKind.Enum:
-                    return name + " = (" + field.Type.TypeName + ")reader.Int(" + at + ");";
+                    return "(" + type.TypeName + ")reader.Int(" + at + ")";
                 case TypeKind.Bool:
-                    return name + " = reader.Bool(" + at + ");";
+                    return "reader.Bool(" + at + ")";
                 case TypeKind.Int:
-                    return name + " = reader.Int(" + at + ");";
+                    return "reader.Int(" + at + ")";
                 case TypeKind.Int64:
-                    return name + " = reader.Int64(" + at + ");";
+                    return "reader.Int64(" + at + ")";
                 case TypeKind.UInt:
-                    return name + " = reader.UInt(" + at + ");";
+                    return "reader.UInt(" + at + ")";
                 case TypeKind.UInt64:
-                    return name + " = reader.UInt64(" + at + ");";
+                    return "reader.UInt64(" + at + ")";
                 case TypeKind.Double:
-                    return name + " = reader.Double(" + at + ");";
+                    return "reader.Double(" + at + ")";
                 default:
-                    return name + " = reader.Chars(" + at + ", " + field.Type.FixedLength + ");";
+                    return "reader.Chars(" + at + ", " + type.FixedLength + ")";
             }
         }
 
         // Read of a fixed field straight from the frame array, for View.
         private static string ViewRead(FieldDef field)
         {
-            string at = "at_ + " + field.FixedOffset;
-            switch (field.Type.Kind)
+            return ViewReadAt(field.Type, "at_ + " + field.FixedOffset);
+        }
+
+        private static string ViewReadAt(TypeRef type, string at)
+        {
+            switch (type.Kind)
             {
                 case TypeKind.Enum:
-                    return "(" + field.Type.TypeName + ")global::System.BitConverter.ToInt32(src_, " + at + ")";
+                    return "(" + type.TypeName + ")global::System.BitConverter.ToInt32(src_, " + at + ")";
                 case TypeKind.Bool:
                     return "src_[" + at + "] != 0";
                 case TypeKind.Int:
@@ -469,7 +529,7 @@ namespace Protacoc
                 case TypeKind.Double:
                     return "global::System.BitConverter.ToDouble(src_, " + at + ")";
                 default:
-                    return "Protaco.Codec.Chars(src_, " + at + ", " + field.Type.FixedLength + ")";
+                    return "Protaco.Codec.Chars(src_, " + at + ", " + type.FixedLength + ")";
             }
         }
 
@@ -492,6 +552,11 @@ namespace Protacoc
             {
                 w.Line();
                 Doc(w, Naming.FieldDoc(field));
+                if (field.Type.Kind == TypeKind.Array)
+                {
+                    ViewArray(w, field);
+                    continue;
+                }
                 w.Line("public " + CsType(field.Type) + " " + Naming.CsProperty(field.Key) + " => " + ViewRead(field) + ";");
             }
             w.Close();
@@ -510,6 +575,23 @@ namespace Protacoc
             w.Line("return TryView(bytes, out view, out error);");
             w.Close();
             w.Line();
+        }
+
+        // T[N] in a View: Name(index) reads one element in place (ArgumentOutOfRangeException outside 0..N-1), Name() copies all.
+        private static void ViewArray(CodeWriter w, FieldDef field)
+        {
+            TypeRef element = field.Type.Element;
+            string name = Naming.CsProperty(field.Key);
+            string type = CsType(element);
+            string at = "at_ + " + field.FixedOffset + " + " + element.FixedSize + " * ";
+            w.Line("public " + type + " " + name + "(int index) => " + ViewReadAt(element, at + "Protaco.Codec.Index(index, " + field.Type.ArrayLength + ")") + ";");
+            w.Line();
+            w.Open("public " + type + "[] " + name + "()");
+            w.Line(type + "[] values = new " + type + "[" + field.Type.ArrayLength + "];");
+            w.Line("for (int i = 0; i < values.Length; ++i)");
+            w.Line("    values[i] = " + ViewReadAt(element, at + "i") + ";");
+            w.Line("return values;");
+            w.Close();
         }
 
         private static string VarMethod(TypeRef type)

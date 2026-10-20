@@ -8,7 +8,9 @@
 #define PROTACO_RUNTIME_0_6_0
 
 #include <algorithm>
+#include <array>
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -436,6 +438,29 @@ inline bool StoreChars(uint8_t* dst, size_t capacity, const std::string& value, 
     std::memcpy(dst, value.data(), value.size());
     std::memset(dst + value.size(), 0, capacity - value.size());
     return true;
+}
+
+// Element index of a fixed array getter: asserted in debug builds, unchecked otherwise (like std::array::operator[]).
+inline size_t AssertIndex(size_t index, size_t size)
+{
+    assert(index < size && "fixed array index out of range");
+    (void)size;
+    return index;
+}
+
+// Element setters of fixed arrays: an index out of range is an error, not a write.
+inline bool IndexError(std::string* error, const char* key, size_t index, size_t size)
+{
+    return SetError(error, std::string(key) + "[" + std::to_string(index) + "]: index out of range (size " + std::to_string(size) + ")");
+}
+
+// string(N) element of a fixed array. The error path names the element: key[index].
+inline bool StoreCharsAt(uint8_t* dst, size_t capacity, const std::string& value, const char* key, size_t index, std::string* error)
+{
+    if (value.size() > capacity)
+        return SetError(error, std::string(key) + "[" + std::to_string(index) + "]: " + std::to_string(value.size()) + " bytes, longer than string("
+            + std::to_string(capacity) + ")");
+    return StoreChars(dst, capacity, value, key, nullptr);
 }
 
 // Frame header: 'P' 'C' | frame version u8 | name length u8 | name | message version u16 | min version u16 |
@@ -1768,6 +1793,19 @@ private:
     {
         Open("[");
         for (const E& item : list)
+        {
+            Item();
+            Value(item);
+        }
+        Close("]");
+    }
+
+    // Fixed-length array: the same text as a list.
+    template <class E, size_t N>
+    void Value(const std::array<E, N>& items)
+    {
+        Open("[");
+        for (const E& item : items)
         {
             Item();
             Value(item);

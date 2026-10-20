@@ -54,6 +54,7 @@ namespace Protacoc.Tests
             Run("C#: const values", ConstValues);
             Run("generator: a const set is not a type PC304", GeneratorConstIsNotAType);
             Run("C#: enum fields match C++", EnumFields);
+            Run("C#: fixed-length arrays match C++", FixedArrays);
             Run("C#: map fields match C++", MapFields);
             Run("C#: recursive messages match C++", RecursiveMessages);
             Run("C#: recursion stops at 100 levels", RecursionDepthLimit);
@@ -369,6 +370,61 @@ namespace Protacoc.Tests
         }
 
         // Same values as the C++ test MakeMenu.
+        // Golden values. Same as the C++ test MakePanel.
+        private static arrays.Panel MakePanel()
+        {
+            arrays.Panel panel = new arrays.Panel { Total = 42 };
+            for (int i = 0; i < panel.Temps.Length; ++i)
+                panel.Temps[i] = 20.5 + i;
+            new[] { 1, -2, 3, -4 }.CopyTo(panel.Counts, 0);
+            new[] { 1ul, 18446744073709551615ul, 7ul }.CopyTo(panel.Ids, 0);
+            panel.Masks[1] = 4294967295u;
+            panel.Ticks[0] = -9000000000L;
+            panel.Flags[1] = true;
+            panel.Names[0] = "alpha";
+            panel.Levels[2] = arrays.Level.High;
+            panel.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
+            return panel;
+        }
+
+        private static void FixedArrays()
+        {
+            arrays.Panel defaults = new arrays.Panel();
+            Check(defaults.Counts.SequenceEqual(new[] { -1, -1, -1, -1 }), "counts default");
+            Equal("none", defaults.Names[1], "names default");
+            Equal(arrays.Level.Low, defaults.Levels[2], "levels default");
+            Equal(arrays.Sizes.Slots, defaults.Temps.Length, "length from a const");
+            byte[] bytes = MakePanel().Serialize();
+            Check(bytes.SequenceEqual(Golden("Panel.bin")), "same bytes as C++");
+            arrays.Panel got = Protaco.Codec.ToObject<arrays.Panel>(Golden("Panel.bin"));
+            Equal(-9000000000L, got.Ticks[0], "ticks");
+            Equal("Panel{temps=[20.5, 21.5, 22.5, 23.5], counts=[1, -2, 3, -4], ids=[1, 18446744073709551615, 7], masks=[0, 4294967295], ticks=[-9000000000, 0], flags=[false, true], names=[\"alpha\", \"none\"], levels=[Low(1), Low(1), High(2)], total=42}", got.ToString(), "text");
+            arrays.Panel.View view;
+            Check(arrays.Panel.TryView(bytes, out view), "view");
+            Equal(-2, view.Counts(1), "view element");
+            Equal("alpha", view.Names(0), "view string");
+            Check(view.Temps().SequenceEqual(got.Temps), "view copy");
+            try
+            {
+                view.Counts(4);
+                Check(false, "index 4 accepted");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+            }
+            arrays.Panel bad = MakePanel();
+            bad.Names[1] = "123456789";
+            try
+            {
+                bad.Serialize();
+                Check(false, "long element accepted");
+            }
+            catch (Protaco.ProtacoException e)
+            {
+                Equal("names[1]: 9 bytes, longer than string(8)", e.Message, "error");
+            }
+        }
+
         private static maps.Menu MakeMenu()
         {
             maps.Menu menu = new maps.Menu { Title = "lunch" };

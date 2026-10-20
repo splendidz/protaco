@@ -45,6 +45,7 @@ field = <key>:<type>[!][=<default>]
 | 다른 메시지 | `Name@xxxxxxxx`, 해당 메시지 fingerprint의 소문자 16진수 8자리 |
 | 자기 참조 | `Name@self` |
 | enum | `enum(Name)`, 값 목록 제외 |
+| 고정 길이 배열 | `T[N]`: T는 이 규칙대로, N은 해석된 원소 수(`int[16]`, `enum(Level)[3]`) |
 
 namespace, 주석, `desc`는 fingerprint에 들어가지 않습니다. 다른 메시지의 fingerprint 변경은 이를 참조하는 메시지에도 반영됩니다. enum 값 추가는 fingerprint를 바꾸지 않습니다.
 
@@ -183,10 +184,10 @@ bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\c
 | PC302 | 중복 필드·enum·const 키 | 같은 `key` 재선언 |
 | PC303 | 예약어·이름 규칙 위반 | 생성 멤버·예약 접두와 충돌, 키 255바이트 초과 |
 | PC304 | 타입 문법 오류 | `map<string>`, const 이름을 타입으로 씀 |
-| PC305 | 고정 필드에 required | `int`, `string(N)` 등에 지정 |
+| PC305 | 고정 필드에 required | `int`, `string(N)`, `T[N]` 등에 지정 |
 | PC306 | 자기 참조 필드에 required | 단일 Self 또는 `list<Self>`에 지정 |
 | PC308 | 잘못된 default | 범위·문자열 제한 위반, enum에 없는 값 이름 |
-| PC310 | 고정 문자열 길이 오류 | `string(N)`의 N이 1..4096 밖 |
+| PC310 | 고정 길이 오류 | `string(N)`의 N이 1..4096 밖, `T[N]`의 N이 1 미만이거나 fixed 영역이 0x7FFF0000바이트 초과 |
 | PC311 | 생성 속성 이름 충돌 | C# 첫 글자 대문자 변환, Python 예약어의 `_` 접미사 |
 | PC312 | version 이력 범위 오류 | `min_version`, `added`, `removed` 범위·순서 |
 | PC313 | 제거된 가변 필드 줄 잔존 | `removed <= min_version`, 해당 줄 삭제 필요 |
@@ -195,7 +196,7 @@ bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\c
 | PC401 | 중복 정의 이름 | 메시지·enum 이름 충돌 |
 | PC402 | 모르는 타입 참조 | 읽은 정의에 없는 타입 |
 | PC403 | 순환·허용되지 않는 자기 참조 | 두 메시지의 상호 참조, map 안의 Self |
-| PC404 | 컨테이너에 허용되지 않는 타입 | `list<bool>`, `map<double, int>`, `string(N)` map 값 |
+| PC404 | 컨테이너에 허용되지 않는 타입 | `list<bool>`, `map<double, int>`, `string(N)` map 값, `string[4]`, `int[2][3]`, `list<int[2]>` |
 | PC405 | namespace 혼용 | 한 실행에 서로 다른 namespace |
 | PC406 | 생성기 중첩 limit 초과 | 자기 참조를 제외한 중첩 100단계 초과 |
 | PC407 | 중첩 메시지의 version 기능 | 필드 타입 메시지에 `min_version/added/removed` 사용 |
@@ -360,6 +361,31 @@ data = stop.Serialize()  # Field ranges are checked here.
 ```
 
 </details>
+
+**고정 길이 배열**
+
+**C++**
+
+```cpp
+static constexpr size_t <k>_size();
+T get_<k>(size_t index) const;
+std::array<T, N> get_<k>() const;
+bool set_<k>(size_t index, T value, std::string* error = nullptr);
+void set_<k>(const std::array<T, N>& values);
+
+bool set_<k>(size_t index, const std::string& value, std::string* error = nullptr); // string(N) 원소
+bool set_<k>(const std::array<std::string, N>& values, std::string* error = nullptr);
+```
+
+배열은 다른 fixed 필드처럼 fixed 영역에 있습니다. `index` 위치의 원소를 제자리에서 읽고 씁니다.
+
+- 매개변수: `index`는 0..N-1, `values`는 배열 전체, `error`는 set 실패 이유
+- 반환값: `get_<k>(index)`는 원소, `get_<k>()`는 배열 복사본. 원소 setter는 성공 여부. `string(N)` 전체 setter는 성공 여부를 돌려주고 실패하면 아무것도 쓰지 않음
+- 범위: `get_<k>(index)`는 debug 빌드에서 index를 assert하고 그 밖에는 검사하지 않음. `set_<k>(index, ...)`는 false: `counts[4]: index out of range (size 4)`
+- `string(N)` 원소: N바이트보다 길면 false: `names[1]: 9 bytes, longer than string(8)`
+- View: `<k>_size()`, `get_<k>(index)`, `get_<k>()`
+
+C# 배열은 길이 N인 get-only `T[]` 속성입니다. `string(N)` 원소가 길면 `Serialize()`가 `ProtacoException`을 던지고, `View`에는 `Name(index)`(0..N-1 밖이면 ArgumentOutOfRangeException)와 `Name()`이 있습니다. Python 배열은 값 N개짜리 list이며 `Serialize()`가 검사합니다.
 
 **가변 필드**
 

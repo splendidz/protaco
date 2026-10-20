@@ -605,6 +605,31 @@ class Items:
 
         return Item(MAP, "map", write, read, lambda b, v: b.map_items(v, key, value))
 
+    @staticmethod
+    def Array(element, count):
+        """T[N]: fixed block only. count elements of the element's fixed bytes in a row; a list of count values."""
+        packer = struct.Struct("<" + element.code)
+
+        def to_fixed(value, key):
+            if not isinstance(value, (list, tuple)):
+                raise ProtacoError(key, "%r is not a list" % (value,))
+            if len(value) != count:
+                raise ProtacoError(key, "%d elements, the array has %d" % (len(value), count))
+            out = bytearray()
+            for i, item in enumerate(value):
+                path = "%s[%d]" % (key, i)
+                try:
+                    out += packer.pack(element.to_fixed(item, path))
+                except (struct.error, TypeError, OverflowError):
+                    raise ProtacoError(path, "%r does not fit %s" % (item, element.name)) from None
+            return bytes(out)
+
+        def from_fixed(raw):
+            return [element.from_fixed(packer.unpack_from(raw, i * packer.size)[0]) for i in range(count)]
+
+        return Item(LIST, "%s[%d]" % (element.name, count), None, None, lambda b, v: b.list_items(v, element),
+                    "%ds" % (packer.size * count), to_fixed, from_fixed)
+
 
 # ---- messages ----
 

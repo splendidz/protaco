@@ -27,7 +27,11 @@ namespace Protacoc
             Element,
             MapKey,
             MapValue,
+            ArrayElement,
         }
+
+        // Fixed block limit: the largest .NET byte array (Protaco.cs Codec.MaxFrameBytes) minus room for the frame header.
+        public const long MaxFixedBlock = 0x7FFF0000;
 
         private static readonly System.Text.RegularExpressions.Regex VersionNamespace =
             new System.Text.RegularExpressions.Regex("^v[0-9]+$");
@@ -104,7 +108,8 @@ namespace Protacoc
             // Dependencies come first, so depth and fingerprints of referenced messages are ready.
             foreach (MessageDef message in order)
             {
-                Layout(message);
+                if (!Layout(message, diag))
+                    return false;
                 message.Depth = message.Dependencies.Count == 0 ? 0 : 1 + message.Dependencies.Max(d => d.Depth);
                 if (message.Depth > MaxDepth)
                     diag.Error(message.Pos, Codes.TooDeep, "'" + message.Name + "' nests messages " + message.Depth + " levels deep. The maximum is " + MaxDepth);
@@ -315,6 +320,23 @@ namespace Protacoc
         // map values: any type but string(N); a list or map value follows the same rules again.
         private static bool ResolveType(TypeRef type, FieldDef field, Dictionary<string, SchemaDef> byName, Diag diag, Place place)
         {
+            if (type.Kind == TypeKind.Array)
+            {
+                if (place != Place.Field)
+                {
+                    diag.Error(field.Pos, Codes.BadElement, "a fixed-length array as a list element, map key or value, or array element is not supported. Wrap it in a message");
+                    return false;
+                }
+                if (!ResolveType(type.Element, field, byName, diag, Place.ArrayElement))
+                    return false;
+                TypeKind element = type.Element.Kind;
+                if (element == TypeKind.String || element == TypeKind.Bytes || element == TypeKind.List || element == TypeKind.Map || element == TypeKind.Message)
+                {
+                    diag.Error(field.Pos, Codes.BadElement, type.Element + "[N] is not supported. Allowed elements: bool, int, int64, uint, uint64, double, string(N), enum");
+                    return false;
+                }
+                return ResolveLength(type, field, byName, diag);
+            }
             if (type.Kind == TypeKind.List)
             {
                 if (place == Place.Element || place == Place.MapKey)
@@ -377,13 +399,56 @@ namespace Protacoc
             return true;
         }
 
+        // N of T[N]: a number, Const.Key or Enum.Value. The element count is 1 or more and the array fits the fixed block limit.
+        private static bool ResolveLength(TypeRef type, FieldDef field, Dictionary<string, SchemaDef> byName, Diag diag)
+        {
+            string text = type.LengthText;
+            long length;
+            if (Loader.IsIntText(text))
+            {
+                if (!long.TryParse(text, out length))
+                    length = -1;
+            }
+            else
+            {
+                string[] parts = text.Split('.');
+                SchemaDef target;
+                byName.TryGetValue(parts[0], out target);
+                ConstDef constDef = target as ConstDef;
+                EnumDef enumDef = target as EnumDef;
+                if (constDef == null && enumDef == null)
+                {
+                    diag.Error(field.Pos, Codes.UnknownRef, "unknown const or enum '" + parts[0] + "' in array length '" + type + "'. Expected "
+                        + parts[0] + Loader.ConstSuffix + " or " + parts[0] + Loader.EnumSuffix + " in an -I folder");
+                    return false;
+                }
+                ConstValueDef constValue = constDef?.Values.FirstOrDefault(v => v.Key == parts[1]);
+                EnumValueDef enumValue = enumDef?.Values.FirstOrDefault(v => v.Key == parts[1]);
+                if (constValue == null && enumValue == null)
+                {
+                    diag.Error(field.Pos, Codes.UnknownRef, "'" + parts[1] + "' is not a value of " + (constDef != null ? "const " : "enum ") + parts[0]);
+                    return false;
+                }
+                length = constValue != null ? constValue.Number : enumValue.Number;
+            }
+            if (length < 1 || length * type.Element.FixedSize > MaxFixedBlock)
+            {
+                diag.Error(field.Pos, Codes.BadLength, "array length of '" + type + "' is " + length + ". It must be 1 or more, and the array at most " + MaxFixedBlock + " bytes");
+                return false;
+            }
+            type.ArrayLength = (int)length;
+            return true;
+        }
+
         private static void CheckDefault(FieldDef field, Diag diag)
         {
             if (field.DefaultText == null)
                 return;
             string text = field.DefaultText;
             bool ok;
-            switch (field.Type.Kind)
+            // An array default fills every element.
+            TypeRef type = field.Type.Kind == TypeKind.Array ? field.Type.Element : field.Type;
+            switch (type.Kind)
             {
                 case TypeKind.Bool:
                     ok = !field.DefaultQuoted && (text == "true" || text == "false");
@@ -412,11 +477,11 @@ namespace Protacoc
                         && !double.IsInfinity(d);
                     break;
                 case TypeKind.Enum:
-                    ok = !field.DefaultQuoted && field.Type.ResolvedEnum.Alive.Exists(v => v.Key == text);
+                    ok = !field.DefaultQuoted && type.ResolvedEnum.Alive.Exists(v => v.Key == text);
                     if (!ok)
                     {
-                        diag.Error(field.Pos, Codes.BadDefault, "default '" + text + "' is not a value of enum " + field.Type.TypeName + " (version "
-                            + field.Type.ResolvedEnum.Version + "). Write the value name without quotes");
+                        diag.Error(field.Pos, Codes.BadDefault, "default '" + text + "' is not a value of enum " + type.TypeName + " (version "
+                            + type.ResolvedEnum.Version + "). Write the value name without quotes");
                         return;
                     }
                     break;
@@ -428,10 +493,10 @@ namespace Protacoc
                         diag.Error(field.Pos, Codes.BadDefault, "string defaults must be ASCII");
                         return;
                     }
-                    ok = field.Type.Kind == TypeKind.String || text.Length <= field.Type.FixedLength;
+                    ok = type.Kind == TypeKind.String || text.Length <= type.FixedLength;
                     if (!ok)
                     {
-                        diag.Error(field.Pos, Codes.BadDefault, "default is longer than string(" + field.Type.FixedLength + ")");
+                        diag.Error(field.Pos, Codes.BadDefault, "default is longer than string(" + type.FixedLength + ")");
                         return;
                     }
                     break;
@@ -520,14 +585,19 @@ namespace Protacoc
         // Serialization order: added, then declaration. A later version only appends fixed fields, so the fixed block
         // of version k is a prefix of every newer one and an offset never changes. Removed fixed fields keep their bytes.
         // Layout changes are caught by the schema fingerprint.
-        private static void Layout(MessageDef message)
+        private static bool Layout(MessageDef message, Diag diag)
         {
             message.Physical = message.Fields.OrderBy(f => f.Added).ThenBy(f => f.Index).ToList();
-            int offset = 0;
+            long offset = 0;
             foreach (FieldDef field in message.Physical.Where(f => f.Type.IsFixed))
             {
-                field.FixedOffset = offset;
+                field.FixedOffset = (int)offset;
                 offset += field.Type.FixedSize;
+                if (offset > MaxFixedBlock)
+                {
+                    diag.Error(message.Pos, Codes.BadLength, "the fixed block of '" + message.Name + "' passes " + MaxFixedBlock + " bytes at '" + field.Key + "'");
+                    return false;
+                }
             }
             message.Views.Clear();
             for (int version = message.MinVersion; version <= message.Version; ++version)
@@ -540,6 +610,7 @@ namespace Protacoc
                 view.SchemaHash = SchemaFingerprint.Of(message, version);
                 message.Views.Add(view);
             }
+            return true;
         }
     }
 }

@@ -1,0 +1,15 @@
+# Fixed-length arrays of every element kind. Every field is fixed, so TryView reads it in place.
+message: Panel
+version: 1
+namespace: arrays
+allow_extension: false
+fields:
+  - {key: temps, type: double[Sizes.Slots], default: 20.5}
+  - {key: counts, type: int[Sizes.Slots], default: -1}
+  - {key: ids, type: uint64[3]}
+  - {key: masks, type: uint[2]}
+  - {key: ticks, type: int64[2]}
+  - {key: flags, type: bool[2]}
+  - {key: names, type: string(8)[Sizes.Names], default: none}
+  - {key: levels, type: Level[Level.Count]}
+  - {key: total, type: int}

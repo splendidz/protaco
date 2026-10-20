@@ -1,0 +1,6 @@
+# expect: PC304
+message: PC304_arraylength
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int[two]}

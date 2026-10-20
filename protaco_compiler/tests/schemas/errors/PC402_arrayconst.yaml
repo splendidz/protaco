@@ -1,0 +1,6 @@
+# expect: PC402
+message: PC402_arrayconst
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int[Nope.Max]}

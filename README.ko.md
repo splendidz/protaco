@@ -376,6 +376,7 @@ namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Pyt
 | `double` | 8바이트, IEEE 754 | `double` / `double` / `float` |
 | `string(N)` | N바이트 UTF-8, N은 1..4096, 남는 부분은 0 | `std::string` / `string` / `str` |
 | enum 이름 | 4바이트(int32) | `enum class` / `enum` / `enum.IntEnum` |
+| `T[N]` | 고정 타입 원소 N개를 연속 배치, 길이 접두 없음. [고정 길이 배열](#49-고정-길이-배열) 참고 | `std::array<T, N>` / 길이 N인 `T[]` / `list` |
 
 `string(N)`에 N바이트보다 긴 값을 넣으면 C++ setter는 `false`를 돌려주고 기존 값을 유지합니다. C# setter는 `ArgumentException`을 던집니다. Python은 `Serialize()`에서 `protaco.ProtacoError`를 냅니다. Python의 `int`는 크기 제한이 없으므로 타입 범위를 넘는 정수도 `Serialize()`에서 같은 오류가 됩니다.
 
@@ -616,6 +617,69 @@ values:
 - C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxStops = 16; ... }`. namespace 범위 `constexpr`라서 C++14에서도 클래스 밖 정의가 필요 없음
 - C# `Limits.const.cs`: `public static class Limits { public const int MaxStops = 16; ... }`
 - Python `Limits_const.py`: int 클래스 속성을 가진 `class Limits`(Python 키워드인 key는 끝에 `_`가 붙음)
+
+### 4.9 고정 길이 배열
+
+`T[N]`은 fixed 영역에 놓이는 원소 N개짜리 배열이며 길이 접두가 없습니다. fixed 필드와 배열만 있는 메시지는 여전히 고정 길이라서 `TryView`로 제자리에서 읽습니다.
+
+```yaml
+# Slots of one panel. Every field is fixed, so TryView reads it in place.
+message: Panel
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: temps, type: double[Limits.MaxStops], default: 20.5}
+  - {key: sizes, type: PizzaSize[3]}
+  - {key: names, type: string(8)[Limits.MaxStops]}
+```
+
+- 원소: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enum. 배열의 배열, list·map 안의 배열은 PC404
+- N: 숫자, const 값(`Limits.MaxStops`), enum 값(`PizzaSize.Large`는 3). 1 이상이어야 함(PC310). 모르는 이름은 PC402
+- `default`는 모든 원소를 채움. 없으면 숫자는 0, 문자열은 빈 값, enum은 첫 값
+- fingerprint에는 해석된 숫자 `double[16]`이 들어감. const 이름을 바꾸면 layout은 그대로, 값을 바꾸면 layout과 fingerprint가 바뀜
+
+생성되는 접근 방법입니다.
+
+- C++: `temps_size()`(constexpr), 제자리 읽기·쓰기 `get_temps(i)`·`set_temps(i, value)`, 배열 전체 `get_temps()`·`set_temps(std::array)`. `get_temps(i)`는 debug 빌드에서 index를 assert. `set_temps(i, ...)`는 index가 범위 밖이거나 `string(N)` 값이 길면 `false`와 이유를 `error`에 돌려줌
+- C#: 길이 N인 get-only 배열. `string(N)` 원소가 길면 `Serialize()`가 `ProtacoException`을 던짐
+- Python: 값 N개짜리 list. 길이가 다르거나 맞지 않는 값이면 `Serialize()`가 `ProtacoError`를 냄
+- `View`(C++, C#): C++은 `get_temps(i)`·`get_temps()`, C#은 `Temps(i)`·`Temps()`
+
+**C++**
+
+```cpp
+demo::Panel panel;                        // temps: 20.5 in every element
+panel.set_temps(0, 21.5);                 // written in place
+std::string error;
+if (!panel.set_names(16, "x", &error))   // names[16]: index out of range (size 16)
+    std::printf("%s\n", error.c_str());
+double first = panel.get_temps(0);
+std::array<double, 16> all = panel.get_temps();
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+var panel = new demo.Panel();             // Temps: a double[16] filled with 20.5
+panel.Temps[0] = 21.5;
+panel.Names[0] = "front";                 // checked by Serialize: string(8)
+byte[] bytes = panel.Serialize();
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+panel = Panel()                           # temps: [20.5] * 16
+panel.temps[0] = 21.5
+data = panel.Serialize()                  # length and elements are checked here
+```
+
+</details>
 
 ## 5. 확장 데이터
 
@@ -1066,6 +1130,7 @@ sequenceDiagram
 
 - 필드 추가(`added`), 필드 제거(`removed`), `min_version` 상향은 각각 `version`을 올려 반영. 새 메시지 추가는 언제나 가능
 - 기존 필드의 타입, `required`, `default`, 이름, 순서를 바꾸거나 제거한 키를 다시 쓰면 옛 계약과 호환되지 않음. 기존 필드를 제거하고 새 키의 필드를 추가
+- 배열 길이는 필드 타입의 일부. N이나 N이 가리키는 const·enum 값을 바꾸면 다른 타입 변경처럼 호환되지 않음
 - 메시지 이름과 `allow_extension` 변경도 기존 계약과 호환되지 않음. 새 메시지로 분리하거나 옛 version 지원을 끝냄
 - 호환되지 않는 스키마로 만든 프레임은 이름이나 fingerprint 검사에서 거부됨
 - 주석, `desc`, `namespace`는 직렬화 바이트에 영향 없음

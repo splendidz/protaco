@@ -1,0 +1,6 @@
+# expect: PC310
+message: PC310_arrayzero
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: int[0]}

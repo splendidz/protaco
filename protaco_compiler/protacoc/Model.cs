@@ -19,25 +19,29 @@ namespace Protacoc
         Map,
         Message,
         Enum,
+        Array,
     }
 
     internal sealed class TypeRef
     {
         public TypeKind Kind;
         public int FixedLength;          // byte count of FixedString
-        public TypeRef Element;          // element of List, value of Map
+        public TypeRef Element;          // element of List and Array, value of Map
         public TypeRef Key;              // key of Map
         public string TypeName;          // referenced message or enum name
         public MessageDef Resolved;      // referenced message, set by the linker
         public EnumDef ResolvedEnum;     // referenced enum, set by the linker
+        public string LengthText;        // N of T[N] as written: a number, Const.Key or Enum.Value
+        public int ArrayLength;          // element count of Array, set by the linker
 
-        // Whether the type lives in the fixed block. Scalars, enums and string(N).
+        // Whether the type lives in the fixed block. Scalars, enums, string(N) and T[N] of those.
         public bool IsFixed
         {
             get
             {
                 return Kind == TypeKind.Bool || Kind == TypeKind.Int || Kind == TypeKind.Int64 || Kind == TypeKind.UInt
-                    || Kind == TypeKind.UInt64 || Kind == TypeKind.Double || Kind == TypeKind.FixedString || Kind == TypeKind.Enum;
+                    || Kind == TypeKind.UInt64 || Kind == TypeKind.Double || Kind == TypeKind.FixedString || Kind == TypeKind.Enum
+                    || Kind == TypeKind.Array;
             }
         }
 
@@ -59,6 +63,8 @@ namespace Protacoc
                         return 8;
                     case TypeKind.FixedString:
                         return FixedLength;
+                    case TypeKind.Array:
+                        return Element.FixedSize * ArrayLength;
                     default:
                         return 0;
                 }
@@ -91,6 +97,8 @@ namespace Protacoc
                     return "list<" + Element + ">";
                 case TypeKind.Map:
                     return "map<" + Key + ", " + Element + ">";
+                case TypeKind.Array:
+                    return Element + "[" + LengthText + "]";
                 default:
                     return TypeName;
             }

@@ -45,6 +45,7 @@ A fixed field removed by that version remains as `~<key>:<type>;`. Its byte posi
 | Other message | `Name@xxxxxxxx`, its fingerprint as eight lowercase hexadecimal digits |
 | Self reference | `Name@self` |
 | Enum | `enum(Name)`, excluding its value list |
+| Fixed-length array | `T[N]`: T by these rules, N the resolved element count (`int[16]`, `enum(Level)[3]`) |
 
 Namespaces, comments, and `desc` are excluded. A change to a referenced message's fingerprint also affects its containing messages. Adding enum values does not change the fingerprint.
 
@@ -183,10 +184,10 @@ Errors with a source position are written to standard error as `file(line,column
 | PC302 | Duplicate field, enum, or const key | Repeated `key` |
 | PC303 | Reserved name or naming violation | Generated member or reserved prefix; key over 255 bytes |
 | PC304 | Malformed type | `map<string>`, a const name as a type |
-| PC305 | Required fixed field | `required` on `int`, `string(N)`, etc. |
+| PC305 | Required fixed field | `required` on `int`, `string(N)`, `T[N]`, etc. |
 | PC306 | Required self reference | `required` on Self or `list<Self>` |
 | PC308 | Invalid default | Range or string restriction; unknown enum value name |
-| PC310 | Invalid fixed string length | N in `string(N)` outside 1..4096 |
+| PC310 | Invalid fixed length | N in `string(N)` outside 1..4096, `T[N]` with N below 1 or a fixed block over 0x7FFF0000 bytes |
 | PC311 | Generated property name collision | C# capitalization or Python keyword suffix `_` |
 | PC312 | Invalid version history | Range or ordering of `min_version`, `added`, `removed` |
 | PC313 | Obsolete variable field line retained | `removed <= min_version`; delete the line |
@@ -195,7 +196,7 @@ Errors with a source position are written to standard error as `file(line,column
 | PC401 | Duplicate definition name | Message or enum name collision |
 | PC402 | Unknown type reference | Type absent from loaded definitions |
 | PC403 | Cycle or unsupported self reference | Two messages referring to each other; Self inside a map |
-| PC404 | Type forbidden in a container | `list<bool>`, `map<double, int>`, `string(N)` map value |
+| PC404 | Type forbidden in a container | `list<bool>`, `map<double, int>`, `string(N)` map value, `string[4]`, `int[2][3]`, `list<int[2]>` |
 | PC405 | Mixed namespaces | Different namespaces in one invocation |
 | PC406 | Generator nesting limit exceeded | More than 100 levels, excluding self references |
 | PC407 | Version features on a nested message | `min_version/added/removed` on a message used as a field type |
@@ -360,6 +361,31 @@ data = stop.Serialize()  # Field ranges are checked here.
 ```
 
 </details>
+
+**Fixed-length arrays**
+
+**C++**
+
+```cpp
+static constexpr size_t <k>_size();
+T get_<k>(size_t index) const;
+std::array<T, N> get_<k>() const;
+bool set_<k>(size_t index, T value, std::string* error = nullptr);
+void set_<k>(const std::array<T, N>& values);
+
+bool set_<k>(size_t index, const std::string& value, std::string* error = nullptr); // string(N) elements
+bool set_<k>(const std::array<std::string, N>& values, std::string* error = nullptr);
+```
+
+Arrays live in the fixed block like other fixed fields. The element at `index` is read and written in place.
+
+- Parameters: `index` is 0..N-1; `values` is the whole array; `error` receives the reason of a failed set
+- Returns: `get_<k>(index)` returns the element, `get_<k>()` a copy of the array. Element setters return success; the whole-array setter of `string(N)` returns success and writes nothing on failure
+- Range: `get_<k>(index)` asserts the index in debug builds and does not check it otherwise. `set_<k>(index, ...)` returns false: `counts[4]: index out of range (size 4)`
+- `string(N)` element: false if longer than N bytes: `names[1]: 9 bytes, longer than string(8)`
+- View: `<k>_size()`, `get_<k>(index)`, `get_<k>()`
+
+C# arrays are get-only `T[]` properties of length N; `Serialize()` throws `ProtacoException` for a `string(N)` element that is too long, and `View` has `Name(index)` (ArgumentOutOfRangeException outside 0..N-1) and `Name()`. Python arrays are lists of N values checked by `Serialize()`.
 
 **Variable fields**
 

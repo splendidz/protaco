@@ -69,6 +69,9 @@ namespace Protacoc
             tags.Add("type " + field.Type);
             if (field.Type.Kind == TypeKind.FixedString)
                 tags.Add("fixed " + field.Type.FixedLength + " bytes, set rejects longer values");
+            if (field.Type.Kind == TypeKind.Array)
+                tags.Add(field.Type.ArrayLength + " elements, fixed " + field.Type.FixedSize + " bytes"
+                    + (field.Type.Element.Kind == TypeKind.FixedString ? ", set rejects values longer than " + field.Type.Element.FixedLength + " bytes" : ""));
             if (field.Required)
                 tags.Add("required, decoding fails if missing");
             if (field.Optional)

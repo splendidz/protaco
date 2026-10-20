@@ -232,15 +232,24 @@ namespace Protacoc
                     return "protaco.Items.List(" + Item(type.Element) + ")";
                 case TypeKind.Map:
                     return "protaco.Items.Map(" + Item(type.Key) + ", " + Item(type.Element) + ")";
+                case TypeKind.Array:
+                    return "protaco.Items.Array(" + Item(type.Element) + ", " + type.ArrayLength + ")";
                 default:
                     return "protaco.Items.Message(" + type.TypeName + ")";
             }
         }
 
+        // An array starts as a list of N copies of the element default.
         private static string Default(FieldDef field)
         {
-            string text = field.DefaultText;
-            switch (field.Type.Kind)
+            if (field.Type.Kind == TypeKind.Array)
+                return "[" + DefaultOf(field.Type.Element, field.DefaultText, false) + "] * " + field.Type.ArrayLength;
+            return DefaultOf(field.Type, field.DefaultText, field.Optional);
+        }
+
+        private static string DefaultOf(TypeRef type, string text, bool optional)
+        {
+            switch (type.Kind)
             {
                 case TypeKind.Bool:
                     return text == "true" ? "True" : "False";
@@ -256,9 +265,9 @@ namespace Protacoc
                 case TypeKind.Map:
                     return "{}";
                 case TypeKind.Message:
-                    return field.Optional ? "None" : field.Type.TypeName + "(_stamp=protaco.NO_STAMP)";
+                    return optional ? "None" : type.TypeName + "(_stamp=protaco.NO_STAMP)";
                 case TypeKind.Enum:
-                    return field.Type.TypeName + "." + Name(text ?? field.Type.ResolvedEnum.First.Key);
+                    return type.TypeName + "." + Name(text ?? type.ResolvedEnum.First.Key);
                 default:
                     return text ?? "0";
             }
@@ -267,13 +276,12 @@ namespace Protacoc
         // Value packed into the slot of a removed fixed field: its default, which older readers get.
         private static string RemovedDefault(FieldDef field)
         {
-            if (field.Type.Kind == TypeKind.Enum)
-            {
-                string text = field.DefaultText;
-                EnumValueDef value = text == null ? field.Type.ResolvedEnum.First : field.Type.ResolvedEnum.Values.First(v => v.Key == text);
-                return value.Number.ToString();
-            }
-            return Default(field);
+            TypeRef type = field.Type.Kind == TypeKind.Array ? field.Type.Element : field.Type;
+            if (type.Kind != TypeKind.Enum)
+                return Default(field);
+            string text = field.DefaultText;
+            EnumValueDef value = text == null ? type.ResolvedEnum.First : type.ResolvedEnum.Values.First(v => v.Key == text);
+            return field.Type.Kind == TypeKind.Array ? "[" + value.Number + "] * " + field.Type.ArrayLength : value.Number.ToString();
         }
 
         private static string FloatLiteral(string text)

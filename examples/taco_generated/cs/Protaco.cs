@@ -561,6 +561,23 @@ namespace Protaco
             return PeekHeader(bytes, out header, out error);
         }
 
+        /// <summary>Generated fixed-length arrays with a default: count copies of value.</summary>
+        public static T[] Filled<T>(int count, T value)
+        {
+            T[] items = new T[count];
+            for (int i = 0; i < count; ++i)
+                items[i] = value;
+            return items;
+        }
+
+        /// <summary>Generated View element reads: index in 0..length-1, otherwise ArgumentOutOfRangeException.</summary>
+        public static int Index(int index, int length)
+        {
+            if ((uint)index >= (uint)length)
+                throw new ArgumentOutOfRangeException("index", index, "fixed array of " + length + " elements");
+            return index;
+        }
+
         /// <summary>Fixed-length string setters call this. Same bytes limit as C++ (UTF-8 byte count).</summary>
         public static void CheckChars(string value, int capacity, string key)
         {
@@ -686,6 +703,15 @@ namespace Protaco
             Buffer.BlockCopy(bytes, 0, block_, offset, Math.Min(bytes.Length, capacity));
             for (int i = bytes.Length; i < capacity; ++i)
                 block_[offset + i] = 0;
+        }
+
+        /// <summary>string(N) element of a fixed-length array. Elements are not checked on assignment, so Serialize checks them here.</summary>
+        public void Chars(int offset, int capacity, string value, string key, int index)
+        {
+            int length = Codec.Text.GetByteCount(value ?? "");
+            if (length > capacity)
+                throw new ProtacoException(key + "[" + index + "]", length + " bytes, longer than string(" + capacity + ")");
+            Chars(offset, capacity, value);
         }
 
         private void Put(int offset, byte[] bytes)
@@ -1766,6 +1792,55 @@ namespace Protaco
             ListItems(value, item => EnumValue(item, name));
         }
 
+        /// <summary>Fixed-length arrays: the same text as lists.</summary>
+        public void Field(string key, bool[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field(string key, int[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field(string key, long[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field(string key, uint[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field(string key, ulong[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field(string key, double[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field(string key, string[] value)
+        {
+            Key(key);
+            ListItems(value, Value);
+        }
+
+        public void Field<T>(string key, T[] value, Func<T, string> name) where T : struct, Enum
+        {
+            Key(key);
+            ListItems(value, item => EnumValue(item, name));
+        }
+
         /// <summary>Map field: {key: value, ...} with keys sorted, so the text does not depend on the dictionary order.</summary>
         public void Field<T>(string key, T value, Item<T> item)
         {
@@ -1840,7 +1915,7 @@ namespace Protaco
             out_.Append(key).Append('=');
         }
 
-        internal void ListItems<T>(List<T> list, Action<T> write)
+        internal void ListItems<T>(IEnumerable<T> list, Action<T> write)
         {
             Open("[");
             if (list != null)

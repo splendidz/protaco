@@ -1,0 +1,8 @@
+# Alarm level of one slot.
+enum: Level
+version: 1
+namespace: arrays
+values:
+  - {key: Low, value: 1}
+  - {key: High, value: 2}
+  - {key: Count, value: 3, desc: number of levels and an array length}
