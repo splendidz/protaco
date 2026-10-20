@@ -100,6 +100,27 @@ namespace Protacoc
             return w.ToString();
         }
 
+        // class <Name> with int class attributes. A Python keyword key gets a trailing '_'.
+        public static string EmitConst(ConstDef constDef)
+        {
+            CodeWriter w = new CodeWriter();
+            w.Line("# " + constDef.Name + "_const.py. protacoc " + Naming.Version + ", source " + constDef.FileName + " (sha1 " + constDef.Sha1 + "). Do not edit.");
+            w.Line();
+            w.Line();
+            w.Line("class " + constDef.Name + ":");
+            w.Indent();
+            Doc(w, Naming.ConstDoc(constDef));
+            w.Line();
+            foreach (ConstValueDef value in constDef.Values)
+            {
+                foreach (string line in Naming.ConstValueDoc(value))
+                    w.Line("#: " + line);
+                w.Line(Name(value.Key) + " = " + value.Number);
+            }
+            w.Outdent();
+            return w.ToString();
+        }
+
         private static void Doc(CodeWriter w, List<string> lines)
         {
             List<string> escaped = lines.Select(l => l.Replace("\\", "\\\\").Replace("\"\"\"", "\\\"\\\"\\\"")).ToList();

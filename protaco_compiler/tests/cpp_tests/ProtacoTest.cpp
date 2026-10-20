@@ -27,6 +27,7 @@
 #include "build2/Ping.g.h"
 #include "build3/Order.g.h"
 #include "build4/Order.g.h"
+#include "arrays/Sizes.const.h"
 #include "deep/D8.g.h"
 #include "partial/PizzaOrder.g.h"
 #include "partial/DeliveryRoute.g.h"
@@ -732,6 +733,17 @@ TEST(Protaco, UnsignedTypesAndUtf8RoundTrip)
 static_assert(protaco::kMaxFrameBytes == 0xFFFFFFFFu, "frames up to 4 GiB - 1");
 
 // Enums: defaults, lists, numbers this build does not know, names of removed values, parsing. Same as the C# test.
+// const.yaml: namespace-scope constexpr int32_t. Usable as array lengths and by const reference (std::max).
+static_assert(std::is_same<decltype(arrays::Sizes::Slots), const int32_t>::value, "const type");
+static_assert(arrays::Sizes::Slots == 4 && arrays::Sizes::Names == 2 && arrays::Sizes::Offset == -7 && arrays::Sizes::pass == 1, "const values");
+
+TEST(Protaco, ConstValues)
+{
+    int32_t slots[arrays::Sizes::Slots] = {};
+    EXPECT_EQ(4u, sizeof(slots) / sizeof(slots[0]));
+    EXPECT_EQ(4, std::max(arrays::Sizes::Slots, arrays::Sizes::Names));
+}
+
 TEST(Protaco, EnumFields)
 {
     using enums::PizzaSize;

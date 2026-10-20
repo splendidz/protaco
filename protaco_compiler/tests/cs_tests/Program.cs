@@ -51,6 +51,8 @@ namespace Protacoc.Tests
             Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
             Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
             Run("C#: auto_envelope false and DisableAutoEnvelope", AutoEnvelopeCanBeTurnedOff);
+            Run("C#: const values", ConstValues);
+            Run("generator: a const set is not a type PC304", GeneratorConstIsNotAType);
             Run("C#: enum fields match C++", EnumFields);
             Run("C#: map fields match C++", MapFields);
             Run("C#: recursive messages match C++", RecursiveMessages);
@@ -329,6 +331,25 @@ namespace Protacoc.Tests
             pie.Sizes.AddRange(new[] { enums.PizzaSize.Small, enums.PizzaSize.Family, (enums.PizzaSize)5, (enums.PizzaSize)9 });
             pie.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
             return pie;
+        }
+
+        private static void ConstValues()
+        {
+            const int slots = arrays.Sizes.Slots;   // compile-time constant
+            Equal(4, slots, "Slots");
+            Equal(2, arrays.Sizes.Names, "Names");
+            Equal(-7, arrays.Sizes.Offset, "Offset");
+            Equal(1, arrays.Sizes.pass, "keyword key");
+        }
+
+        private static void GeneratorConstIsNotAType()
+        {
+            string dir = TempDir();
+            File.WriteAllText(Path.Combine(dir, "Sizes.const.yaml"), "const: Sizes\nnamespace: ct\nvalues:\n  - {key: Slots, value: 4}\n");
+            File.WriteAllText(Path.Combine(dir, "Row.yaml"), "message: Row\nversion: 1\nnamespace: ct\nfields:\n  - {key: s, type: Sizes}\n");
+            GenResult result = Protacoc("-I", dir, "--cpp_out", Path.Combine(dir, "out"));
+            Equal(2, result.Exit, "exit code");
+            Check(result.Output.Contains("error PC304:") && result.Output.Contains("'Sizes' is a const set, not a type"), "no PC304: " + result.Output);
         }
 
         private static void EnumFields()

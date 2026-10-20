@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(TESTS, "taco_generated", "py"))
 
 import protaco  # noqa: E402
 from alt.Recipe_g import Recipe as AltRecipe  # noqa: E402
+from arrays.Sizes_const import Sizes  # noqa: E402
 from build1.Order_g import Order as Order1  # noqa: E402
 from build1.Ping_g import Ping as Ping1  # noqa: E402
 from build2.Order_g import Order as Order2  # noqa: E402
@@ -423,6 +424,9 @@ class ProtacoTest(unittest.TestCase):
         result = route.TryGetTimeFromTimestamp()
         self.assertFalse(result)
         self.assertEqual("timestamp 1000 is not a time (2000-01-01 to 9999-12-31 in UTC microseconds)", result.error)
+
+    def test_const_values(self):
+        self.assertEqual((4, 2, -7, 1), (Sizes.Slots, Sizes.Names, Sizes.Offset, Sizes.pass_))
 
     def test_enum_fields(self):
         defaults = Pie()

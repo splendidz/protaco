@@ -1,6 +1,7 @@
 ﻿// Program.cs. protacoc.exe command line (protoc style).
 //   protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [--no_runtime] [--check] [name or yaml path...]
-// Inputs: <Name>.yaml (one message) and <Name>.enum.yaml (one enum). A file name containing .bak is skipped.
+// Inputs: <Name>.yaml (one message), <Name>.enum.yaml (one enum), <Name>.const.yaml (one const set).
+// A file name containing .bak is skipped.
 // The namespace comes from each yaml header (namespace:).
 // Exit codes: 0 success, 1 usage, 2 schema error, 3 --check mismatch
 using System;
@@ -124,12 +125,12 @@ namespace Protacoc
             Console.WriteLine("protacoc " + Naming.Version + ". message yaml to C++ (.g.h) / C# (.g.cs) / Python (_g.py)");
             Console.WriteLine("usage: protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [options] [message...]");
             Console.WriteLine("  -I, --proto_path <dir>   yaml folder. Several folders share one name space");
-            Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h, <enum>.enum.h and the runtime Protaco.hpp");
-            Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.cs and the runtime Protaco.cs");
-            Console.WriteLine("  --py_out <dir>           writes <namespace folders>/<message>_g.py, <enum>_enum.py and the runtime protaco.py");
+            Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h, <enum>.enum.h, <const>.const.h and the runtime Protaco.hpp");
+            Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.cs, <const>.const.cs and the runtime Protaco.cs");
+            Console.WriteLine("  --py_out <dir>           writes <namespace folders>/<message>_g.py, <enum>_enum.py, <const>_const.py and the runtime protaco.py");
             Console.WriteLine("  --no_runtime             skips the runtime files");
             Console.WriteLine("  --check                  checks without writing. Exit code 3 if anything differs");
-            Console.WriteLine("  name...                  generates only these messages or enums (name or yaml path). Default: all");
+            Console.WriteLine("  name...                  generates only these messages, enums or consts (name or yaml path). Default: all");
         }
 
         private static List<SchemaDef> LoadAll(Options options, Diag diag)
@@ -167,7 +168,7 @@ namespace Protacoc
                 string name = target.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ? Loader.Stem(target) : target;
                 SchemaDef found = defs.FirstOrDefault(m => m.Name == name);
                 if (found == null)
-                    diag.Error(Codes.Usage, "message or enum not found: " + target);
+                    diag.Error(Codes.Usage, "message, enum or const not found: " + target);
                 else
                     targets.Add(found);
             }
@@ -176,6 +177,15 @@ namespace Protacoc
 
         private static void Emit(List<MessageDef> order, List<EnumDef> enums, HashSet<SchemaDef> targets, Options options, OutputSet output)
         {
+            foreach (ConstDef constDef in targets.OfType<ConstDef>().OrderBy(c => c.Name, StringComparer.Ordinal))
+            {
+                if (options.CppOut != null)
+                    output.Write(Path.Combine(options.CppOut, constDef.Name + ".const.h"), CppEmitter.EmitConst(constDef, constDef.Namespace.Split('.')));
+                if (options.CsOut != null)
+                    output.Write(Path.Combine(options.CsOut, constDef.Name + ".const.cs"), CsEmitter.EmitConst(constDef, constDef.Namespace));
+                if (options.PyOut != null)
+                    output.Write(Path.Combine(PyPackage(options.PyOut, constDef), constDef.Name + "_const.py"), PyEmitter.EmitConst(constDef));
+            }
             foreach (EnumDef enumDef in enums.Where(targets.Contains))
             {
                 if (options.CppOut != null)

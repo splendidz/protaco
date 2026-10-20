@@ -74,6 +74,7 @@
     <ClInclude Include="..\..\..\include\cpp\Protaco.hpp" />
     <ClInclude Include="..\taco_generated\cpp\**\*.g.h" />
     <ClInclude Include="..\taco_generated\cpp\**\*.enum.h" />
+    <ClInclude Include="..\taco_generated\cpp\**\*.const.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\schemas\**\*.yaml" />

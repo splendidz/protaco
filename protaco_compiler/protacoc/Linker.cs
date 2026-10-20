@@ -88,6 +88,8 @@ namespace Protacoc
             CheckNamespaces(defs, diag);
             foreach (EnumDef enumDef in enums)
                 CheckEnum(enumDef, diag);
+            foreach (ConstDef constDef in defs.OfType<ConstDef>())
+                CheckConst(constDef, diag);
             foreach (MessageDef message in messages)
             {
                 CheckFields(message, byName, diag);
@@ -110,13 +112,18 @@ namespace Protacoc
             return diag.ErrorCount == 0;
         }
 
-        // Version rules. README.md "Versioning".
-        private static bool CheckVersionRange(SchemaDef def, string kind, Diag diag)
+        private static void CheckDefName(SchemaDef def, string kind, Diag diag)
         {
             if (VersionNamespace.IsMatch(def.Name))
                 diag.Error(def.Pos, Codes.ReservedName, kind + " name '" + def.Name + "' is reserved for version namespaces (v1, v2, ...)");
             if (CppKeywords.Contains(def.Name) || CsKeywords.Contains(def.Name) || PyEmitter.Keywords.Contains(def.Name))
                 diag.Error(def.Pos, Codes.Reserved, "'" + def.Name + "' is a C++, C# or Python keyword");
+        }
+
+        // Version rules. README.md "Versioning".
+        private static bool CheckVersionRange(SchemaDef def, string kind, Diag diag)
+        {
+            CheckDefName(def, kind, diag);
             if (def.MinVersion > def.Version)
             {
                 diag.Error(def.Pos, Codes.BadVersion, "min_version " + def.MinVersion + " is above version " + def.Version);
@@ -176,6 +183,27 @@ namespace Protacoc
             }
             if (enumDef.First == null)
                 diag.Error(enumDef.Pos, Codes.MissingTop, "enum '" + enumDef.Name + "' has no value in version " + enumDef.Version);
+        }
+
+        // Const values: unique keys, no keywords, not the C# class name (a member cannot share its class name).
+        private static void CheckConst(ConstDef constDef, Diag diag)
+        {
+            CheckDefName(constDef, "const", diag);
+            HashSet<string> keys = new HashSet<string>();
+            HashSet<string> pyNames = new HashSet<string>();
+            foreach (ConstValueDef value in constDef.Values)
+            {
+                if (!keys.Add(value.Key))
+                    diag.Error(value.Pos, Codes.DupKey, "duplicate const key '" + value.Key + "'");
+                else if (!pyNames.Add(PyEmitter.Name(value.Key)))
+                    diag.Error(value.Pos, Codes.NameClash, "Python name '" + PyEmitter.Name(value.Key) + "' clashes (a Python keyword gets a trailing '_')");
+                if (CppKeywords.Contains(value.Key) || CsKeywords.Contains(value.Key))
+                    diag.Error(value.Pos, Codes.Reserved, "'" + value.Key + "' is a C++ or C# keyword");
+                if (value.Key == constDef.Name)
+                    diag.Error(value.Pos, Codes.NameClash, "const key '" + value.Key + "' equals the const name (C# class member)");
+            }
+            if (constDef.Values.Count == 0)
+                diag.Error(constDef.Pos, Codes.MissingTop, "const '" + constDef.Name + "' has no value");
         }
 
         // Nested bodies carry no version, so a message used as a field type has exactly one layout.
@@ -339,6 +367,11 @@ namespace Protacoc
                 type.Kind = TypeKind.Enum;
                 type.ResolvedEnum = enumDef;
                 return true;
+            }
+            if (target is ConstDef)
+            {
+                diag.Error(field.Pos, Codes.BadType, "'" + type.TypeName + "' is a const set, not a type");
+                return false;
             }
             type.Resolved = (MessageDef)target;
             return true;

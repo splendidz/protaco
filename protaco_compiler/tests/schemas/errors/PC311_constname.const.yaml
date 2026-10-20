@@ -1,0 +1,5 @@
+# expect: PC311
+const: PC311_constname
+namespace: errors
+values:
+  - {key: PC311_constname, value: 1}

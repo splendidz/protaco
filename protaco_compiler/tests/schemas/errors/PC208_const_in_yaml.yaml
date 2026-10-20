@@ -1,0 +1,5 @@
+# expect: PC208
+const: PC208_const_in_yaml
+namespace: errors
+values:
+  - {key: A, value: 1}

@@ -1,11 +1,13 @@
 ﻿// Cpp14Check.cpp. Generated headers and the runtime must compile as C++14.
 // Only this file is built as C++14 (ProtacoTest.vcxproj /std:c++14, build.sh -std=c++14). Real calls force template
 // instantiation: maps, enums, recursive messages, views and adopted buffers included.
+#include <algorithm>
 #include <utility>
 
 #include "DeliveryRoute.g.h"
 #include "Heartbeat.g.h"
 #include "PizzaOrder.g.h"
+#include "arrays/Sizes.const.h"
 #include "enums/Pie.g.h"
 #include "maps/Menu.g.h"
 #include "recursive/Node.g.h"
@@ -49,5 +51,6 @@ bool Cpp14RoundTrip()
         && nodeBack.get_next().get_children().size() == 1
         && protaco::ToObject<enums::Pie>(pie.Serialize()).get_size() == enums::PizzaSize::Medium
         && !routeBack.ToString().empty() && !orderBack.ToString(protaco::TextStyle::Pretty()).empty()
-        && !beatBack.ToString().empty();
+        && !beatBack.ToString().empty()
+        && std::max(arrays::Sizes::Slots, arrays::Sizes::Names) == 4;
 }

@@ -113,6 +113,23 @@ namespace Protacoc
             return lines;
         }
 
+        public static List<string> ConstDoc(ConstDef constDef)
+        {
+            List<string> lines = new List<string>(constDef.Doc);
+            if (!string.IsNullOrEmpty(constDef.Desc))
+                lines.Add(constDef.Desc);
+            lines.Add("[const; source " + constDef.FileName + "]");
+            return lines;
+        }
+
+        public static List<string> ConstValueDoc(ConstValueDef value)
+        {
+            List<string> lines = new List<string>(value.Doc);
+            if (!string.IsNullOrEmpty(value.Desc))
+                lines.Add(value.Desc);
+            return lines;
+        }
+
         public static List<string> EnumValueDoc(EnumValueDef value)
         {
             List<string> lines = new List<string>(value.Doc);

@@ -125,7 +125,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | `--py_out <dir>` | Python output root |
 | `--no_runtime` | Skip runtime output |
 | `--check` | Compare expected bytes without writing |
-| `name...` | Message or enum names, or YAML paths; all definitions if omitted |
+| `name...` | Message, enum, or const names, or YAML paths; all definitions if omitted |
 | `-h`, `--help` | Help |
 | `--version` | Generator version |
 
@@ -133,9 +133,9 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 
 | Language | Output paths |
 |---|---|
-| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.h`, `Protaco.hpp` |
-| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `Protaco.cs` |
-| Python | `<py_out>/<namespace folders>/<Name>_g.py`, `<Enum>_enum.py`; runtime at `<py_out>/protaco.py` |
+| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.h`, `<Const>.const.h`, `Protaco.hpp` |
+| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `<Const>.const.cs`, `Protaco.cs` |
+| Python | `<py_out>/<namespace folders>/<Name>_g.py`, `<Enum>_enum.py`, `<Const>_const.py`; runtime at `<py_out>/protaco.py` |
 
 Each input folder supplies its `*.yaml` files, subfolders excluded. A file whose name contains `.bak` (any case) is skipped and reported as `protacoc: skipped <path> (.bak in the file name)`; no valid file matches, because a definition name has no `.`.
 
@@ -178,11 +178,11 @@ Errors with a source position are written to standard error as `file(line,column
 | PC204 | Invalid value format | Invalid bool, int, or name |
 | PC205 | Duplicate attribute | Two `key` attributes in one item |
 | PC206 | Invalid namespace | Invalid name or reserved segment |
-| PC208 | Definition kind and suffix differ | Enum outside `<Name>.enum.yaml`, or that file lacks `enum:` |
+| PC208 | Definition kind and suffix differ | Enum or const outside `<Name>.enum.yaml` or `<Name>.const.yaml`, or that file lacks `enum:` or `const:` |
 | PC301 | Definition name and file name differ | A different name in `Menu.yaml` |
-| PC302 | Duplicate field or enum key | Repeated `key` |
+| PC302 | Duplicate field, enum, or const key | Repeated `key` |
 | PC303 | Reserved name or naming violation | Generated member or reserved prefix; key over 255 bytes |
-| PC304 | Malformed type | `map<string>` |
+| PC304 | Malformed type | `map<string>`, a const name as a type |
 | PC305 | Required fixed field | `required` on `int`, `string(N)`, etc. |
 | PC306 | Required self reference | `required` on Self or `list<Self>` |
 | PC308 | Invalid default | Range or string restriction; unknown enum value name |

@@ -125,7 +125,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | `--py_out <dir>` | Python 출력 루트 |
 | `--no_runtime` | 런타임 파일 출력 생략 |
 | `--check` | 파일을 쓰지 않고 예상 바이트와 비교 |
-| `name...` | 생성할 메시지·enum 이름 또는 YAML 경로, 생략하면 전체 |
+| `name...` | 생성할 메시지·enum·const 이름 또는 YAML 경로, 생략하면 전체 |
 | `-h`, `--help` | 도움말 |
 | `--version` | 생성기 버전 |
 
@@ -133,9 +133,9 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 
 | 언어 | 출력 경로 |
 |---|---|
-| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.h`, `Protaco.hpp` |
-| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `Protaco.cs` |
-| Python | `<py_out>/<namespace 폴더>/<Name>_g.py`, `<Enum>_enum.py`; 런타임은 `<py_out>/protaco.py` |
+| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.h`, `<Const>.const.h`, `Protaco.hpp` |
+| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `<Const>.const.cs`, `Protaco.cs` |
+| Python | `<py_out>/<namespace 폴더>/<Name>_g.py`, `<Enum>_enum.py`, `<Const>_const.py`; 런타임은 `<py_out>/protaco.py` |
 
 입력 폴더마다 하위 폴더를 제외한 `*.yaml` 파일을 읽습니다. 파일 이름에 `.bak`(대소문자 무관)가 들어 있으면 건너뛰고 `protacoc: skipped <path> (.bak in the file name)`으로 알립니다. 정의 이름에는 `.`이 없으므로 올바른 파일이 건너뛰어지는 일은 없습니다.
 
@@ -178,11 +178,11 @@ bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\c
 | PC204 | 잘못된 값 형식 | bool·int·이름 형식 오류 |
 | PC205 | 중복 속성 | 같은 항목에 `key` 두 번 |
 | PC206 | namespace 오류 | 잘못된 이름 또는 예약어 조각 |
-| PC208 | 정의 종류와 파일 접미사 불일치 | enum이 `<Name>.enum.yaml` 밖에 있거나 해당 파일에 `enum:` 없음 |
+| PC208 | 정의 종류와 파일 접미사 불일치 | enum이나 const가 `<Name>.enum.yaml`·`<Name>.const.yaml` 밖에 있거나 해당 파일에 `enum:`·`const:` 없음 |
 | PC301 | 정의 이름과 파일 이름 불일치 | `Menu.yaml`에 다른 이름 |
-| PC302 | 중복 필드·enum 키 | 같은 `key` 재선언 |
+| PC302 | 중복 필드·enum·const 키 | 같은 `key` 재선언 |
 | PC303 | 예약어·이름 규칙 위반 | 생성 멤버·예약 접두와 충돌, 키 255바이트 초과 |
-| PC304 | 타입 문법 오류 | `map<string>` |
+| PC304 | 타입 문법 오류 | `map<string>`, const 이름을 타입으로 씀 |
 | PC305 | 고정 필드에 required | `int`, `string(N)` 등에 지정 |
 | PC306 | 자기 참조 필드에 required | 단일 Self 또는 `list<Self>`에 지정 |
 | PC308 | 잘못된 default | 범위·문자열 제한 위반, enum에 없는 값 이름 |

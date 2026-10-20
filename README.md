@@ -209,7 +209,7 @@ At build time, `protacoc` reads the YAML and writes the message classes and the 
 
 ![Schemas become generated code and runtimes for C++, C#, and Python](docs/img/flow.svg)
 
-Each message produces one file per language, and the classes for older versions you still support go into the same file. Enums come out as `<Name>.enum.h`, `<Name>.enum.cs`, and `<Name>_enum.py`.
+Each message produces one file per language, and the classes for older versions you still support go into the same file. Enums come out as `<Name>.enum.h`, `<Name>.enum.cs`, and `<Name>_enum.py`, and const files as `<Name>.const.h`, `<Name>.const.cs`, and `<Name>_const.py`.
 
 ## 3. Getting started
 
@@ -291,7 +291,7 @@ Generated files are written as UTF-8 (with BOM) and CRLF, so every OS produces t
 | `--py_out <dir>` | Python packages and runtime |
 | `--no_runtime` | Skip the runtime files |
 | `--check` | Check that the output is up to date without writing; exit code 3 if anything differs |
-| `name...` | Generate only these messages or enums; default is all |
+| `name...` | Generate only these messages, enums, or const files; default is all |
 
 Choose at least one output language. Exit codes and full usage are in [Command line](docs/reference.md#2-command-line).
 
@@ -299,7 +299,7 @@ Choose at least one output language. Exit codes and full usage are in [Command l
 
 ### 4.1 File rules
 
-- One definition per file. A message is `<Name>.yaml` (top line `message: <Name>`), an enum is `<Name>.enum.yaml` (top line `enum: <Name>`)
+- One definition per file. A message is `<Name>.yaml` (top line `message: <Name>`), an enum is `<Name>.enum.yaml` (top line `enum: <Name>`), a const file is `<Name>.const.yaml` (top line `const: <Name>`)
 - A file name that differs from the definition name is PC301; a definition kind that does not match the file suffix is PC208
 - A file name containing `.bak` (any case) is not read, so backup copies such as `Menu.bak.yaml` can stay in the folder
 - References resolve by name. Input file order does not matter
@@ -593,6 +593,29 @@ pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 ```
 
 </details>
+
+### 4.8 Constants
+
+Named integers that your code shares across languages go in a `<Name>.const.yaml` file. For example, `Limits.const.yaml`:
+
+```yaml
+# Limits shared by the C++ core and the C# UI.
+const: Limits
+namespace: demo
+values:
+  - {key: MaxStops, value: 16, desc: stops per route}
+  - {key: MaxRiders, value: 64}
+```
+
+- Top-level keys: `const`, `namespace`, `desc`, `values`. Value attributes: `key`, `value` (int32), `desc`
+- Constants are not serialized, so a const file has no `version`
+- A const name is not a field type (PC304)
+
+Generated code per language:
+
+- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxStops = 16; ... }`. Namespace-scope `constexpr` works in C++14 without out-of-line definitions
+- C# `Limits.const.cs`: `public static class Limits { public const int MaxStops = 16; ... }`
+- Python `Limits_const.py`: `class Limits` with int class attributes (a Python keyword key gets a trailing `_`)
 
 ## 5. Extension data
 

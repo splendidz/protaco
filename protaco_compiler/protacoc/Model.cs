@@ -241,6 +241,21 @@ namespace Protacoc
         }
     }
 
+    internal sealed class ConstValueDef
+    {
+        public string Key;
+        public int Number;
+        public string Desc;
+        public List<string> Doc = new List<string>();
+        public SourcePos Pos;
+    }
+
+    // Const file (<Name>.const.yaml). Named int32 values for code and array lengths. Not serialized, so no version.
+    internal sealed class ConstDef : SchemaDef
+    {
+        public List<ConstValueDef> Values = new List<ConstValueDef>();
+    }
+
     internal struct SourcePos
     {
         public string File;

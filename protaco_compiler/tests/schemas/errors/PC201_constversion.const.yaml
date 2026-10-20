@@ -1,0 +1,6 @@
+# expect: PC201
+const: PC201_constversion
+version: 1
+namespace: errors
+values:
+  - {key: A, value: 1}

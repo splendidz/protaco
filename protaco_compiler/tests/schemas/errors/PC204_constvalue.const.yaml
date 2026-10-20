@@ -1,0 +1,5 @@
+# expect: PC204
+const: PC204_constvalue
+namespace: errors
+values:
+  - {key: A, value: 1.5}

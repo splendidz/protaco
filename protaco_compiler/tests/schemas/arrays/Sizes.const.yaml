@@ -1,0 +1,10 @@
+# Array lengths of the arrays test messages.
+const: Sizes
+namespace: arrays
+desc: array lengths
+values:
+  - {key: Slots, value: 4, desc: slots per row}
+  - {key: Names, value: 2}
+  # Negative values are allowed outside array lengths.
+  - {key: Offset, value: -7}
+  - {key: pass, value: 1, desc: a Python keyword key}

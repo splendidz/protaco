@@ -24,7 +24,7 @@ echo "=== [1/6] build protacoc (.NET 8)"
 "$DOTNET" build protaco_compiler/protacoc/protacoc.net.csproj -c $CONFIG -nologo -v quiet
 
 echo "=== [2/6] generate test and example code"
-for n in demo scalars enums maps recursive ver_v1 ver_v2 alt partial deep build1 build2 build3 build4; do
+for n in demo scalars enums maps recursive arrays ver_v1 ver_v2 alt partial deep build1 build2 build3 build4; do
     $PROTACOC -I $TESTS/schemas/$n --cpp_out $TESTS/taco_generated/cpp/$n --cs_out $TESTS/taco_generated/cs/$n --py_out $TESTS/taco_generated/py --no_runtime
 done
 $PROTACOC -I examples/schemas --cpp_out examples/taco_generated/cpp --cs_out examples/taco_generated/cs --py_out examples/taco_generated/py

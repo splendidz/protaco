@@ -52,7 +52,7 @@ namespace Protacoc
         public const string BadValue = "PC204";        // value format (bool, int, name)
         public const string DupAttr = "PC205";         // duplicate attribute
         public const string BadNamespace = "PC206";    // malformed namespace or keyword segment
-        public const string FileKind = "PC208";        // enum: outside <Name>.enum.yaml, or a .enum.yaml file without enum:
+        public const string FileKind = "PC208";        // enum: or const: outside <Name>.enum.yaml or <Name>.const.yaml, or such a file without it
         public const string FileName = "PC301";        // message name differs from file name
         public const string DupKey = "PC302";          // duplicate field key
         public const string Reserved = "PC303";        // reserved word or generated member name

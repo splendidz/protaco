@@ -5,54 +5,6 @@
     <Filter Include="cpp_tests">
       <UniqueIdentifier>{9A21A56A-123E-5BA0-9939-A92F5F65B7DC}</UniqueIdentifier>
     </Filter>
-    <Filter Include="taco_generated">
-      <UniqueIdentifier>{C99319FD-483C-592A-BDF4-F8C85822C11D}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp">
-      <UniqueIdentifier>{99C687F9-87F9-5ADB-80C8-4E2542AF8DCC}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\alt">
-      <UniqueIdentifier>{45B521A6-F699-5A13-80A5-435C00E70419}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\build1">
-      <UniqueIdentifier>{894FB66F-435B-54CA-8AC3-D4DE60B38C25}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\build2">
-      <UniqueIdentifier>{91BE6FEB-DF55-5348-8CC9-198DF36A07A3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\build3">
-      <UniqueIdentifier>{6911A701-7174-506F-9EBF-295D8E120D82}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\build4">
-      <UniqueIdentifier>{FF05FA02-DDE8-5964-ACFC-A8586FB92FB9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\deep">
-      <UniqueIdentifier>{3D992345-4483-5EAE-8617-43CCA99FA3ED}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\demo">
-      <UniqueIdentifier>{EBC3CCA2-3493-5B16-BD6A-5C628AD64908}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\enums">
-      <UniqueIdentifier>{B6775DAE-09C3-5B17-9AD5-B6F26FC5075A}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\maps">
-      <UniqueIdentifier>{B573B2D2-64E3-596F-9E71-DA2674C30852}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\partial">
-      <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\recursive">
-      <UniqueIdentifier>{E92BA104-1AE7-541C-AD1C-433520DC4A13}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\scalars">
-      <UniqueIdentifier>{57E4C229-818C-5AAD-8514-3337D3FBA117}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\ver_v1">
-      <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="taco_generated\cpp\ver_v2">
-      <UniqueIdentifier>{0EB11328-CE63-5DA8-B8AB-0157B91C6317}</UniqueIdentifier>
-    </Filter>
     <Filter Include="googletest">
       <UniqueIdentifier>{6673539F-D205-57D3-B9A1-2A3EE9529D0C}</UniqueIdentifier>
     </Filter>
@@ -76,6 +28,9 @@
     </Filter>
     <Filter Include="schemas\alt">
       <UniqueIdentifier>{C72D2DD9-C331-5768-BCAE-4E558A551A77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="schemas\arrays">
+      <UniqueIdentifier>{CB84DE01-292A-5E3D-9873-4515EC9DC9AF}</UniqueIdentifier>
     </Filter>
     <Filter Include="schemas\build1">
       <UniqueIdentifier>{5F4FD5E1-6923-5AFA-8A89-D107F44B19B0}</UniqueIdentifier>
@@ -131,6 +86,57 @@
     <Filter Include="schemas\ver_v2">
       <UniqueIdentifier>{39F6911C-60C3-599C-9C86-CBFCA31784FD}</UniqueIdentifier>
     </Filter>
+    <Filter Include="taco_generated">
+      <UniqueIdentifier>{C99319FD-483C-592A-BDF4-F8C85822C11D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp">
+      <UniqueIdentifier>{99C687F9-87F9-5ADB-80C8-4E2542AF8DCC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\alt">
+      <UniqueIdentifier>{45B521A6-F699-5A13-80A5-435C00E70419}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\arrays">
+      <UniqueIdentifier>{8D47A25D-2538-5B79-8E1E-12DA9C0204DD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\build1">
+      <UniqueIdentifier>{894FB66F-435B-54CA-8AC3-D4DE60B38C25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\build2">
+      <UniqueIdentifier>{91BE6FEB-DF55-5348-8CC9-198DF36A07A3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\build3">
+      <UniqueIdentifier>{6911A701-7174-506F-9EBF-295D8E120D82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\build4">
+      <UniqueIdentifier>{FF05FA02-DDE8-5964-ACFC-A8586FB92FB9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\deep">
+      <UniqueIdentifier>{3D992345-4483-5EAE-8617-43CCA99FA3ED}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\demo">
+      <UniqueIdentifier>{EBC3CCA2-3493-5B16-BD6A-5C628AD64908}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\enums">
+      <UniqueIdentifier>{B6775DAE-09C3-5B17-9AD5-B6F26FC5075A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\maps">
+      <UniqueIdentifier>{B573B2D2-64E3-596F-9E71-DA2674C30852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\partial">
+      <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\recursive">
+      <UniqueIdentifier>{E92BA104-1AE7-541C-AD1C-433520DC4A13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\scalars">
+      <UniqueIdentifier>{57E4C229-818C-5AAD-8514-3337D3FBA117}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\ver_v1">
+      <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="taco_generated\cpp\ver_v2">
+      <UniqueIdentifier>{0EB11328-CE63-5DA8-B8AB-0157B91C6317}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\googletest\src\gtest\gtest-all.cc">
@@ -155,6 +161,9 @@
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\alt\Recipe.g.h">
       <Filter>taco_generated\cpp\alt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\build1\Order.g.h">
       <Filter>taco_generated\cpp\build1</Filter>
@@ -272,6 +281,9 @@
     <None Include="..\schemas\alt\Recipe.yaml">
       <Filter>schemas\alt</Filter>
     </None>
+    <None Include="..\schemas\arrays\Sizes.const.yaml">
+      <Filter>schemas\arrays</Filter>
+    </None>
     <None Include="..\schemas\build1\Order.yaml">
       <Filter>schemas\build1</Filter>
     </None>
@@ -368,6 +380,9 @@
     <None Include="..\schemas\errors\PC102_mapquote.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC201_constversion.const.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC201_deprecated.yaml">
       <Filter>schemas\errors</Filter>
     </None>
@@ -389,6 +404,9 @@
     <None Include="..\schemas\errors\PC204_bool.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC204_constvalue.const.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC204_extension.yaml">
       <Filter>schemas\errors</Filter>
     </None>
@@ -396,6 +414,12 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC206_namespace.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC208_const.const.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC208_const_in_yaml.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC208_enum_in_yaml.yaml">
@@ -408,6 +432,9 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC301_name.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC302_constkey.const.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC302_dup.yaml">
@@ -456,6 +483,9 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC311_clash.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC311_constname.const.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC312_added.yaml">

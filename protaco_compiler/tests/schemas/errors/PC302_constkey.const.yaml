@@ -1,0 +1,6 @@
+# expect: PC302
+const: PC302_constkey
+namespace: errors
+values:
+  - {key: A, value: 1}
+  - {key: A, value: 2}

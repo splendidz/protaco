@@ -108,6 +108,34 @@ namespace Protacoc
             return w.ToString();
         }
 
+        // namespace <Name> { constexpr int32_t <Key> = <value>; }. Namespace-scope constexpr has internal linkage, so the
+        // values work in C++14 without out-of-line definitions.
+        public static string EmitConst(ConstDef constDef, string[] ns)
+        {
+            CodeWriter w = new CodeWriter();
+            w.Line("// " + constDef.Name + ".const.h. protacoc " + Naming.Version + ", source " + constDef.FileName + " (sha1 " + constDef.Sha1 + "). Do not edit.");
+            w.Line("#pragma once");
+            w.Line();
+            w.Line("#include <cstdint>");
+            w.Line();
+            foreach (string part in ns)
+                w.Line("namespace " + part + "\n{");
+            w.Line();
+            Doc(w, Naming.ConstDoc(constDef));
+            w.Line("namespace " + constDef.Name);
+            w.Line("{");
+            foreach (ConstValueDef value in constDef.Values)
+            {
+                Doc(w, Naming.ConstValueDoc(value));
+                w.Line("constexpr int32_t " + value.Key + " = " + value.Number + ";");
+            }
+            w.Line("}  // namespace " + constDef.Name);
+            w.Line();
+            for (int i = ns.Length - 1; i >= 0; --i)
+                w.Line("}  // namespace " + ns[i]);
+            return w.ToString();
+        }
+
         private static void Class(CodeWriter w, MessageDef message, VersionView view)
         {
             Doc(w, Naming.MessageDoc(message, view));

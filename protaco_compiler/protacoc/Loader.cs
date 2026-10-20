@@ -1,6 +1,6 @@
 ﻿// Loader.cs. YDoc -> MessageDef or EnumDef. Checks key and value formats, file naming and per-field rules.
 // Cross-definition rules (references, cycles, layout) belong to Linker.
-// File kinds: <Name>.yaml declares one message (message:), <Name>.enum.yaml declares one enum (enum:).
+// File kinds: <Name>.yaml declares one message (message:), <Name>.enum.yaml one enum (enum:), <Name>.const.yaml one const set (const:).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +13,7 @@ namespace Protacoc
     internal static class Loader
     {
         public const string EnumSuffix = ".enum.yaml";
+        public const string ConstSuffix = ".const.yaml";
 
         private static readonly Regex Ident = new Regex("^[A-Za-z_][A-Za-z0-9_]*$");
         private static readonly Regex IntText = new Regex("^-?(0|[1-9][0-9]*)$");
@@ -24,6 +25,8 @@ namespace Protacoc
         private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
         private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc" };
         private static readonly HashSet<string> ValueAttrs = new HashSet<string> { "key", "value", "added", "removed", "desc" };
+        private static readonly HashSet<string> ConstKeys = new HashSet<string> { "const", "namespace", "desc", "values" };
+        private static readonly HashSet<string> ConstValueAttrs = new HashSet<string> { "key", "value", "desc" };
 
         public const int MaxFixedLength = 4096;
 
@@ -38,17 +41,37 @@ namespace Protacoc
             return path.EndsWith(EnumSuffix, StringComparison.OrdinalIgnoreCase);
         }
 
+        public static bool IsConstFile(string path)
+        {
+            return path.EndsWith(ConstSuffix, StringComparison.OrdinalIgnoreCase);
+        }
+
         // Backup copy such as Order.bak.yaml or Order.bak2.yaml: not read. A definition name has no '.', so no valid file matches.
         public static bool IsBackupFile(string path)
         {
             return Path.GetFileName(path).IndexOf(".bak", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        // File name without .yaml or .enum.yaml: the name the file must declare.
+        // File name without .yaml, .enum.yaml or .const.yaml: the name the file must declare.
         public static string Stem(string path)
         {
             string name = Path.GetFileName(path);
-            return IsEnumFile(path) ? name.Substring(0, name.Length - EnumSuffix.Length) : Path.GetFileNameWithoutExtension(name);
+            if (IsEnumFile(path))
+                return name.Substring(0, name.Length - EnumSuffix.Length);
+            if (IsConstFile(path))
+                return name.Substring(0, name.Length - ConstSuffix.Length);
+            return Path.GetFileNameWithoutExtension(name);
+        }
+
+        // Kind word of a definition (message, enum, const) and the file name it belongs in.
+        public static string KindOf(SchemaDef def)
+        {
+            return def is EnumDef ? "enum" : def is ConstDef ? "const" : "message";
+        }
+
+        public static string FileNameOf(SchemaDef def)
+        {
+            return def.Name + (def is EnumDef ? EnumSuffix : def is ConstDef ? ConstSuffix : ".yaml");
         }
 
         public static SchemaDef Load(string path, Diag diag)
@@ -68,20 +91,11 @@ namespace Protacoc
             YDoc doc = YamlLite.Parse(text, path, diag);
             if (diag.ErrorCount != before)
                 return null;
-            bool enumFile = IsEnumFile(path);
-            bool declaresEnum = doc.Entries.Exists(t => t.Key.Text == "enum");
             SourcePos filePos = new SourcePos(path, 1, 1);
-            if (enumFile && !declaresEnum)
-            {
-                diag.Error(filePos, Codes.FileKind, "a " + EnumSuffix + " file declares one enum ('enum: " + Stem(path) + "')");
+            if (!CheckFileKind(path, doc, "enum", EnumSuffix, IsEnumFile(path), filePos, diag)
+                || !CheckFileKind(path, doc, "const", ConstSuffix, IsConstFile(path), filePos, diag))
                 return null;
-            }
-            if (!enumFile && declaresEnum)
-            {
-                diag.Error(filePos, Codes.FileKind, "enums are declared in <Name>" + EnumSuffix + " files; rename this file to " + Stem(path) + EnumSuffix);
-                return null;
-            }
-            SchemaDef def = enumFile ? (SchemaDef)new EnumDef() : new MessageDef();
+            SchemaDef def = IsEnumFile(path) ? new EnumDef() : IsConstFile(path) ? (SchemaDef)new ConstDef() : new MessageDef();
             def.FilePath = path;
             def.FileName = Path.GetFileName(path);
             // Without BOM and with LF line ends, so every checkout (autocrlf or not) writes the same header.
@@ -90,6 +104,23 @@ namespace Protacoc
             def.Doc.AddRange(doc.HeaderDoc);
             ReadTop(doc, def, diag);
             return diag.ErrorCount == before ? def : null;
+        }
+
+        // A <Name><suffix> file declares exactly that kind (top key word), and that kind lives only in such files.
+        private static bool CheckFileKind(string path, YDoc doc, string word, string suffix, bool kindFile, SourcePos filePos, Diag diag)
+        {
+            bool declares = doc.Entries.Exists(t => t.Key.Text == word);
+            if (kindFile && !declares)
+            {
+                diag.Error(filePos, Codes.FileKind, "a " + suffix + " file declares one " + word + " ('" + word + ": " + Stem(path) + "')");
+                return false;
+            }
+            if (!kindFile && declares)
+            {
+                diag.Error(filePos, Codes.FileKind, word + "s are declared in <Name>" + suffix + " files; rename this file to " + Stem(path) + suffix);
+                return false;
+            }
+            return true;
         }
 
         private static string Sha1Hex(byte[] bytes)
@@ -108,8 +139,9 @@ namespace Protacoc
         {
             MessageDef message = def as MessageDef;
             EnumDef enumDef = def as EnumDef;
-            string kind = message != null ? "message" : "enum";
-            HashSet<string> allowed = message != null ? MessageKeys : EnumKeys;
+            ConstDef constDef = def as ConstDef;
+            string kind = KindOf(def);
+            HashSet<string> allowed = message != null ? MessageKeys : enumDef != null ? EnumKeys : ConstKeys;
             HashSet<string> seen = new HashSet<string>();
             foreach (YTop top in doc.Entries)
             {
@@ -128,6 +160,7 @@ namespace Protacoc
                 {
                     case "message":
                     case "enum":
+                    case "const":
                         def.Name = ReadIdent(top.Value, top.Key.Pos, diag);
                         def.Pos = top.Key.Pos;
                         break;
@@ -153,13 +186,16 @@ namespace Protacoc
                         ReadFields(top, message, diag);
                         break;
                     case "values":
-                        ReadValues(top, enumDef, diag);
+                        if (enumDef != null)
+                            ReadValues(top, enumDef, diag);
+                        else
+                            ReadConstValues(top, constDef, diag);
                         break;
                 }
             }
             if (def.Name == null)
                 diag.Error(def.Pos, Codes.MissingTop, "missing '" + kind + ":'");
-            if (!seen.Contains("version"))
+            if (constDef == null && !seen.Contains("version"))
                 diag.Error(def.Pos, Codes.MissingTop, "missing 'version:'");
             if (!seen.Contains("namespace"))
                 diag.Error(def.Pos, Codes.MissingTop, "missing 'namespace:' (for example 'namespace: app.proto')");
@@ -170,7 +206,7 @@ namespace Protacoc
             string stem = Stem(def.FilePath);
             if (def.Name != null && def.Name != stem)
                 diag.Error(def.Pos, Codes.FileName, kind + " name '" + def.Name + "' does not match file name '" + def.FileName + "'. One " + kind
-                    + " per file: " + def.Name + (def is EnumDef ? EnumSuffix : ".yaml"));
+                    + " per file: " + FileNameOf(def));
         }
 
         private static List<YItem> Items(YTop top, Diag diag)
@@ -290,6 +326,49 @@ namespace Protacoc
                     continue;
                 }
                 enumDef.Values.Add(value);
+            }
+        }
+
+        private static void ReadConstValues(YTop top, ConstDef constDef, Diag diag)
+        {
+            foreach (YItem item in Items(top, diag))
+            {
+                ConstValueDef value = new ConstValueDef { Pos = item.Pos };
+                value.Doc.AddRange(item.Doc);
+                HashSet<string> seen = new HashSet<string>();
+                foreach (KeyValuePair<YScalar, object> entry in item.Map.Entries)
+                {
+                    string attr = entry.Key.Text;
+                    SourcePos pos = entry.Key.Pos;
+                    if (!ConstValueAttrs.Contains(attr))
+                    {
+                        diag.Error(pos, Codes.UnknownAttr, "unknown const value attribute '" + attr + "'. Allowed: " + string.Join(", ", ConstValueAttrs));
+                        continue;
+                    }
+                    if (!seen.Add(attr))
+                    {
+                        diag.Error(pos, Codes.DupAttr, "duplicate attribute '" + attr + "'");
+                        continue;
+                    }
+                    switch (attr)
+                    {
+                        case "key":
+                            value.Key = ReadIdent(entry.Value, pos, diag);
+                            break;
+                        case "value":
+                            value.Number = ReadInt(entry.Value, pos, int.MinValue + 1, int.MaxValue, diag);
+                            break;
+                        case "desc":
+                            value.Desc = ReadText(entry.Value, pos, diag);
+                            break;
+                    }
+                }
+                if (value.Key == null || !seen.Contains("value"))
+                {
+                    diag.Error(item.Pos, Codes.MissingTop, "a const value needs key and value");
+                    continue;
+                }
+                constDef.Values.Add(value);
             }
         }
 

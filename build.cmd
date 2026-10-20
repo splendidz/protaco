@@ -16,7 +16,7 @@ echo === [1/6] build protacoc
 "%MSBUILD%" protaco_compiler\protacoc\protacoc.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
 
 echo === [2/6] generate test and example code
-for %%N in (demo scalars enums maps recursive ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
+for %%N in (demo scalars enums maps recursive arrays ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
     %PROTACOC% -I %TESTS%\schemas\%%N --cpp_out %TESTS%\taco_generated\cpp\%%N --cs_out %TESTS%\taco_generated\cs\%%N --py_out %TESTS%\taco_generated\py --no_runtime || goto :fail
 )
 %PROTACOC% -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py || goto :fail

@@ -209,7 +209,7 @@ Protaco는 Protocol Buffers보다 좁은 범위를 다룹니다. 지원 언어�
 
 ![스키마에서 생성 코드와 런타임을 거쳐 C++, C#, Python이 통신하는 흐름](docs/img/flow.svg)
 
-메시지 하나에서 언어마다 파일 하나가 나오고, 아직 지원하는 옛 version 클래스도 그 파일에 함께 들어갑니다. enum은 `<Name>.enum.h`, `<Name>.enum.cs`, `<Name>_enum.py`로 나옵니다.
+메시지 하나에서 언어마다 파일 하나가 나오고, 아직 지원하는 옛 version 클래스도 그 파일에 함께 들어갑니다. enum은 `<Name>.enum.h`, `<Name>.enum.cs`, `<Name>_enum.py`로, const 파일은 `<Name>.const.h`, `<Name>.const.cs`, `<Name>_const.py`로 나옵니다.
 
 ## 3. 시작하기
 
@@ -291,7 +291,7 @@ bin/Release/net8.0/protacoc -I schemas --cpp_out gen/cpp --cs_out gen/cs --py_ou
 | `--py_out <dir>` | Python 패키지와 런타임 출력 |
 | `--no_runtime` | 런타임 파일을 쓰지 않음 |
 | `--check` | 파일을 쓰지 않고 생성 결과가 최신인지 검사, 다르면 종료 코드 3 |
-| `이름...` | 지정한 메시지·enum만 생성, 기본은 전부 |
+| `이름...` | 지정한 메시지·enum·const만 생성, 기본은 전부 |
 
 출력 언어는 하나 이상 고릅니다. 종료 코드와 전체 사용법은 [명령행](docs/reference.ko.md#2-명령행)에 있습니다.
 
@@ -299,7 +299,7 @@ bin/Release/net8.0/protacoc -I schemas --cpp_out gen/cpp --cs_out gen/cs --py_ou
 
 ### 4.1 파일 규칙
 
-- 파일 하나에 정의 하나. 메시지는 `<Name>.yaml`(맨 위 `message: <Name>`), enum은 `<Name>.enum.yaml`(맨 위 `enum: <Name>`)
+- 파일 하나에 정의 하나. 메시지는 `<Name>.yaml`(맨 위 `message: <Name>`), enum은 `<Name>.enum.yaml`(맨 위 `enum: <Name>`), const 파일은 `<Name>.const.yaml`(맨 위 `const: <Name>`)
 - 파일 이름과 정의 이름이 다르면 PC301, 정의 종류와 파일 접미사가 맞지 않으면 PC208
 - 파일 이름에 `.bak`(대소문자 무관)가 들어 있으면 읽지 않음. `Menu.bak.yaml` 같은 백업 사본을 폴더에 둬도 됨
 - 참조는 이름으로 해결. 입력 파일 순서는 상관없음
@@ -593,6 +593,29 @@ pizza.subsections.append(Category(name="white", dishes=["bianca"]))
 ```
 
 </details>
+
+### 4.8 const
+
+여러 언어의 코드가 함께 쓰는 이름 붙은 정수는 `<Name>.const.yaml` 파일에 둡니다. 예를 들어 `Limits.const.yaml`:
+
+```yaml
+# Limits shared by the C++ core and the C# UI.
+const: Limits
+namespace: demo
+values:
+  - {key: MaxStops, value: 16, desc: stops per route}
+  - {key: MaxRiders, value: 64}
+```
+
+- 최상위 키: `const`, `namespace`, `desc`, `values`. 값 속성: `key`, `value`(int32), `desc`
+- const는 직렬화되지 않으므로 const 파일에는 `version`이 없음
+- const 이름은 필드 타입이 아님(PC304)
+
+언어별 생성 결과입니다.
+
+- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxStops = 16; ... }`. namespace 범위 `constexpr`라서 C++14에서도 클래스 밖 정의가 필요 없음
+- C# `Limits.const.cs`: `public static class Limits { public const int MaxStops = 16; ... }`
+- Python `Limits_const.py`: int 클래스 속성을 가진 `class Limits`(Python 키워드인 key는 끝에 `_`가 붙음)
 
 ## 5. 확장 데이터
 
