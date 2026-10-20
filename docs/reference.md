@@ -137,6 +137,8 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `Protaco.cs` |
 | Python | `<py_out>/<namespace folders>/<Name>_g.py`, `<Enum>_enum.py`; runtime at `<py_out>/protaco.py` |
 
+Each input folder supplies its `*.yaml` files, subfolders excluded. A file whose name contains `.bak` (any case) is skipped and reported as `protacoc: skipped <path> (.bak in the file name)`; no valid file matches, because a definition name has no `.`.
+
 Selecting targets still loads and validates every input. Referenced definitions are not added to the output selection automatically; select the messages and enums you need together. A YAML path also selects by the name of a definition loaded from the input folders. With `--no_runtime`, supply a runtime from the same generator version separately.
 
 **Windows command prompt**

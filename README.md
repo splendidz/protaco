@@ -289,6 +289,7 @@ Choose at least one output language. Exit codes and full usage are in [Command l
 
 - One definition per file. A message is `<Name>.yaml` (top line `message: <Name>`), an enum is `<Name>.enum.yaml` (top line `enum: <Name>`)
 - A file name that differs from the definition name is PC301; a definition kind that does not match the file suffix is PC208
+- A file name containing `.bak` (any case) is not read, so backup copies such as `Menu.bak.yaml` can stay in the folder
 - References resolve by name. Input file order does not matter
 - All files in one protacoc run share one namespace (PC405). Different namespaces use separate runs and output folders
 - The comment at the top of the file becomes the class docstring. A comment right above an entry, a comment at the end of its line, and `desc` become the entry docstring

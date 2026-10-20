@@ -1,6 +1,6 @@
 ﻿// Program.cs. protacoc.exe command line (protoc style).
 //   protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [--no_runtime] [--check] [name or yaml path...]
-// Inputs: <Name>.yaml (one message) and <Name>.enum.yaml (one enum).
+// Inputs: <Name>.yaml (one message) and <Name>.enum.yaml (one enum). A file name containing .bak is skipped.
 // The namespace comes from each yaml header (namespace:).
 // Exit codes: 0 success, 1 usage, 2 schema error, 3 --check mismatch
 using System;
@@ -144,6 +144,11 @@ namespace Protacoc
                 }
                 foreach (string path in Directory.GetFiles(dir, "*.yaml").OrderBy(p => p, StringComparer.Ordinal))
                 {
+                    if (Loader.IsBackupFile(path))
+                    {
+                        Console.WriteLine("protacoc: skipped " + path + " (.bak in the file name)");
+                        continue;
+                    }
                     SchemaDef def = Loader.Load(path, diag);
                     if (def != null)
                         defs.Add(def);

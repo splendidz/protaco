@@ -289,6 +289,7 @@ bin/Release/net8.0/protacoc -I schemas --cpp_out gen/cpp --cs_out gen/cs --py_ou
 
 - 파일 하나에 정의 하나. 메시지는 `<Name>.yaml`(맨 위 `message: <Name>`), enum은 `<Name>.enum.yaml`(맨 위 `enum: <Name>`)
 - 파일 이름과 정의 이름이 다르면 PC301, 정의 종류와 파일 접미사가 맞지 않으면 PC208
+- 파일 이름에 `.bak`(대소문자 무관)가 들어 있으면 읽지 않음. `Menu.bak.yaml` 같은 백업 사본을 폴더에 둬도 됨
 - 참조는 이름으로 해결. 입력 파일 순서는 상관없음
 - 한 번의 protacoc 실행에 넣는 파일은 모두 같은 namespace(PC405). namespace가 다르면 실행과 출력 폴더를 나눔
 - 파일 맨 위 주석은 클래스 docstring. 항목 바로 위 주석, 같은 줄 끝 주석, `desc`는 항목 docstring

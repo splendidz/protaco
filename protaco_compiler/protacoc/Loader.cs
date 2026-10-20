@@ -38,6 +38,12 @@ namespace Protacoc
             return path.EndsWith(EnumSuffix, StringComparison.OrdinalIgnoreCase);
         }
 
+        // Backup copy such as Order.bak.yaml or Order.bak2.yaml: not read. A definition name has no '.', so no valid file matches.
+        public static bool IsBackupFile(string path)
+        {
+            return Path.GetFileName(path).IndexOf(".bak", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         // File name without .yaml or .enum.yaml: the name the file must declare.
         public static string Stem(string path)
         {

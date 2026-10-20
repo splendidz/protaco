@@ -137,6 +137,8 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `Protaco.cs` |
 | Python | `<py_out>/<namespace 폴더>/<Name>_g.py`, `<Enum>_enum.py`; 런타임은 `<py_out>/protaco.py` |
 
+입력 폴더마다 하위 폴더를 제외한 `*.yaml` 파일을 읽습니다. 파일 이름에 `.bak`(대소문자 무관)가 들어 있으면 건너뛰고 `protacoc: skipped <path> (.bak in the file name)`으로 알립니다. 정의 이름에는 `.`이 없으므로 올바른 파일이 건너뛰어지는 일은 없습니다.
+
 대상을 선택해도 입력 전체를 읽고 검사합니다. 참조하는 정의를 출력 대상에 자동으로 추가하지 않으므로 필요한 메시지와 enum을 함께 선택해야 합니다. YAML 경로도 입력 폴더에서 읽은 정의의 이름으로 선택합니다. `--no_runtime`을 쓰면 같은 생성기 버전의 런타임을 별도로 제공해야 합니다.
 
 **Windows 명령 프롬프트**

@@ -28,6 +28,7 @@ namespace Protacoc.Tests
             Run("generator: --namespace option removed", GeneratorNamespaceOption);
             Run("generator: committed demo output is up to date (--check)", GeneratorCheckUpToDate);
             Run("generator: hand edits detected (--check)", GeneratorCheckDetectsEdit);
+            Run("generator: .bak files are skipped", GeneratorSkipsBackupFiles);
             Run("generator: input folder order does not matter", GeneratorOrderIndependent);
             Run("generator: fingerprint is FNV-1a of the documented canonical text", FingerprintCanonicalText);
             Run("C#: round trip", RoundTrip);
@@ -217,6 +218,20 @@ namespace Protacoc.Tests
             GenResult result = Protacoc("-I", Demo(), "--cpp_out", dir, "--check");
             Equal(3, result.Exit, "exit code");
             Check(result.Output.Contains("RouteStop.g.h"), "edited file not reported: " + result.Output);
+        }
+
+        // Copies named RouteStop.bak.yaml and RouteStop.BAK2.yaml would be PC301 if read.
+        private static void GeneratorSkipsBackupFiles()
+        {
+            string dir = TempDir();
+            foreach (string file in Directory.GetFiles(Demo(), "*.yaml"))
+                File.Copy(file, Path.Combine(dir, Path.GetFileName(file)));
+            File.Copy(Path.Combine(dir, "RouteStop.yaml"), Path.Combine(dir, "RouteStop.bak.yaml"));
+            File.Copy(Path.Combine(dir, "RouteStop.yaml"), Path.Combine(dir, "RouteStop.BAK2.yaml"));
+            GenResult result = Protacoc("-I", dir, "--cpp_out", Path.Combine(dir, "out"));
+            Equal(0, result.Exit, "exit code (" + result.Output.Trim() + ")");
+            Check(result.Output.Contains("RouteStop.bak.yaml (.bak in the file name)") && result.Output.Contains("RouteStop.BAK2.yaml (.bak in the file name)"), "skip not reported: " + result.Output);
+            Check(File.Exists(Path.Combine(dir, "out", "RouteStop.g.h")), "RouteStop.g.h missing");
         }
 
         // Splitting the same yaml into two folders and swapping their order gives identical output.
