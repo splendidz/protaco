@@ -69,6 +69,8 @@ namespace Protacoc
             tags.Add("type " + field.Type);
             if (field.Type.Kind == TypeKind.FixedString)
                 tags.Add("fixed " + field.Type.FixedLength + " bytes, set rejects longer values");
+            if (field.Type.Kind == TypeKind.Message && field.Type.IsFixed)
+                tags.Add("fixed message, inline " + field.Type.FixedSize + " bytes");
             if (field.Type.Kind == TypeKind.Array)
                 tags.Add(field.Type.ArrayLength + " elements, fixed " + field.Type.FixedSize + " bytes"
                     + (field.Type.Element.Kind == TypeKind.FixedString ? ", set rejects values longer than " + field.Type.Element.FixedLength + " bytes" : ""));
@@ -96,7 +98,9 @@ namespace Protacoc
             List<string> tags = new List<string> { "version " + view.Version, "schema " + SchemaFingerprint.Hex(view.SchemaHash) };
             if (message.MinVersion < message.Version)
                 tags.Add("supports " + message.MinVersion + ".." + message.Version);
-            if (!message.AllowExtension)
+            if (message.Fixed)
+                tags.Add("fixed: inline in other messages");
+            else if (!message.AllowExtension)
                 tags.Add("allow_extension false");
             tags.Add("source " + message.FileName);
             lines.Add("[" + string.Join("; ", tags) + "]");

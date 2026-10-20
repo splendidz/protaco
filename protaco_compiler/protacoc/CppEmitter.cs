@@ -151,6 +151,8 @@ namespace Protacoc
             Common(w, message, view);
             if (view.AliveVar.Count == 0)
                 View(w, message, view);
+            if (message.Fixed)
+                Refs(w, message, view);
             w.Outdent();
             w.Line();
             w.Line("private:");
@@ -226,6 +228,16 @@ namespace Protacoc
             {
                 bool array = field.Type.Kind == TypeKind.Array;
                 TypeRef type = array ? field.Type.Element : field.Type;
+                if (type.Kind == TypeKind.Message)
+                {
+                    if (!HasDefaults(type.Resolved))
+                        continue;
+                    string init = "protaco::detail::Access::InitBlock<" + type.TypeName + ">(" + (array ? ElementAt(FixedAt(field), type, "i") : FixedAt(field)) + ");";
+                    if (array)
+                        w.Line("for (size_t i = 0; i < " + field.Type.ArrayLength + "; ++i)");
+                    w.Line((array ? "    " : "") + init);
+                    continue;
+                }
                 string literal = FixedDefault(type, field.DefaultText);
                 if (literal == null)
                     continue;
@@ -240,6 +252,18 @@ namespace Protacoc
             w.Outdent();
             w.Line("}");
             w.Line();
+        }
+
+        // Whether the fixed block of a fixed message has a byte other than 0 at construction.
+        private static bool HasDefaults(MessageDef message)
+        {
+            foreach (FieldDef field in message.Latest.FixedSlots)
+            {
+                TypeRef type = field.Type.Kind == TypeKind.Array ? field.Type.Element : field.Type;
+                if (type.Kind == TypeKind.Message ? HasDefaults(type.Resolved) : FixedDefault(type, field.DefaultText) != null)
+                    return true;
+            }
+            return false;
         }
 
         private static string StoreDefault(TypeRef type, string at, string literal, string key)
@@ -305,34 +329,10 @@ namespace Protacoc
             string type = CppType(field.Type);
             List<string> doc = Naming.FieldDoc(field);
             Doc(w, doc);
-            if (field.Type.Kind == TypeKind.Array)
-            {
-                ArrayAccessors(w, field, FixedAt(field), true);
-                return;
-            }
             if (field.Type.IsFixed)
             {
-                string at = FixedAt(field);
-                if (field.Type.Kind == TypeKind.Enum)
-                    w.Line("/// Numbers this build does not know are kept as they are (ToString shows ?(n)).");
-                Method(w, type + " get_" + key + "() const", "return " + FixedGet(field, at) + ";");
-                switch (field.Type.Kind)
-                {
-                    case TypeKind.Bool:
-                        Method(w, "void set_" + key + "(bool value)", "protaco::detail::StoreBool(" + at + ", value);");
-                        break;
-                    case TypeKind.Enum:
-                        Method(w, "void set_" + key + "(" + type + " value)", "protaco::detail::Store<int32_t>(" + at + ", static_cast<int32_t>(value));");
-                        break;
-                    case TypeKind.FixedString:
-                        w.Line("/// Returns false, keeps the old value and writes the reason to error if longer than " + field.Type.FixedLength + " bytes.");
-                        Method(w, "bool set_" + key + "(const std::string& value, std::string* error = nullptr)",
-                            "return protaco::detail::StoreChars(" + at + ", " + field.Type.FixedLength + ", value, \"" + key + "\", error);");
-                        break;
-                    default:
-                        Method(w, "void set_" + key + "(" + type + " value)", "protaco::detail::Store<" + type + ">(" + at + ", value);");
-                        break;
-                }
+                FixedGetters(w, field, FixedAt(field));
+                FixedSetters(w, field, FixedAt(field));
                 return;
             }
             if (field.Optional)
@@ -372,31 +372,109 @@ namespace Protacoc
             }
         }
 
-        // T[N] at a pointer expression: size, element get and set in place, and whole-array copies.
-        // Element get asserts the index (debug builds); element set checks it and returns false with the reason.
-        private static void ArrayAccessors(CodeWriter w, FieldDef field, string at, bool write)
+        // Getters of a fixed field at a pointer expression. Shared by the message, its View, ConstRef and Ref.
+        // T[N]: size, element read in place (index asserted in debug builds), whole-array copy.
+        // Inline fixed message M: M::ConstRef over its bytes; M[N] elements the same.
+        private static void FixedGetters(CodeWriter w, FieldDef field, string at)
+        {
+            string key = field.Key;
+            TypeRef type = field.Type;
+            if (type.Kind == TypeKind.Message)
+            {
+                w.Line("/// Read in place: a view of the " + type.TypeName + " bytes inside this message.");
+                Method(w, type.TypeName + "::ConstRef get_" + key + "() const", "return " + type.TypeName + "::ConstRef(" + at + ");");
+                return;
+            }
+            if (type.Kind != TypeKind.Array)
+            {
+                if (type.Kind == TypeKind.Enum)
+                    w.Line("/// Numbers this build does not know are kept as they are (ToString shows ?(n)).");
+                Method(w, CppType(type) + " get_" + key + "() const", "return " + FixedGet(field, at) + ";");
+                return;
+            }
+            TypeRef element = type.Element;
+            int count = type.ArrayLength;
+            string index = ElementAt(at, element, "protaco::detail::AssertIndex(index, " + count + ")");
+            w.Line("/// Element count.");
+            Method(w, "static constexpr size_t " + key + "_size()", "return " + count + ";");
+            if (element.Kind == TypeKind.Message)
+            {
+                w.Line("/// Element read in place. index below " + key + "_size() (asserted in debug builds).");
+                Method(w, element.TypeName + "::ConstRef get_" + key + "(size_t index) const", "return " + element.TypeName + "::ConstRef(" + index + ");");
+                return;
+            }
+            w.Line("/// Element read in place. index below " + key + "_size() (asserted in debug builds).");
+            Method(w, CppType(element) + " get_" + key + "(size_t index) const", "return " + FixedGet(element, index) + ";");
+            w.Line("/// All elements, copied.");
+            Method(w, CppType(type) + " get_" + key + "() const",
+                CppType(type) + " values;",
+                "for (size_t i = 0; i < " + count + "; ++i)",
+                "    values[i] = " + FixedGet(element, ElementAt(at, element, "i")) + ";",
+                "return values;");
+        }
+
+        // Setters of a fixed field at a pointer expression. Element setters check the index and return false with the reason.
+        // Inline fixed message M: mutable_ gives M::Ref over its bytes, set_ copies an M object in.
+        private static void FixedSetters(CodeWriter w, FieldDef field, string at)
+        {
+            string key = field.Key;
+            TypeRef type = field.Type;
+            string cpp = CppType(type);
+            switch (type.Kind)
+            {
+                case TypeKind.Message:
+                    w.Line("/// Written in place: the " + type.TypeName + " bytes inside this message.");
+                    Method(w, type.TypeName + "::Ref mutable_" + key + "()", "return " + type.TypeName + "::Ref(" + at + ");");
+                    w.Line("/// Copies the fields of value in.");
+                    Method(w, "void set_" + key + "(const " + type.TypeName + "& value)", "protaco::detail::Access::CopyBlock(" + at + ", value);");
+                    return;
+                case TypeKind.Bool:
+                    Method(w, "void set_" + key + "(bool value)", "protaco::detail::StoreBool(" + at + ", value);");
+                    return;
+                case TypeKind.Enum:
+                    Method(w, "void set_" + key + "(" + cpp + " value)", "protaco::detail::Store<int32_t>(" + at + ", static_cast<int32_t>(value));");
+                    return;
+                case TypeKind.FixedString:
+                    w.Line("/// Returns false, keeps the old value and writes the reason to error if longer than " + type.FixedLength + " bytes.");
+                    Method(w, "bool set_" + key + "(const std::string& value, std::string* error = nullptr)",
+                        "return protaco::detail::StoreChars(" + at + ", " + type.FixedLength + ", value, \"" + key + "\", error);");
+                    return;
+                case TypeKind.Array:
+                    ArraySetters(w, field, at);
+                    return;
+                default:
+                    Method(w, "void set_" + key + "(" + cpp + " value)", "protaco::detail::Store<" + cpp + ">(" + at + ", value);");
+                    return;
+            }
+        }
+
+        private static string ElementAt(string at, TypeRef element, string index)
+        {
+            return at + " + " + element.FixedSize + " * " + index;
+        }
+
+        private static void ArraySetters(CodeWriter w, FieldDef field, string at)
         {
             TypeRef element = field.Type.Element;
             string key = field.Key;
             int count = field.Type.ArrayLength;
-            int size = element.FixedSize;
             string type = CppType(element);
             string all = CppType(field.Type);
-            Func<string, string> item = index => at + " + " + size + " * " + index;
-            w.Line("/// Element count.");
-            Method(w, "static constexpr size_t " + key + "_size()", "return " + count + ";");
-            w.Line("/// Element read in place. index below " + key + "_size() (asserted in debug builds).");
-            Method(w, type + " get_" + key + "(size_t index) const", "return " + FixedGet(element, item("protaco::detail::AssertIndex(index, " + count + ")")) + ";");
-            w.Line("/// All elements, copied.");
-            Method(w, all + " " + "get_" + key + "() const",
-                all + " values;",
-                "for (size_t i = 0; i < " + count + "; ++i)",
-                "    values[i] = " + FixedGet(element, item("i")) + ";",
-                "return values;");
-            if (!write)
-                return;
+            Func<string, string> item = index => ElementAt(at, element, index);
             string check = "if (index >= " + count + ")";
             string fail = "    return protaco::detail::IndexError(error, \"" + key + "\", index, " + count + ");";
+            if (element.Kind == TypeKind.Message)
+            {
+                w.Line("/// Element written in place. index below " + key + "_size() (asserted in debug builds).");
+                Method(w, element.TypeName + "::Ref mutable_" + key + "(size_t index)",
+                    "return " + element.TypeName + "::Ref(" + item("protaco::detail::AssertIndex(index, " + count + ")") + ");");
+                w.Line("/// Copies the fields of value into the element. False and the reason in error for an index out of range.");
+                Method(w, "bool set_" + key + "(size_t index, const " + element.TypeName + "& value, std::string* error = nullptr)",
+                    check, fail,
+                    "protaco::detail::Access::CopyBlock(" + item("index") + ", value);",
+                    "return true;");
+                return;
+            }
             if (element.Kind == TypeKind.FixedString)
             {
                 w.Line("/// Element write in place. False, the old value kept and the reason in error for an index out of range or a value longer than "
@@ -444,9 +522,9 @@ namespace Protacoc
             {
                 FieldDef field = view.Alive[i];
                 Doc(w, Naming.FieldDoc(field));
-                if (field.Type.Kind == TypeKind.Array)
+                if (field.Type.Kind == TypeKind.Array || field.Type.Kind == TypeKind.Message)
                 {
-                    ArrayAccessors(w, field, "Fixed() + " + field.FixedOffset, false);
+                    FixedGetters(w, field, "Fixed() + " + field.FixedOffset);
                     continue;
                 }
                 w.Line(CppType(field.Type) + " get_" + field.Key + "() const");
@@ -456,6 +534,94 @@ namespace Protacoc
                 if (i + 1 < view.Alive.Count)
                     w.Line();
             }
+            w.Outdent();
+            w.Line("};");
+        }
+
+        // Value passed to the text writer: the getter for fixed fields, RefArray for an array of fixed messages, the member otherwise.
+        private static string TextValue(FieldDef field, string block, string member)
+        {
+            TypeRef type = field.Type;
+            if (type.Kind == TypeKind.Array && type.Element.Kind == TypeKind.Message)
+                return "protaco::detail::RefArray<" + type.Element.TypeName + "::ConstRef, " + type.ArrayLength + ", " + type.Element.FixedSize + ">{ "
+                    + block + " + " + field.FixedOffset + " }";
+            return type.IsFixed ? "self.get_" + field.Key + "()" : member;
+        }
+
+        // fixed: true messages: ConstRef reads and Ref writes the message's bytes inside another message (inline fields, M[N]
+        // elements), with the same accessors as the message.
+        private static void Refs(CodeWriter w, MessageDef message, VersionView view)
+        {
+            string name = message.Name;
+            w.Line();
+            w.Line("/// Read-only " + name + " inside another message's fixed block: fields read in place, nothing copied.");
+            w.Line("/// Valid while those bytes live.");
+            w.Line("class ConstRef : public protaco::detail::BlockRef");
+            w.Line("{");
+            w.Line("public:");
+            w.Indent();
+            Method(w, "explicit ConstRef(const uint8_t* block)", "p_ = block;");
+            w.Line("/// Message name, for ToString.");
+            Method(w, "static const char* MsgName()", "return \"" + name + "\";");
+            foreach (FieldDef field in view.Alive)
+            {
+                Doc(w, Naming.FieldDoc(field));
+                FixedGetters(w, field, "p_ + " + field.FixedOffset);
+            }
+            w.Line("/// The fields as a " + name + " object (copied).");
+            Method(w, name + " Copy() const",
+                name + " value{protaco::detail::NoStampTag()};",
+                "std::memcpy(value.buf_.data() + kFixedOffset, p_, kFixedSize);",
+                "return value;");
+            w.Line("/// Text for logs, the same as " + name + "::ToString without an envelope.");
+            w.Line("std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const");
+            w.Line("{");
+            w.Line("    return protaco::detail::Access::RefText(*this, style);");
+            w.Line("}");
+            w.Outdent();
+            w.Line();
+            w.Line("protected:");
+            w.Indent();
+            w.Line("const uint8_t* p_;");
+            w.Outdent();
+            w.Line();
+            w.Line("private:");
+            w.Indent();
+            w.Line("friend struct protaco::detail::Access;");
+            w.Line();
+            w.Line("template <class TWriter>");
+            w.Line("static void VisitText(const ConstRef& self, TWriter& writer)");
+            w.Line("{");
+            foreach (FieldDef field in view.Alive)
+                w.Line("    writer.Field(\"" + field.Key + "\", " + TextValue(field, "self.p_", null) + ");");
+            w.Line("}");
+            w.Outdent();
+            w.Line("};");
+            w.Line();
+            w.Line("/// " + name + " inside another message's fixed block, written in place.");
+            w.Line("class Ref : public ConstRef");
+            w.Line("{");
+            w.Line("public:");
+            w.Indent();
+            w.Line("explicit Ref(uint8_t* block)");
+            w.Line("    : ConstRef(block)");
+            w.Line("{");
+            w.Line("}");
+            w.Line();
+            foreach (FieldDef field in view.Alive)
+            {
+                Doc(w, Naming.FieldDoc(field));
+                FixedSetters(w, field, "Data() + " + field.FixedOffset);
+            }
+            w.Line("/// Copies the fields of value in.");
+            Method(w, "void Assign(const " + name + "& value)", "std::memcpy(Data(), value.buf_.data() + kFixedOffset, kFixedSize);");
+            w.Outdent();
+            w.Line("private:");
+            w.Indent();
+            w.Line("uint8_t* Data() const");
+            w.Line("{");
+            w.Line("    return const_cast<uint8_t*>(p_);");
+            w.Line("}");
             w.Outdent();
             w.Line("};");
         }
@@ -563,10 +729,7 @@ namespace Protacoc
                 w.Line("static void VisitText(const " + message.Name + "& self, TWriter& writer)");
                 w.Line("{");
                 foreach (FieldDef field in view.Alive)
-                {
-                    string value = field.Type.IsFixed ? "self.get_" + field.Key + "()" : "self." + field.Key + "_";
-                    w.Line("    writer.Field(\"" + field.Key + "\", " + value + ");");
-                }
+                    w.Line("    writer.Field(\"" + field.Key + "\", " + TextValue(field, "self.buf_.data() + kFixedOffset", "self." + field.Key + "_") + ");");
                 w.Line("}");
             }
             w.Line();

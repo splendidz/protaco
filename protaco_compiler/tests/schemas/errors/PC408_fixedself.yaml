@@ -1,0 +1,7 @@
+# expect: PC408
+message: PC408_fixedself
+version: 1
+namespace: errors
+fixed: true
+fields:
+  - {key: a, type: PC408_fixedself}

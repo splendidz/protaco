@@ -43,6 +43,7 @@ A fixed field removed by that version remains as `~<key>:<type>;`. Its byte posi
 | List | `list<T>`, applying these rules recursively to T |
 | Map | `map<K,V>`, no space after the comma; apply these rules to K and V |
 | Other message | `Name@xxxxxxxx`, its fingerprint as eight lowercase hexadecimal digits |
+| Inline fixed message | `fixed(Name@xxxxxxxx)` for a field or array element of a `fixed: true` message; inside lists and maps it stays `Name@xxxxxxxx` |
 | Self reference | `Name@self` |
 | Enum | `enum(Name)`, excluding its value list |
 | Fixed-length array | `T[N]`: T by these rules, N the resolved element count (`int[16]`, `enum(Level)[3]`) |
@@ -200,6 +201,7 @@ Errors with a source position are written to standard error as `file(line,column
 | PC405 | Mixed namespaces | Different namespaces in one invocation |
 | PC406 | Generator nesting limit exceeded | More than 100 levels, excluding self references |
 | PC407 | Version features on a nested message | `min_version/added/removed` on a message used as a field type |
+| PC408 | Rule of a `fixed: true` message | A variable field, versions, `allow_extension: true`, or a field of its own type |
 | PC501 | File I/O | Missing input folder, write failure, or `--check` mismatch |
 | PC502 | Command line or target error | Missing output language, unknown option or target |
 
@@ -386,6 +388,34 @@ Arrays live in the fixed block like other fixed fields. The element at `index` i
 - View: `<k>_size()`, `get_<k>(index)`, `get_<k>()`
 
 C# arrays are get-only `T[]` properties of length N; `Serialize()` throws `ProtacoException` for a `string(N)` element that is too long, and `View` has `Name(index)` (ArgumentOutOfRangeException outside 0..N-1) and `Name()`. Python arrays are lists of N values checked by `Serialize()`.
+
+**Inline fixed messages**
+
+**C++**
+
+```cpp
+M::ConstRef get_<k>() const;                       // a field of a fixed: true message M
+M::Ref mutable_<k>();
+void set_<k>(const M& value);
+
+M::ConstRef get_<k>(size_t index) const;           // M[N]
+M::Ref mutable_<k>(size_t index);
+bool set_<k>(size_t index, const M& value, std::string* error = nullptr);
+
+// M::ConstRef: the getters of M, M Copy() const, std::string ToString(style) const
+// M::Ref: ConstRef plus the setters of M, void Assign(const M& value)
+```
+
+A `fixed: true` message used as a field type, or as the element of `T[N]`, sits inline in the fixed block. `ConstRef` and `Ref` point at those bytes inside this message.
+
+- Parameters: `index` is 0..N-1; `value` is an `M` object whose fields are copied in
+- Returns: `ConstRef` and `Ref` by value (a pointer inside this message's buffer); the element setter returns success
+- Lifetime: a `ConstRef` or `Ref` is valid while the message lives and its buffer is not replaced (decoding into the message, assignment, moving)
+- Range: `get_<k>(index)` and `mutable_<k>(index)` assert the index in debug builds; `set_<k>(index, ...)` returns false: `slots[4]: index out of range (size 4)`
+- Defaults: a new message copies each inline message's own defaults in
+- View: `get_<k>()` and `get_<k>(index)` return `M::ConstRef`
+
+C# fields are `M` objects and arrays get-only `M[]` arrays of N objects; `Serialize()` throws `ProtacoException` (`slots[1]: null fixed message`) for a null element, and `View` returns the struct `M.ConstRef`. Python fields are `M` objects and arrays lists of N objects.
 
 **Variable fields**
 

@@ -331,6 +331,7 @@ fields:
 | `min_version` | 아니오 | 아직 지원하는 가장 오래된 version, 기본값은 `version`. [버전 관리](#7-버전-관리) 참고 |
 | `allow_extension` | 아니오 | 확장 데이터 허용 여부, 기본값 `true` |
 | `auto_envelope` | 아니오 | 새 객체에 id와 현재 시각을 찍을지 여부, 기본값 `true`. [Envelope](#65-envelope) 참고 |
+| `fixed` | 아니오 | `true`면 fixed 필드만 가지며, 이 메시지를 쓰는 메시지의 fixed 영역에 인라인으로 놓임. [fixed 메시지](#410-fixed-메시지) 참고 |
 | `desc` | 아니오 | docstring에 들어가는 설명 |
 
 namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Python에서 패키지 폴더 `shop/orders/`가 됩니다.
@@ -377,6 +378,7 @@ namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Pyt
 | `string(N)` | N바이트 UTF-8, N은 1..4096, 남는 부분은 0 | `std::string` / `string` / `str` |
 | enum 이름 | 4바이트(int32) | `enum class` / `enum` / `enum.IntEnum` |
 | `T[N]` | 고정 타입 원소 N개를 연속 배치, 길이 접두 없음. [고정 길이 배열](#49-고정-길이-배열) 참고 | `std::array<T, N>` / 길이 N인 `T[]` / `list` |
+| `fixed: true` 메시지 | 그 메시지의 fixed 영역을 인라인 배치, 길이 없음. [fixed 메시지](#410-fixed-메시지) 참고 | C++은 `ConstRef`·`Ref` / 생성 클래스 / 생성 클래스 |
 
 `string(N)`에 N바이트보다 긴 값을 넣으면 C++ setter는 `false`를 돌려주고 기존 값을 유지합니다. C# setter는 `ArgumentException`을 던집니다. Python은 `Serialize()`에서 `protaco.ProtacoError`를 냅니다. Python의 `int`는 크기 제한이 없으므로 타입 범위를 넘는 정수도 `Serialize()`에서 같은 오류가 됩니다.
 
@@ -634,7 +636,7 @@ fields:
   - {key: names, type: string(8)[Limits.MaxStops]}
 ```
 
-- 원소: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enum. 배열의 배열, list·map 안의 배열은 PC404
+- 원소: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enum, `fixed: true` 메시지([fixed 메시지](#410-fixed-메시지)). 배열의 배열, list·map 안의 배열은 PC404
 - N: 숫자, const 값(`Limits.MaxStops`), enum 값(`PizzaSize.Large`는 3). 1 이상이어야 함(PC310). 모르는 이름은 PC402
 - `default`는 모든 원소를 채움. 없으면 숫자는 0, 문자열은 빈 값, enum은 첫 값
 - fingerprint에는 해석된 숫자 `double[16]`이 들어감. const 이름을 바꾸면 layout은 그대로, 값을 바꾸면 layout과 fingerprint가 바뀜
@@ -677,6 +679,79 @@ byte[] bytes = panel.Serialize();
 panel = Panel()                           # temps: [20.5] * 16
 panel.temps[0] = 21.5
 data = panel.Serialize()                  # length and elements are checked here
+```
+
+</details>
+
+### 4.10 fixed 메시지
+
+`fixed: true`인 메시지는 fixed 필드로만 된 구조체입니다. 필드 타입이나 `T[N]`의 원소로 쓰면 그 메시지를 쓰는 메시지의 fixed 영역에 인라인으로 놓입니다. 길이도 중첩 본문도 없습니다. fixed 필드, 배열, fixed 메시지로만 된 메시지는 여전히 고정 길이라서 `TryView`로 제자리에서 읽습니다. 중첩 구조체와 구조체 배열을 가진 C++ 구조체를 Protaco로 옮기는 방법입니다.
+
+```yaml
+# A stop of a route, the same layout everywhere it appears.
+message: Spot
+version: 1
+namespace: demo
+fixed: true
+fields:
+  - {key: lat, type: double}
+  - {key: lon, type: double}
+  - {key: label, type: string(16)}
+```
+
+```yaml
+message: Board
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: depot, type: Spot}
+  - {key: spots, type: Spot[Limits.MaxStops]}
+```
+
+- `fixed: true` 메시지는 fixed 필드만 가짐: 스칼라, `string(N)`, enum, 다른 fixed 메시지, 이들의 `T[N]`. 가변 필드, `min_version`, `added`, `removed`, `allow_extension: true`, 자기 타입 필드는 PC408
+- 확장 데이터를 싣지 않음. 단독으로 보내는 프레임은 다른 fixed 전용 메시지와 같음
+- `list<T>`나 `map<K, V>` 안에서는 지금처럼 중첩 본문
+- 이 메시지를 쓰는 쪽의 fingerprint에는 `fixed(Spot@xxxxxxxx)`가 들어감. `fixed`를 켜거나 끄면 layout과 fingerprint가 바뀜
+
+생성되는 접근 방법입니다.
+
+- C++: `Spot::ConstRef`는 읽기, `Spot::Ref`는 쓰기를 제자리에서 하며 접근자는 `Spot`과 같음. 필드 `depot`에는 `get_depot()`(ConstRef), `mutable_depot()`(Ref), `set_depot(const Spot&)`(복사)가 생김. 배열 `spots`에는 `spots_size()`, `get_spots(i)`, `mutable_spots(i)`(debug 빌드에서 index assert), `set_spots(i, spot, &error)`가 생김. `ConstRef::Copy()`는 `Spot` 객체를 만들고, `Ref::Assign(spot)`은 객체를 복사해 넣고, `ConstRef::ToString()`은 필드를 출력
+- C#: 필드는 `Spot` 객체, 배열은 객체 N개를 가진 get-only `Spot[]`. `Serialize()`가 인라인으로 씀. `View`는 제자리에서 읽는 `Spot.ConstRef`를 돌려줌
+- Python: `Spot` 객체 또는 `Spot` 객체 N개짜리 list
+
+**C++**
+
+```cpp
+demo::Board board;
+board.mutable_depot().set_lat(37.5);                 // demo::Spot::Ref, written in place
+board.mutable_spots(2).set_label("north gate");
+demo::Spot::ConstRef spot = board.get_spots(2);      // read in place, nothing copied
+double lat = spot.get_lat();
+demo::Spot copy = spot.Copy();                       // a Spot object when one is needed
+board.set_spots(3, copy);                            // false with the reason for an index out of range
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+var board = new demo.Board();
+board.Depot.Lat = 37.5;                              // a demo.Spot object, written inline by Serialize
+board.Spots[2].Label = "north gate";                 // Spots: a demo.Spot[16], one object per element
+byte[] bytes = board.Serialize();
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+board = Board()
+board.depot.lat = 37.5
+board.spots[2].label = "north gate"                  # spots: a list of 16 Spot objects
+data = board.Serialize()
 ```
 
 </details>

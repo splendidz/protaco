@@ -981,6 +981,18 @@ struct Codec;
 
 class CTextWriter;
 
+// Base of generated ConstRef classes (fixed: true messages): a fixed block inside another message's bytes.
+struct BlockRef
+{
+};
+
+// An array of fixed messages, for text: N blocks of Size bytes read through R (a generated ConstRef).
+template <class R, size_t N, size_t Size>
+struct RefArray
+{
+    const uint8_t* p;
+};
+
 struct Access
 {
     template <class T>
@@ -988,6 +1000,31 @@ struct Access
 
     template <class T>
     static void WriteText(const T& message, CTextWriter& writer);
+
+    // ConstRef text: the fields only (no envelope, no ext).
+    template <class R>
+    static std::string RefText(const R& ref, const TextStyle& style);
+
+    template <class R>
+    static void WriteRefText(const R& ref, CTextWriter& writer)
+    {
+        R::VisitText(ref, writer);
+    }
+
+    // Inline fixed message: the default fixed block of T, built once, copied into a new parent.
+    template <class T>
+    static void InitBlock(uint8_t* dst)
+    {
+        static const T defaults{NoStampTag()};
+        std::memcpy(dst, defaults.buf_.data() + T::kFixedOffset, T::kFixedSize);
+    }
+
+    // Inline fixed message: the fields of value copied into dst.
+    template <class T>
+    static void CopyBlock(uint8_t* dst, const T& value)
+    {
+        std::memcpy(dst, value.buf_.data() + T::kFixedOffset, T::kFixedSize);
+    }
 
     template <class T>
     static size_t BodySize(const T& message);
@@ -1648,13 +1685,13 @@ public:
         return out_;
     }
 
-    // Name{field=value, ...}
+    // Name{field=value, ...}. A ConstRef (inline fixed message) has fields only.
     template <class T>
     void Message(const T& message)
     {
         out_ += T::MsgName();
         Open(style_.open);
-        Access::WriteText(message, *this);
+        Fields(message, std::is_base_of<BlockRef, T>());
         Close(style_.close);
     }
 
@@ -1845,6 +1882,31 @@ private:
         Message(message);
     }
 
+    template <class T>
+    void Fields(const T& message, std::false_type)
+    {
+        Access::WriteText(message, *this);
+    }
+
+    template <class R>
+    void Fields(const R& ref, std::true_type)
+    {
+        Access::WriteRefText(ref, *this);
+    }
+
+    // Array of fixed messages: the same text as a list of messages.
+    template <class R, size_t N, size_t Size>
+    void Value(const RefArray<R, N, Size>& items)
+    {
+        Open("[");
+        for (size_t i = 0; i < N; ++i)
+        {
+            Item();
+            Message(R(items.p + Size * i));
+        }
+        Close("]");
+    }
+
     // Enum: Name(number), ?(number) for a number this build does not know. EnumName comes from the generated .enum.h.
     template <class T>
     void ValueOf(T value, std::true_type)
@@ -1993,6 +2055,14 @@ std::string Access::ToText(const T& message, const TextStyle& style)
 {
     CTextWriter writer(style);
     writer.TopMessage(message);
+    return writer.Text();
+}
+
+template <class R>
+std::string Access::RefText(const R& ref, const TextStyle& style)
+{
+    CTextWriter writer(style);
+    writer.Message(ref);
     return writer.Text();
 }
 

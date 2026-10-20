@@ -55,6 +55,7 @@ namespace Protacoc.Tests
             Run("generator: a const set is not a type PC304", GeneratorConstIsNotAType);
             Run("C#: enum fields match C++", EnumFields);
             Run("C#: fixed-length arrays match C++", FixedArrays);
+            Run("C#: fixed messages inline match C++", FixedMessages);
             Run("C#: map fields match C++", MapFields);
             Run("C#: recursive messages match C++", RecursiveMessages);
             Run("C#: recursion stops at 100 levels", RecursionDepthLimit);
@@ -422,6 +423,70 @@ namespace Protacoc.Tests
             catch (Protaco.ProtacoException e)
             {
                 Equal("names[1]: 9 bytes, longer than string(8)", e.Message, "error");
+            }
+        }
+
+        // Golden values. Same as the C++ test MakeRack.
+        private static arrays.Rack MakeRack()
+        {
+            arrays.Rack rack = new arrays.Rack { Count = 4 };
+            rack.Origin.X = 3;
+            for (int i = 0; i < rack.Slots.Length; ++i)
+            {
+                rack.Slots[i].Id = (uint)(100 + i);
+                rack.Slots[i].Pos.Y = i;
+            }
+            rack.Slots[1].Name = "one";
+            rack.Slots[2].Path[1].X = 7;
+            rack.Slots[3].Level = arrays.Level.High;
+            rack.Slots[3].Temps[1] = 1.5;
+            rack.SetEnvelope(default(Protaco.Envelope));   // golden bytes: no id, no time
+            return rack;
+        }
+
+        // Golden values. Same as the C++ test MakeTrail.
+        private static arrays.Trail MakeTrail()
+        {
+            arrays.Trail trail = new arrays.Trail { Note = "n" };
+            trail.Start.Y = 5;
+            trail.Points.Add(new arrays.Point { X = 3, Y = 0 });
+            trail.SetEnvelope(default(Protaco.Envelope));
+            return trail;
+        }
+
+        private static void FixedMessages()
+        {
+            arrays.Rack defaults = new arrays.Rack();
+            Equal(-1, defaults.Origin.X, "inline default");
+            Equal("empty", defaults.Slots[3].Name, "element default");
+            Equal(-1, defaults.Slots[0].Path[1].X, "nested default");
+            Equal(arrays.Sizes.Slots, defaults.Slots.Length, "length from a const");
+            byte[] bytes = MakeRack().Serialize();
+            Check(bytes.SequenceEqual(Golden("Rack.bin")), "same bytes as C++");
+            arrays.Rack got = Protaco.Codec.ToObject<arrays.Rack>(Golden("Rack.bin"));
+            Equal(7, got.Slots[2].Path[1].X, "nested element");
+            Equal("Rack{origin=Point{x=3, y=0}, slots=[Slot{id=100, name=\"empty\", pos=Point{x=-1, y=0}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=Low(1), temps=[0, 0]}, "
+                + "Slot{id=101, name=\"one\", pos=Point{x=-1, y=1}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=Low(1), temps=[0, 0]}, "
+                + "Slot{id=102, name=\"empty\", pos=Point{x=-1, y=2}, path=[Point{x=-1, y=0}, Point{x=7, y=0}], level=Low(1), temps=[0, 0]}, "
+                + "Slot{id=103, name=\"empty\", pos=Point{x=-1, y=3}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=High(2), temps=[0, 1.5]}], count=4}", got.ToString(), "text");
+            arrays.Rack.View view;
+            Check(arrays.Rack.TryView(bytes, out view), "view");
+            Equal(1.5, view.Slots(3).Temps(1), "view nested array");
+            Equal(3, view.Origin.X, "view inline");
+            Equal("one", view.Slots(1).Copy().Name, "ConstRef copy");
+            Equal("Point{x=3, y=0}", view.Origin.ToString(), "ConstRef text");
+            Check(MakeTrail().Serialize().SequenceEqual(Golden("Trail.bin")), "trail bytes");
+            Equal("Trail{start=Point{x=-1, y=5}, points=[Point{x=3, y=0}], note=\"n\"}", Protaco.Codec.ToObject<arrays.Trail>(Golden("Trail.bin")).ToString(), "trail text");
+            arrays.Rack bad = MakeRack();
+            bad.Slots[1] = null;
+            try
+            {
+                bad.Serialize();
+                Check(false, "null element accepted");
+            }
+            catch (Protaco.ProtacoException e)
+            {
+                Equal("slots[1]: null fixed message", e.Message, "error");
             }
         }
 

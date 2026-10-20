@@ -30,10 +30,10 @@ namespace Protacoc
                 if (!field.AliveAt(version))
                 {
                     if (field.Type.IsFixed)
-                        sb.Append('~').Append(field.Key).Append(':').Append(TypeText(field.Type, message)).Append(';');
+                        sb.Append('~').Append(field.Key).Append(':').Append(TypeText(field.Type, message, true)).Append(';');
                     continue;
                 }
-                sb.Append(field.Key).Append(':').Append(TypeText(field.Type, message));
+                sb.Append(field.Key).Append(':').Append(TypeText(field.Type, message, true));
                 if (field.Required)
                     sb.Append('!');
                 if (field.DefaultText != null)
@@ -44,24 +44,26 @@ namespace Protacoc
         }
 
         // A reference to the message itself is <Name>@self: its own fingerprint is not known yet.
-        private static string TypeText(TypeRef type, MessageDef owner)
+        // inline: a field or array element, where a fixed: true message sits in the fixed block: fixed(<Name>@hash).
+        private static string TypeText(TypeRef type, MessageDef owner, bool inline)
         {
             switch (type.Kind)
             {
                 case TypeKind.List:
-                    return "list<" + TypeText(type.Element, owner) + ">";
+                    return "list<" + TypeText(type.Element, owner, false) + ">";
                 case TypeKind.Map:
-                    return "map<" + TypeText(type.Key, owner) + "," + TypeText(type.Element, owner) + ">";
+                    return "map<" + TypeText(type.Key, owner, false) + "," + TypeText(type.Element, owner, false) + ">";
                 case TypeKind.Message:
                     if (type.Resolved == owner)
                         return type.TypeName + "@self";
-                    return type.TypeName + "@" + type.Resolved.SchemaHash.ToString("x8");
+                    string named = type.TypeName + "@" + type.Resolved.SchemaHash.ToString("x8");
+                    return inline && type.Resolved.Fixed ? "fixed(" + named + ")" : named;
                 case TypeKind.Enum:
                     // Only the enum name: values are append-only and receivers keep unknown numbers.
                     return "enum(" + type.TypeName + ")";
                 case TypeKind.Array:
                     // The resolved element count, not the const name: renaming a const keeps the layout, a new value does not.
-                    return TypeText(type.Element, owner) + "[" + type.ArrayLength + "]";
+                    return TypeText(type.Element, owner, true) + "[" + type.ArrayLength + "]";
                 default:
                     return type.ToString();
             }

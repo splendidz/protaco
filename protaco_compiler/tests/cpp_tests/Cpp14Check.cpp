@@ -8,6 +8,7 @@
 #include "Heartbeat.g.h"
 #include "PizzaOrder.g.h"
 #include "arrays/Panel.g.h"
+#include "arrays/Rack.g.h"
 #include "arrays/Sizes.const.h"
 #include "enums/Pie.g.h"
 #include "maps/Menu.g.h"
@@ -21,6 +22,16 @@ static_assert(__cplusplus == 201402L, "must be compiled as C++14");
 
 using namespace demo;
 
+bool Cpp14FixedMessages()
+{
+    arrays::Rack rack;
+    rack.mutable_slots(1).mutable_path(0).set_x(2);
+    rack.set_slots(0, rack.get_slots(1).Copy());
+    arrays::Rack::View view;
+    return protaco::TryView<arrays::Rack>(rack.Serialize(), &view) && view.get_slots(0).get_path(0).get_x() == 2
+        && !rack.ToString().empty() && !rack.get_origin().ToString().empty();
+}
+
 bool Cpp14Arrays()
 {
     arrays::Panel panel;
@@ -28,7 +39,7 @@ bool Cpp14Arrays()
     panel.set_names(std::array<std::string, 2>{ { "a", "b" } });
     arrays::Panel::View view;
     return protaco::TryView<arrays::Panel>(panel.Serialize(), &view) && view.get_counts(0) == 1 && view.get_names()[1] == "b"
-        && panel.get_temps()[3] == 20.5 && !panel.ToString().empty();
+        && panel.get_temps()[3] == 20.5 && !panel.ToString().empty() && Cpp14FixedMessages();
 }
 
 bool Cpp14RoundTrip()

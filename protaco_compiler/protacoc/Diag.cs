@@ -73,6 +73,7 @@ namespace Protacoc
         public const string NamespaceMismatch = "PC405"; // files of one run declare different namespaces
         public const string TooDeep = "PC406";         // message nesting deeper than the runtime limit
         public const string NestedVersion = "PC407";   // message used as a field type has version attributes
+        public const string FixedMessage = "PC408";    // fixed: true message with a variable field, versions, ext or itself
         public const string Io = "PC501";              // file I/O
         public const string Usage = "PC502";           // command line
     }

@@ -15,7 +15,10 @@ import protaco  # noqa: E402
 from alt.Recipe_g import Recipe as AltRecipe  # noqa: E402
 from arrays.Level_enum import Level  # noqa: E402
 from arrays.Panel_g import Panel  # noqa: E402
+from arrays.Point_g import Point  # noqa: E402
+from arrays.Rack_g import Rack  # noqa: E402
 from arrays.Sizes_const import Sizes  # noqa: E402
+from arrays.Trail_g import Trail  # noqa: E402
 from build1.Order_g import Order as Order1  # noqa: E402
 from build1.Ping_g import Ping as Ping1  # noqa: E402
 from build2.Order_g import Order as Order2  # noqa: E402
@@ -129,6 +132,28 @@ def make_panel():
     panel.levels[2] = Level.High
     panel.SetEnvelope(protaco.Envelope())
     return panel
+
+
+def make_rack():
+    rack = Rack(count=4)
+    rack.origin.x = 3
+    for i, slot in enumerate(rack.slots):
+        slot.id = 100 + i
+        slot.pos.y = i
+    rack.slots[1].name = "one"
+    rack.slots[2].path[1].x = 7
+    rack.slots[3].level = Level.High
+    rack.slots[3].temps[1] = 1.5
+    rack.SetEnvelope(protaco.Envelope())
+    return rack
+
+
+def make_trail():
+    trail = Trail(note="n")
+    trail.start.y = 5
+    trail.points.append(Point(x=3, y=0))
+    trail.SetEnvelope(protaco.Envelope())
+    return trail
 
 
 def make_menu():
@@ -477,6 +502,23 @@ class ProtacoTest(unittest.TestCase):
         with self.assertRaises(protaco.ProtacoError) as caught:
             short.Serialize()
         self.assertEqual("counts: 2 elements, the array has 4", str(caught.exception))
+
+    def test_fixed_messages(self):
+        defaults = Rack()
+        self.assertEqual(-1, defaults.origin.x)
+        self.assertEqual("empty", defaults.slots[3].name)
+        self.assertEqual(-1, defaults.slots[0].path[1].x)
+        self.assertEqual(golden("Rack.bin"), make_rack().Serialize())
+        got = protaco.ToObject(Rack, golden("Rack.bin"))
+        self.assertEqual(7, got.slots[2].path[1].x)
+        self.assertEqual('Rack{origin=Point{x=3, y=0}, slots=[Slot{id=100, name="empty", pos=Point{x=-1, y=0}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=Low(1), temps=[0, 0]}, Slot{id=101, name="one", pos=Point{x=-1, y=1}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=Low(1), temps=[0, 0]}, Slot{id=102, name="empty", pos=Point{x=-1, y=2}, path=[Point{x=-1, y=0}, Point{x=7, y=0}], level=Low(1), temps=[0, 0]}, Slot{id=103, name="empty", pos=Point{x=-1, y=3}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=High(2), temps=[0, 1.5]}], count=4}', got.ToString())
+        self.assertEqual(golden("Trail.bin"), make_trail().Serialize())
+        self.assertEqual('Trail{start=Point{x=-1, y=5}, points=[Point{x=3, y=0}], note="n"}', protaco.ToObject(Trail, golden("Trail.bin")).ToString())
+        bad = make_rack()
+        bad.slots[1].name = "123456789"
+        with self.assertRaises(protaco.ProtacoError) as caught:
+            bad.Serialize()
+        self.assertEqual("slots[1].name: 9 bytes, longer than string(8)", str(caught.exception))
 
     def test_map_fields(self):
         got = protaco.ToObject(Menu, golden("Menu.bin"))

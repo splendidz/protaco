@@ -606,6 +606,26 @@ class Items:
         return Item(MAP, "map", write, read, lambda b, v: b.map_items(v, key, value))
 
     @staticmethod
+    def Fixed(cls):
+        """fixed: true message inline in a fixed block: its own fixed fields, no length."""
+        schema = cls._SCHEMA
+
+        def to_fixed(value, key):
+            if not isinstance(value, cls):
+                raise ProtacoError(key, "%r is not a %s" % (value, cls.__name__))
+            try:
+                return schema.pack_fixed(value)
+            except ProtacoError as e:
+                raise e._prepend(key) from None
+
+        def from_fixed(raw):
+            message = cls(_stamp=NO_STAMP)
+            schema.unpack_fixed(message, raw, 0)
+            return message
+
+        return Item(MESSAGE, cls.__name__, None, None, lambda b, v: b.message(v), "%ds" % schema.fixed_size, to_fixed, from_fixed)
+
+    @staticmethod
     def Array(element, count):
         """T[N]: fixed block only. count elements of the element's fixed bytes in a row; a list of count values."""
         packer = struct.Struct("<" + element.code)

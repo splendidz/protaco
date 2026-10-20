@@ -34,14 +34,14 @@ namespace Protacoc
         public string LengthText;        // N of T[N] as written: a number, Const.Key or Enum.Value
         public int ArrayLength;          // element count of Array, set by the linker
 
-        // Whether the type lives in the fixed block. Scalars, enums, string(N) and T[N] of those.
+        // Whether the type lives in the fixed block. Scalars, enums, string(N), fixed messages (inline) and T[N] of those.
         public bool IsFixed
         {
             get
             {
                 return Kind == TypeKind.Bool || Kind == TypeKind.Int || Kind == TypeKind.Int64 || Kind == TypeKind.UInt
                     || Kind == TypeKind.UInt64 || Kind == TypeKind.Double || Kind == TypeKind.FixedString || Kind == TypeKind.Enum
-                    || Kind == TypeKind.Array;
+                    || Kind == TypeKind.Array || (Kind == TypeKind.Message && Resolved != null && Resolved.Fixed);
             }
         }
 
@@ -64,7 +64,10 @@ namespace Protacoc
                     case TypeKind.FixedString:
                         return FixedLength;
                     case TypeKind.Array:
-                        return Element.FixedSize * ArrayLength;
+                        return (int)System.Math.Min((long)Element.FixedSize * ArrayLength, int.MaxValue);
+                    case TypeKind.Message:
+                        // An inline fixed message: its fixed block, known once the linker laid it out.
+                        return Resolved != null && Resolved.Fixed && Resolved.Views.Count != 0 ? Resolved.Latest.FixedSize : 0;
                     default:
                         return 0;
                 }
@@ -174,7 +177,9 @@ namespace Protacoc
     internal sealed class MessageDef : SchemaDef
     {
         public bool AllowExtension = true;
+        public bool AllowExtensionSet;    // allow_extension written in the yaml
         public bool AutoEnvelope = true;  // false: new objects keep id 0 and ts 0. Not part of the fingerprint
+        public bool Fixed;                // fixed: true. Fixed fields only; used as a field type it is inline in the fixed block
         public List<FieldDef> Fields = new List<FieldDef>();
 
         // Set by the linker.

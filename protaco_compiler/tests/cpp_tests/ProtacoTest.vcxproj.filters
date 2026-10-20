@@ -168,7 +168,19 @@
     <ClInclude Include="..\taco_generated\cpp\arrays\Panel.g.h">
       <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Point.g.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Rack.g.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
+    </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Slot.g.h">
+      <Filter>taco_generated\cpp\arrays</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taco_generated\cpp\arrays\Trail.g.h">
       <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\build1\Order.g.h">
@@ -293,7 +305,19 @@
     <None Include="..\schemas\arrays\Panel.yaml">
       <Filter>schemas\arrays</Filter>
     </None>
+    <None Include="..\schemas\arrays\Point.yaml">
+      <Filter>schemas\arrays</Filter>
+    </None>
+    <None Include="..\schemas\arrays\Rack.yaml">
+      <Filter>schemas\arrays</Filter>
+    </None>
     <None Include="..\schemas\arrays\Sizes.const.yaml">
+      <Filter>schemas\arrays</Filter>
+    </None>
+    <None Include="..\schemas\arrays\Slot.yaml">
+      <Filter>schemas\arrays</Filter>
+    </None>
+    <None Include="..\schemas\arrays\Trail.yaml">
       <Filter>schemas\arrays</Filter>
     </None>
     <None Include="..\schemas\build1\Order.yaml">
@@ -542,6 +566,9 @@
     <None Include="..\schemas\errors\PC404_arraylist.yaml">
       <Filter>schemas\errors</Filter>
     </None>
+    <None Include="..\schemas\errors\PC404_arraymessage.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
     <None Include="..\schemas\errors\PC404_arraystring.yaml">
       <Filter>schemas\errors</Filter>
     </None>
@@ -555,6 +582,18 @@
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\PC404_mapkey.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC408_fixedext.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC408_fixedself.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC408_fixedvar.yaml">
+      <Filter>schemas\errors</Filter>
+    </None>
+    <None Include="..\schemas\errors\PC408_fixedversion.yaml">
       <Filter>schemas\errors</Filter>
     </None>
     <None Include="..\schemas\errors\v2.yaml">

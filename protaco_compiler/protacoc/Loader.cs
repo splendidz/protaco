@@ -23,7 +23,7 @@ namespace Protacoc
         private static readonly Regex ArrayType = new Regex("^(.+)\\[([^\\[\\]]*)\\]$");
         private static readonly Regex QualifiedName = new Regex("^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$");
 
-        private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "auto_envelope", "desc", "fields" };
+        private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "auto_envelope", "fixed", "desc", "fields" };
         private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
         private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc" };
         private static readonly HashSet<string> ValueAttrs = new HashSet<string> { "key", "value", "added", "removed", "desc" };
@@ -177,6 +177,10 @@ namespace Protacoc
                         break;
                     case "allow_extension":
                         message.AllowExtension = ReadBool(top.Value, top.Key.Pos, diag);
+                        message.AllowExtensionSet = true;
+                        break;
+                    case "fixed":
+                        message.Fixed = ReadBool(top.Value, top.Key.Pos, diag);
                         break;
                     case "auto_envelope":
                         message.AutoEnvelope = ReadBool(top.Value, top.Key.Pos, diag);

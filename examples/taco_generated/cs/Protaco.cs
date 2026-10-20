@@ -570,6 +570,22 @@ namespace Protaco
             return items;
         }
 
+        /// <summary>Generated arrays of fixed messages: one new object per element.</summary>
+        public static T[] Created<T>(int count, Func<T> create)
+        {
+            T[] items = new T[count];
+            for (int i = 0; i < count; ++i)
+                items[i] = create();
+            return items;
+        }
+
+        /// <summary>Generated ConstRef.Copy: the fixed block at at read into target.</summary>
+        public static T FixedCopy<T>(T target, byte[] src, int at) where T : IMessage
+        {
+            target.ReadFixed(new FixedReader(src, at));
+            return target;
+        }
+
         /// <summary>Generated View element reads: index in 0..length-1, otherwise ArgumentOutOfRangeException.</summary>
         public static int Index(int index, int length)
         {
@@ -661,15 +677,18 @@ namespace Protaco
     public sealed class FixedWriter
     {
         private readonly byte[] block_;
+        private readonly int base_;
 
-        internal FixedWriter(byte[] block)
+        // at: where this message's fixed block starts in block (an inline fixed message starts inside its parent's).
+        internal FixedWriter(byte[] block, int at = 0)
         {
             block_ = block;
+            base_ = at;
         }
 
         public void Bool(int offset, bool value)
         {
-            block_[offset] = (byte)(value ? 1 : 0);
+            block_[base_ + offset] = (byte)(value ? 1 : 0);
         }
 
         public void Int(int offset, int value)
@@ -700,9 +719,9 @@ namespace Protaco
         public void Chars(int offset, int capacity, string value)
         {
             byte[] bytes = Codec.Text.GetBytes(value ?? "");
-            Buffer.BlockCopy(bytes, 0, block_, offset, Math.Min(bytes.Length, capacity));
+            Buffer.BlockCopy(bytes, 0, block_, base_ + offset, Math.Min(bytes.Length, capacity));
             for (int i = bytes.Length; i < capacity; ++i)
-                block_[offset + i] = 0;
+                block_[base_ + offset + i] = 0;
         }
 
         /// <summary>string(N) element of a fixed-length array. Elements are not checked on assignment, so Serialize checks them here.</summary>
@@ -714,9 +733,22 @@ namespace Protaco
             Chars(offset, capacity, value);
         }
 
+        /// <summary>Inline fixed message: its fixed fields at offset. null is an error (ProtacoException at key).</summary>
+        public void Message(int offset, IMessage value, string key)
+        {
+            if (value == null)
+                throw new ProtacoException(key, "null fixed message");
+            value.WriteFixed(new FixedWriter(block_, base_ + offset));
+        }
+
+        public void Message(int offset, IMessage value, string key, int index)
+        {
+            Message(offset, value, key + "[" + index + "]");
+        }
+
         private void Put(int offset, byte[] bytes)
         {
-            Buffer.BlockCopy(bytes, 0, block_, offset, bytes.Length);
+            Buffer.BlockCopy(bytes, 0, block_, base_ + offset, bytes.Length);
         }
     }
 
@@ -765,6 +797,15 @@ namespace Protaco
         public string Chars(int offset, int capacity)
         {
             return Codec.Chars(src_, start_ + offset, capacity);
+        }
+
+        /// <summary>Inline fixed message at offset, read into target (a new object if target is null).</summary>
+        public T Message<T>(int offset, T target) where T : IMessage, new()
+        {
+            if (target == null)
+                target = new T();
+            target.ReadFixed(new FixedReader(src_, start_ + offset));
+            return target;
         }
     }
 
@@ -1854,6 +1895,13 @@ namespace Protaco
         }
 
         public void Field<T>(string key, List<T> value) where T : IMessage
+        {
+            Key(key);
+            ListItems(value, item => Message(item));
+        }
+
+        /// <summary>Array of fixed messages: the same text as a list of messages.</summary>
+        public void Field<T>(string key, T[] value) where T : IMessage
         {
             Key(key);
             ListItems(value, item => Message(item));

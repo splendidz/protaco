@@ -1,0 +1,6 @@
+# expect: PC404
+message: PC404_arraymessage
+version: 1
+namespace: errors
+fields:
+  - {key: a, type: PC404_arraymessage[2]}

@@ -178,8 +178,8 @@ namespace Protacoc
             List<string> keys = message.Fields.Select(f => "\"" + f.Key + "\"").ToList();
             w.Line("schema_keys=(" + string.Join(", ", keys) + (keys.Count == 1 ? "," : "") + "),");
             Tuple(w, "fixed", view.FixedSlots.Select(field => field.AliveAt(view.Version)
-                ? "(\"" + field.Key + "\", \"" + Name(field.Key) + "\", " + Item(field.Type) + ", None)"
-                : "(\"" + field.Key + "\", None, " + Item(field.Type) + ", " + RemovedDefault(field) + ")"));
+                ? "(\"" + field.Key + "\", \"" + Name(field.Key) + "\", " + Item(field.Type, true) + ", None)"
+                : "(\"" + field.Key + "\", None, " + Item(field.Type, true) + ", " + RemovedDefault(field) + ")"));
             Tuple(w, "var", view.AliveVar.Select(field => "(\"" + field.Key + "\", \"" + Name(field.Key) + "\", " + Item(field.Type) + ", "
                 + (field.Required ? "True" : "False") + ", " + (field.Optional ? "True" : "False") + ")"));
             List<string> text = view.Alive.Select(f => "\"" + f.Key + "\"").ToList();
@@ -203,8 +203,8 @@ namespace Protacoc
             w.Line("),");
         }
 
-        // Runtime descriptor (protaco.Items) of a type.
-        private static string Item(TypeRef type)
+        // Runtime descriptor (protaco.Items) of a type. inline: a fixed block slot, where a fixed: true message is inline.
+        private static string Item(TypeRef type, bool inline = false)
         {
             switch (type.Kind)
             {
@@ -233,15 +233,17 @@ namespace Protacoc
                 case TypeKind.Map:
                     return "protaco.Items.Map(" + Item(type.Key) + ", " + Item(type.Element) + ")";
                 case TypeKind.Array:
-                    return "protaco.Items.Array(" + Item(type.Element) + ", " + type.ArrayLength + ")";
+                    return "protaco.Items.Array(" + Item(type.Element, true) + ", " + type.ArrayLength + ")";
                 default:
-                    return "protaco.Items.Message(" + type.TypeName + ")";
+                    return (inline && type.Resolved.Fixed ? "protaco.Items.Fixed(" : "protaco.Items.Message(") + type.TypeName + ")";
             }
         }
 
         // An array starts as a list of N copies of the element default.
         private static string Default(FieldDef field)
         {
+            if (field.Type.Kind == TypeKind.Array && field.Type.Element.Kind == TypeKind.Message)
+                return "[" + DefaultOf(field.Type.Element, null, false) + " for _ in range(" + field.Type.ArrayLength + ")]";
             if (field.Type.Kind == TypeKind.Array)
                 return "[" + DefaultOf(field.Type.Element, field.DefaultText, false) + "] * " + field.Type.ArrayLength;
             return DefaultOf(field.Type, field.DefaultText, field.Optional);

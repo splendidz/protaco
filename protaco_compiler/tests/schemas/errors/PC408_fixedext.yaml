@@ -1,0 +1,8 @@
+# expect: PC408
+message: PC408_fixedext
+version: 1
+namespace: errors
+fixed: true
+allow_extension: true
+fields:
+  - {key: a, type: int}

@@ -1,0 +1,9 @@
+# A rack of slots. Not fixed: true itself, but every field is fixed, so TryView reads it in place.
+message: Rack
+version: 1
+namespace: arrays
+allow_extension: false
+fields:
+  - {key: origin, type: Point}
+  - {key: slots, type: Slot[Sizes.Slots]}
+  - {key: count, type: int}

@@ -43,6 +43,7 @@ field = <key>:<type>[!][=<default>]
 | 목록 | `list<T>`, T도 같은 규칙으로 변환 |
 | map | `map<K,V>`, 쉼표 뒤 공백 없음, K·V도 같은 규칙으로 변환 |
 | 다른 메시지 | `Name@xxxxxxxx`, 해당 메시지 fingerprint의 소문자 16진수 8자리 |
+| 인라인 fixed 메시지 | `fixed: true` 메시지인 필드나 배열 원소는 `fixed(Name@xxxxxxxx)`. list·map 안에서는 그대로 `Name@xxxxxxxx` |
 | 자기 참조 | `Name@self` |
 | enum | `enum(Name)`, 값 목록 제외 |
 | 고정 길이 배열 | `T[N]`: T는 이 규칙대로, N은 해석된 원소 수(`int[16]`, `enum(Level)[3]`) |
@@ -200,6 +201,7 @@ bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\c
 | PC405 | namespace 혼용 | 한 실행에 서로 다른 namespace |
 | PC406 | 생성기 중첩 limit 초과 | 자기 참조를 제외한 중첩 100단계 초과 |
 | PC407 | 중첩 메시지의 version 기능 | 필드 타입 메시지에 `min_version/added/removed` 사용 |
+| PC408 | `fixed: true` 메시지 규칙 위반 | 가변 필드, version 기능, `allow_extension: true`, 자기 타입 필드 |
 | PC501 | 파일 입출력 | 입력 폴더 없음, 쓰기 실패, `--check` 불일치 |
 | PC502 | 명령행·대상 오류 | 출력 언어 없음, 모르는 옵션 또는 대상 |
 
@@ -386,6 +388,34 @@ bool set_<k>(const std::array<std::string, N>& values, std::string* error = null
 - View: `<k>_size()`, `get_<k>(index)`, `get_<k>()`
 
 C# 배열은 길이 N인 get-only `T[]` 속성입니다. `string(N)` 원소가 길면 `Serialize()`가 `ProtacoException`을 던지고, `View`에는 `Name(index)`(0..N-1 밖이면 ArgumentOutOfRangeException)와 `Name()`이 있습니다. Python 배열은 값 N개짜리 list이며 `Serialize()`가 검사합니다.
+
+**인라인 fixed 메시지**
+
+**C++**
+
+```cpp
+M::ConstRef get_<k>() const;                       // fixed: true 메시지 M인 필드
+M::Ref mutable_<k>();
+void set_<k>(const M& value);
+
+M::ConstRef get_<k>(size_t index) const;           // M[N]
+M::Ref mutable_<k>(size_t index);
+bool set_<k>(size_t index, const M& value, std::string* error = nullptr);
+
+// M::ConstRef: M의 getter, M Copy() const, std::string ToString(style) const
+// M::Ref: ConstRef와 M의 setter, void Assign(const M& value)
+```
+
+`fixed: true` 메시지를 필드 타입이나 `T[N]`의 원소로 쓰면 fixed 영역에 인라인으로 놓입니다. `ConstRef`와 `Ref`는 이 메시지 안의 그 바이트를 가리킵니다.
+
+- 매개변수: `index`는 0..N-1, `value`는 필드를 복사해 넣을 `M` 객체
+- 반환값: `ConstRef`·`Ref`는 값으로 돌려줌(이 메시지 버퍼 안의 포인터). 원소 setter는 성공 여부
+- 수명: `ConstRef`·`Ref`는 메시지가 살아 있고 버퍼가 바뀌지 않는 동안 유효(메시지로 디코딩, 대입, 이동하면 무효)
+- 범위: `get_<k>(index)`·`mutable_<k>(index)`는 debug 빌드에서 index를 assert. `set_<k>(index, ...)`는 false: `slots[4]: index out of range (size 4)`
+- 기본값: 새 메시지는 인라인 메시지마다 그 메시지의 기본값을 복사해 넣음
+- View: `get_<k>()`·`get_<k>(index)`가 `M::ConstRef`를 돌려줌
+
+C# 필드는 `M` 객체, 배열은 객체 N개를 가진 get-only `M[]`입니다. 원소가 null이면 `Serialize()`가 `ProtacoException`(`slots[1]: null fixed message`)을 던지고, `View`는 struct `M.ConstRef`를 돌려줍니다. Python 필드는 `M` 객체, 배열은 객체 N개짜리 list입니다.
 
 **가변 필드**
 

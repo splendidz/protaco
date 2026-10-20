@@ -84,6 +84,8 @@ namespace Protacoc
             w.Line();
             if (view.AliveVar.Count == 0)
                 View(w, message, view);
+            if (message.Fixed)
+                ConstRef(w, message, view);
             Hidden(w, message, view);
             w.Close();
         }
@@ -214,6 +216,8 @@ namespace Protacoc
             if (field.Type.Kind == TypeKind.Array)
             {
                 TypeRef element = field.Type.Element;
+                if (element.Kind == TypeKind.Message)
+                    return "Protaco.Codec.Created(" + field.Type.ArrayLength + ", () => " + ElementInitializer(element, null) + ")";
                 string value = ElementInitializer(element, field.DefaultText);
                 bool zero = element.Kind == TypeKind.Enum ? ElementDefault(element, field.DefaultText).Number == 0
                     : element.Kind != TypeKind.FixedString && (value == "0" || value == "false");
@@ -339,7 +343,7 @@ namespace Protacoc
             {
                 if (field.AliveAt(view.Version))
                     w.Line(FixedWrite(field, Naming.CsProperty(field.Key)));
-                else if (field.DefaultText != null || field.Type.Kind == TypeKind.Enum || (field.Type.Kind == TypeKind.Array && field.Type.Element.Kind == TypeKind.Enum))
+                else if (field.DefaultText != null || ElementKind(field) == TypeKind.Enum || ElementKind(field) == TypeKind.Message)
                     w.Line(FixedWrite(field, Initializer(field)) + "   // removed in " + field.Removed + ": default for older readers");
             }
             w.Close();
@@ -382,6 +386,12 @@ namespace Protacoc
                 w.Line(name + " = reader." + VarMethod(field.Type) + "(\"" + field.Key + "\", " + required + ", " + name + ");");
             }
             w.Close();
+        }
+
+        // Kind of the field type, or of its elements for T[N].
+        private static TypeKind ElementKind(FieldDef field)
+        {
+            return field.Type.Kind == TypeKind.Array ? field.Type.Element.Kind : field.Type.Kind;
         }
 
         // Keys never start with '_', so the name cannot clash with a property or a backing field.
@@ -431,6 +441,8 @@ namespace Protacoc
         {
             if (field.Type.Kind == TypeKind.Array)
                 return ArrayWrite(field, value);
+            if (field.Type.Kind == TypeKind.Message)
+                return "writer.Message(" + field.FixedOffset + ", " + value + ", \"" + field.Key + "\");";
             return FixedWriteAt(field.Type, field.FixedOffset.ToString(), value);
         }
 
@@ -442,6 +454,7 @@ namespace Protacoc
             string item = value == Naming.CsProperty(field.Key) ? value + "[i]" : ElementInitializer(element, field.DefaultText);
             string write = element.Kind == TypeKind.FixedString
                 ? "writer.Chars(" + at + ", " + element.FixedLength + ", " + item + ", \"" + field.Key + "\", i);"
+                : element.Kind == TypeKind.Message ? "writer.Message(" + at + ", " + item + ", \"" + field.Key + "\", i);"
                 : FixedWriteAt(element, at, item);
             return "for (int i = 0; i < " + field.Type.ArrayLength + "; ++i) " + write;
         }
@@ -476,15 +489,18 @@ namespace Protacoc
             {
                 TypeRef element = field.Type.Element;
                 return "for (int i = 0; i < " + field.Type.ArrayLength + "; ++i) " + name + "[i] = "
-                    + FixedReadAt(element, field.FixedOffset + " + " + element.FixedSize + " * i") + ";";
+                    + FixedReadAt(element, field.FixedOffset + " + " + element.FixedSize + " * i", name + "[i]") + ";";
             }
-            return name + " = " + FixedReadAt(field.Type, field.FixedOffset.ToString()) + ";";
+            return name + " = " + FixedReadAt(field.Type, field.FixedOffset.ToString(), name) + ";";
         }
 
-        private static string FixedReadAt(TypeRef type, string at)
+        // current: the object an inline message is read into (a new one if null).
+        private static string FixedReadAt(TypeRef type, string at, string current)
         {
             switch (type.Kind)
             {
+                case TypeKind.Message:
+                    return "reader.Message(" + at + ", " + current + ")";
                 case TypeKind.Enum:
                     return "(" + type.TypeName + ")reader.Int(" + at + ")";
                 case TypeKind.Bool:
@@ -514,6 +530,8 @@ namespace Protacoc
         {
             switch (type.Kind)
             {
+                case TypeKind.Message:
+                    return "new " + type.TypeName + ".ConstRef(src_, " + at + ")";
                 case TypeKind.Enum:
                     return "(" + type.TypeName + ")global::System.BitConverter.ToInt32(src_, " + at + ")";
                 case TypeKind.Bool:
@@ -548,6 +566,15 @@ namespace Protacoc
             w.Close();
             w.Line();
             w.Line("public Protaco.Envelope GetEnvelope() => Protaco.Codec.EnvelopeOf(src_);");
+            ViewMembers(w, view);
+            w.Close();
+            w.Line();
+            TryView(w, message, view);
+        }
+
+        // Fixed fields read from src_ at at_: shared by View and ConstRef.
+        private static void ViewMembers(CodeWriter w, VersionView view)
+        {
             foreach (FieldDef field in view.Alive)
             {
                 w.Line();
@@ -557,10 +584,35 @@ namespace Protacoc
                     ViewArray(w, field);
                     continue;
                 }
-                w.Line("public " + CsType(field.Type) + " " + Naming.CsProperty(field.Key) + " => " + ViewRead(field) + ";");
+                w.Line("public " + ViewType(field.Type) + " " + Naming.CsProperty(field.Key) + " => " + ViewRead(field) + ";");
             }
+        }
+
+        // fixed: true messages: read-only access to the message's bytes inside another message's fixed block.
+        private static void ConstRef(CodeWriter w, MessageDef message, VersionView view)
+        {
+            w.Line("/// <summary>Read-only " + message.Name + " inside another message's fixed block: fields read in place. Valid while the array is unchanged.</summary>");
+            w.Open("public struct ConstRef");
+            w.Line("private readonly byte[] src_;");
+            w.Line("private readonly int at_;");
+            w.Line();
+            w.Open("internal ConstRef(byte[] src, int at)");
+            w.Line("src_ = src;");
+            w.Line("at_ = at;");
+            w.Close();
+            ViewMembers(w, view);
+            w.Line();
+            w.Line("/// <summary>The fields as a " + message.Name + " object (copied).</summary>");
+            w.Line("public " + message.Name + " Copy() => Protaco.Codec.FixedCopy(new " + message.Name + "(Protaco.NoStamp.Value), src_, at_);");
+            w.Line();
+            w.Line("/// <summary>Text for logs, the same as " + message.Name + ".ToString().</summary>");
+            w.Line("public override string ToString() => Copy().ToString();");
             w.Close();
             w.Line();
+        }
+
+        private static void TryView(CodeWriter w, MessageDef message, VersionView view)
+        {
             w.Line("/// <summary>Reads bytes in place as a View, with the checks of Codec.ToObject. False and the reason in error on failure.</summary>");
             w.Open("public static bool TryView(byte[] bytes, out View view, out string error)");
             w.Line("int at;");
@@ -577,12 +629,18 @@ namespace Protacoc
             w.Line();
         }
 
+        // Type of a View member: an inline fixed message is read through its ConstRef.
+        private static string ViewType(TypeRef type)
+        {
+            return type.Kind == TypeKind.Message ? type.TypeName + ".ConstRef" : CsType(type);
+        }
+
         // T[N] in a View: Name(index) reads one element in place (ArgumentOutOfRangeException outside 0..N-1), Name() copies all.
         private static void ViewArray(CodeWriter w, FieldDef field)
         {
             TypeRef element = field.Type.Element;
             string name = Naming.CsProperty(field.Key);
-            string type = CsType(element);
+            string type = ViewType(element);
             string at = "at_ + " + field.FixedOffset + " + " + element.FixedSize + " * ";
             w.Line("public " + type + " " + name + "(int index) => " + ViewReadAt(element, at + "Protaco.Codec.Index(index, " + field.Type.ArrayLength + ")") + ";");
             w.Line();

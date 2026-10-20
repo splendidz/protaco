@@ -100,6 +100,8 @@ namespace Protacoc
                 CheckVersions(message, diag);
             }
             CheckNestedVersions(messages, diag);
+            foreach (MessageDef message in messages.Where(m => m.Fixed))
+                CheckFixedMessage(message, diag);
             if (diag.ErrorCount != 0)
                 return false;
             order = TopoSort(messages, diag);
@@ -209,6 +211,25 @@ namespace Protacoc
             }
             if (constDef.Values.Count == 0)
                 diag.Error(constDef.Pos, Codes.MissingTop, "const '" + constDef.Name + "' has no value");
+        }
+
+        // fixed: true. One layout of fixed fields only, so the message can sit inline in another message's fixed block.
+        // No ext: it would need a variable block. The fingerprint carries ext 0.
+        private static void CheckFixedMessage(MessageDef message, Diag diag)
+        {
+            if (message.AllowExtensionSet && message.AllowExtension)
+                diag.Error(message.Pos, Codes.FixedMessage, "'" + message.Name + "' is fixed: true and cannot allow extension data");
+            message.AllowExtension = false;
+            if (message.UsesVersions)
+                diag.Error(message.Pos, Codes.FixedMessage, "'" + message.Name + "' is fixed: true and has one layout: no min_version, added or removed");
+            foreach (FieldDef field in message.Fields)
+            {
+                if (field.Type.Named().Any(t => t.Resolved == message))
+                    diag.Error(field.Pos, Codes.FixedMessage, "'" + message.Name + "' is fixed: true and cannot contain itself ('" + field.Key + "')");
+                else if (!field.Type.IsFixed)
+                    diag.Error(field.Pos, Codes.FixedMessage, "'" + field.Key + "' (" + field.Type + ") is a variable field. A fixed: true message has fixed fields "
+                        + "only: scalars, string(N), enums, fixed messages and T[N] of those");
+            }
         }
 
         // Nested bodies carry no version, so a message used as a field type has exactly one layout.
@@ -330,9 +351,11 @@ namespace Protacoc
                 if (!ResolveType(type.Element, field, byName, diag, Place.ArrayElement))
                     return false;
                 TypeKind element = type.Element.Kind;
-                if (element == TypeKind.String || element == TypeKind.Bytes || element == TypeKind.List || element == TypeKind.Map || element == TypeKind.Message)
+                if (element == TypeKind.String || element == TypeKind.Bytes || element == TypeKind.List || element == TypeKind.Map
+                    || (element == TypeKind.Message && !type.Element.Resolved.Fixed))
                 {
-                    diag.Error(field.Pos, Codes.BadElement, type.Element + "[N] is not supported. Allowed elements: bool, int, int64, uint, uint64, double, string(N), enum");
+                    diag.Error(field.Pos, Codes.BadElement, type.Element + "[N] is not supported. Allowed elements: bool, int, int64, uint, uint64, double, string(N), enum, "
+                        + "and messages with fixed: true");
                     return false;
                 }
                 return ResolveLength(type, field, byName, diag);

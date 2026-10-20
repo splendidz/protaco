@@ -28,7 +28,9 @@
 #include "build3/Order.g.h"
 #include "build4/Order.g.h"
 #include "arrays/Panel.g.h"
+#include "arrays/Rack.g.h"
 #include "arrays/Sizes.const.h"
+#include "arrays/Trail.g.h"
 #include "deep/D8.g.h"
 #include "partial/PizzaOrder.g.h"
 #include "partial/DeliveryRoute.g.h"
@@ -148,6 +150,40 @@ arrays::Panel MakePanel()
     panel.set_total(42);
     panel.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
     return panel;
+}
+
+// Golden values. Same as the C# test MakeRack and Python make_rack.
+arrays::Rack MakeRack()
+{
+    arrays::Rack rack;
+    rack.mutable_origin().set_x(3);
+    for (size_t i = 0; i < arrays::Rack::slots_size(); ++i)
+    {
+        arrays::Slot::Ref slot = rack.mutable_slots(i);
+        slot.set_id(static_cast<uint32_t>(100 + i));
+        slot.mutable_pos().set_y(static_cast<int32_t>(i));
+    }
+    rack.mutable_slots(1).set_name("one");
+    rack.mutable_slots(2).mutable_path(1).set_x(7);
+    rack.mutable_slots(3).set_level(arrays::Level::High);
+    rack.mutable_slots(3).set_temps(1, 1.5);
+    rack.set_count(4);
+    rack.SetEnvelope(protaco::Envelope());   // golden bytes: no id, no time
+    return rack;
+}
+
+// Golden values. Same as the C# test MakeTrail and Python make_trail.
+arrays::Trail MakeTrail()
+{
+    arrays::Trail trail;
+    trail.mutable_start().set_y(5);
+    arrays::Point point;
+    point.set_x(3);
+    point.set_y(0);
+    trail.mutable_points().push_back(point);
+    trail.set_note("n");
+    trail.SetEnvelope(protaco::Envelope());
+    return trail;
 }
 
 maps::Menu MakeMenu()
@@ -797,6 +833,52 @@ TEST(Protaco, FixedArrays)
     EXPECT_EQ("alpha", view.get_names(0));
     EXPECT_EQ(arrays::Level::High, view.get_levels(2));
     EXPECT_EQ(got.get_temps(), view.get_temps());
+}
+
+// fixed: true messages sit inline in the fixed block: read and written in place through ConstRef and Ref.
+TEST(Protaco, FixedMessages)
+{
+    const arrays::Rack defaults;   // inline messages start with their own defaults
+    EXPECT_EQ(-1, defaults.get_origin().get_x());
+    EXPECT_EQ("empty", defaults.get_slots(3).get_name());
+    EXPECT_EQ(-1, defaults.get_slots(0).get_path(1).get_x());
+    EXPECT_EQ(arrays::Level::Low, defaults.get_slots(2).get_level());
+    static_assert(arrays::Rack::slots_size() == arrays::Sizes::Slots, "length from a const");
+
+    arrays::Rack rack = MakeRack();
+    arrays::Slot slot;
+    slot.set_id(9);
+    std::string error;
+    EXPECT_FALSE(rack.set_slots(4, slot, &error));
+    EXPECT_EQ("slots[4]: index out of range (size 4)", error);
+    EXPECT_TRUE(rack.set_slots(0, slot));
+    EXPECT_EQ(9u, rack.get_slots(0).get_id());
+    rack.mutable_slots(0).Assign(MakeRack().get_slots(0).Copy());
+    EXPECT_EQ(100u, rack.get_slots(0).get_id());
+
+    const std::vector<uint8_t> bytes = rack.Serialize();
+    const arrays::Rack got = protaco::ToObject<arrays::Rack>(bytes);
+    EXPECT_EQ(7, got.get_slots(2).get_path(1).get_x());
+    EXPECT_EQ("one", got.get_slots(1).Copy().get_name());
+    EXPECT_EQ("Rack{origin=Point{x=3, y=0}, slots=[Slot{id=100, name=\"empty\", pos=Point{x=-1, y=0}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=Low(1), temps=[0, 0]}, "
+              "Slot{id=101, name=\"one\", pos=Point{x=-1, y=1}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=Low(1), temps=[0, 0]}, "
+              "Slot{id=102, name=\"empty\", pos=Point{x=-1, y=2}, path=[Point{x=-1, y=0}, Point{x=7, y=0}], level=Low(1), temps=[0, 0]}, "
+              "Slot{id=103, name=\"empty\", pos=Point{x=-1, y=3}, path=[Point{x=-1, y=0}, Point{x=-1, y=0}], level=High(2), temps=[0, 1.5]}], count=4}",
+              got.ToString());
+    EXPECT_EQ("Point{x=3, y=0}", got.get_origin().ToString());
+    ExpectGolden("Rack.bin", bytes);
+
+    arrays::Rack::View view;
+    ASSERT_TRUE(protaco::TryView<arrays::Rack>(bytes, &view));
+    EXPECT_EQ(1.5, view.get_slots(3).get_temps(1));
+    EXPECT_EQ(3, view.get_origin().get_x());
+
+    const arrays::Trail trail = MakeTrail();
+    const arrays::Trail trailBack = protaco::ToObject<arrays::Trail>(trail.Serialize());
+    EXPECT_EQ(5, trailBack.get_start().get_y());
+    EXPECT_EQ(3, trailBack.get_points().at(0).get_x());
+    EXPECT_EQ("Trail{start=Point{x=-1, y=5}, points=[Point{x=3, y=0}], note=\"n\"}", trailBack.ToString());
+    ExpectGolden("Trail.bin", trail.Serialize());
 }
 
 TEST(Protaco, EnumFields)

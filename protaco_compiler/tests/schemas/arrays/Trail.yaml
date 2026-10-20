@@ -1,0 +1,8 @@
+# A fixed message in a list stays a nested body; inline next to variable fields.
+message: Trail
+version: 1
+namespace: arrays
+fields:
+  - {key: start, type: Point}
+  - {key: points, type: list<Point>}
+  - {key: note, type: string}

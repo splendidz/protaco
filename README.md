@@ -331,6 +331,7 @@ fields:
 | `min_version` | No | Oldest version still supported; defaults to `version`. See [Version management](#7-version-management) |
 | `allow_extension` | No | Whether extension data is allowed; default `true` |
 | `auto_envelope` | No | Whether a new object gets an id and the current time; default `true`. See [Envelope](#65-envelope) |
+| `fixed` | No | `true`: fixed fields only, and the message sits inline in the fixed block of messages that use it. See [Fixed messages](#410-fixed-messages) |
 | `desc` | No | Description for the docstring |
 
 The namespace `shop.orders` becomes `shop::orders` in C++, `shop.orders` in C#, and the package folder `shop/orders/` in Python.
@@ -377,6 +378,7 @@ Fixed-length types go into the fixed block at the front of the body.
 | `string(N)` | N bytes of UTF-8, N in 1..4096, zero padded | `std::string` / `string` / `str` |
 | enum name | 4 bytes (int32) | `enum class` / `enum` / `enum.IntEnum` |
 | `T[N]` | N elements of a fixed type in a row, no length prefix. See [Fixed-length arrays](#49-fixed-length-arrays) | `std::array<T, N>` / `T[]` of length N / `list` |
+| `fixed: true` message | Its fixed block inline, no length. See [Fixed messages](#410-fixed-messages) | `ConstRef` and `Ref` in C++ / the generated class / the generated class |
 
 If a value is longer than N bytes, the C++ `string(N)` setter returns `false` and keeps the old value. The C# setter throws `ArgumentException`. Python raises `protaco.ProtacoError` from `Serialize()`. A Python `int` has no size limit, so an integer out of range for its type fails in `Serialize()` the same way.
 
@@ -634,7 +636,7 @@ fields:
   - {key: names, type: string(8)[Limits.MaxStops]}
 ```
 
-- Elements: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enums. Arrays of arrays and arrays inside lists or maps are PC404
+- Elements: `bool`, `int`, `int64`, `uint`, `uint64`, `double`, `string(N)`, enums, and messages with `fixed: true` ([Fixed messages](#410-fixed-messages)). Arrays of arrays and arrays inside lists or maps are PC404
 - N: a number, a const value (`Limits.MaxStops`), or an enum value (`PizzaSize.Large` is 3). It must be 1 or more (PC310). An unknown name is PC402
 - `default` fills every element. Without one, numbers are 0, strings are empty, and enums take their first value
 - The fingerprint holds the resolved number, `double[16]`. Renaming a const keeps the layout; changing its value changes the layout and the fingerprint
@@ -677,6 +679,79 @@ byte[] bytes = panel.Serialize();
 panel = Panel()                           # temps: [20.5] * 16
 panel.temps[0] = 21.5
 data = panel.Serialize()                  # length and elements are checked here
+```
+
+</details>
+
+### 4.10 Fixed messages
+
+A message with `fixed: true` is a struct of fixed fields. Used as a field type, or as the element of `T[N]`, it sits inline in the fixed block of the message that uses it: no length, no nested body. A message built from fixed fields, arrays and fixed messages stays fixed-length, so `TryView` still reads it in place. This is how a C++ struct with nested structs and arrays of structs maps to Protaco.
+
+```yaml
+# A stop of a route, the same layout everywhere it appears.
+message: Spot
+version: 1
+namespace: demo
+fixed: true
+fields:
+  - {key: lat, type: double}
+  - {key: lon, type: double}
+  - {key: label, type: string(16)}
+```
+
+```yaml
+message: Board
+version: 1
+namespace: demo
+allow_extension: false
+fields:
+  - {key: depot, type: Spot}
+  - {key: spots, type: Spot[Limits.MaxStops]}
+```
+
+- A `fixed: true` message has fixed fields only: scalars, `string(N)`, enums, other fixed messages, and `T[N]` of those. A variable field, `min_version`, `added`, `removed`, `allow_extension: true`, or a field of its own type is PC408
+- It carries no extension data. Its frames, when sent on their own, are like those of any fixed-only message
+- Inside `list<T>` or `map<K, V>` it stays a nested body, as before
+- A message that uses it has `fixed(Spot@xxxxxxxx)` in its fingerprint text, so turning `fixed` on or off changes that message's layout and fingerprint
+
+Generated access:
+
+- C++: `Spot::ConstRef` reads and `Spot::Ref` writes the bytes in place, with the same accessors as `Spot`. A field `depot` gets `get_depot()` (ConstRef), `mutable_depot()` (Ref) and `set_depot(const Spot&)` (copy in). An array `spots` gets `spots_size()`, `get_spots(i)`, `mutable_spots(i)` (index asserted in debug builds) and `set_spots(i, spot, &error)`. `ConstRef::Copy()` makes a `Spot` object, `Ref::Assign(spot)` copies one in, and `ConstRef::ToString()` prints the fields
+- C#: the field is a `Spot` object and the array a get-only `Spot[]` of N objects; `Serialize()` writes them inline. `View` returns `Spot.ConstRef`, read in place
+- Python: a `Spot` object, or a list of N `Spot` objects
+
+**C++**
+
+```cpp
+demo::Board board;
+board.mutable_depot().set_lat(37.5);                 // demo::Spot::Ref, written in place
+board.mutable_spots(2).set_label("north gate");
+demo::Spot::ConstRef spot = board.get_spots(2);      // read in place, nothing copied
+double lat = spot.get_lat();
+demo::Spot copy = spot.Copy();                       // a Spot object when one is needed
+board.set_spots(3, copy);                            // false with the reason for an index out of range
+```
+
+<details>
+<summary>C#</summary>
+
+```csharp
+var board = new demo.Board();
+board.Depot.Lat = 37.5;                              // a demo.Spot object, written inline by Serialize
+board.Spots[2].Label = "north gate";                 // Spots: a demo.Spot[16], one object per element
+byte[] bytes = board.Serialize();
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+board = Board()
+board.depot.lat = 37.5
+board.spots[2].label = "north gate"                  # spots: a list of 16 Spot objects
+data = board.Serialize()
 ```
 
 </details>

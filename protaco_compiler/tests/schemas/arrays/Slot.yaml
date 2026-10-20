@@ -1,0 +1,12 @@
+# One slot of a rack: a fixed message holding a fixed message, an array of them and scalar arrays.
+message: Slot
+version: 1
+namespace: arrays
+fixed: true
+fields:
+  - {key: id, type: uint}
+  - {key: name, type: string(8), default: empty}
+  - {key: pos, type: Point}
+  - {key: path, type: Point[2]}
+  - {key: level, type: Level}
+  - {key: temps, type: double[2]}
