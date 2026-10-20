@@ -52,7 +52,7 @@ RouteStop MakeStop(const std::string& orderId, const std::string& address, int32
     return stop;
 }
 
-// Golden values. Same as the C# test (tests/cs/Program.cs MakeDeliveryRoute).
+// Golden values. Same as the C# test (tests/cs_tests/Program.cs MakeDeliveryRoute).
 DeliveryRoute MakeDeliveryRoute()
 {
     DeliveryRoute route;
@@ -1044,7 +1044,7 @@ TEST(Protaco, PeekHeaderReadsEnvelopeWithoutBody)
     EXPECT_EQ(build3::Order::MsgSchemaHash(), header.schemaHash);
 }
 
-// ToString: same text as C# (tests/cs/Program.cs ToStringMatchesCpp).
+// ToString: same text as C# (tests/cs_tests/Program.cs ToStringMatchesCpp).
 TEST(Protaco, ToStringCompact)
 {
     EXPECT_EQ("DeliveryRoute{rider=\"rider-7\", stops=[RouteStop{orderId=\"A-100\", address=\"1 Pizza St\", etaMin=10}, "

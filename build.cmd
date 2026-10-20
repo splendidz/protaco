@@ -17,27 +17,27 @@ echo === [1/6] build protacoc
 
 echo === [2/6] generate test and example code
 for %%N in (demo scalars enums maps recursive ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
-    %PROTACOC% -I %TESTS%\schemas\%%N --cpp_out %TESTS%\gen\cpp\%%N --cs_out %TESTS%\gen\cs\%%N --py_out %TESTS%\gen\py --no_runtime || goto :fail
+    %PROTACOC% -I %TESTS%\schemas\%%N --cpp_out %TESTS%\taco_generated\cpp\%%N --cs_out %TESTS%\taco_generated\cs\%%N --py_out %TESTS%\taco_generated\py --no_runtime || goto :fail
 )
-%PROTACOC% -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py || goto :fail
+%PROTACOC% -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py || goto :fail
 
 echo === [3/6] build and run C++ tests (v141 x64)
-"%MSBUILD%" %TESTS%\cpp\ProtacoTest.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
+"%MSBUILD%" %TESTS%\cpp_tests\ProtacoTest.vcxproj /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
 set "PROTACO_GOLDEN_DIR=%CD%\%TESTS%\golden"
 %BIN%\ProtacoTest.exe || goto :fail
 
 echo === [4/6] build and run C# tests
-"%MSBUILD%" %TESTS%\cs\protacoc.Tests.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
+"%MSBUILD%" %TESTS%\cs_tests\protacoc.Tests.csproj /p:Configuration=%CONFIG% /nologo /v:minimal || goto :fail
 %BIN%\protacoc.Tests.exe "%CD%\%TESTS%" || goto :fail
 
 echo === [5/6] run Python tests
-"%PYTHON%" %TESTS%\py\test_protaco.py "%CD%\%TESTS%" || goto :fail
+"%PYTHON%" %TESTS%\py_tests\test_protaco.py "%CD%\%TESTS%" || goto :fail
 
 echo === [6/6] build and run the examples
 "%MSBUILD%" examples\examples.sln /p:Configuration=%CONFIG% /p:Platform=x64 /nologo /v:minimal || goto :fail
 %BIN%\protaco_example.exe || goto :fail
 %BIN%\protaco_example_cs.exe || goto :fail
-"%PYTHON%" examples\py\main.py || goto :fail
+"%PYTHON%" examples\python_examples\main.py || goto :fail
 
 echo === ALL PASSED
 popd

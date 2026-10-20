@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- C++ example using protacoc generated code. v141 x64, C++17. The only include path is the output folder (examples\gen\cpp).
+<!-- C++ example using protacoc generated code. v141 x64, C++17. The only include path is the output folder (examples\taco_generated\cpp).
      A Pre-Build Event runs protacoc from bin\Release or bin\Debug (regenerates on yaml changes, leaves identical files untouched).
      Output: bin\<Configuration>\protaco_example.exe. Intermediates: .IntermediateDirectory\example\. -->
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -42,13 +42,13 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\gen\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\taco_generated\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
     </Link>
     <PreBuildEvent>
-      <Command Condition="'$(Protacoc)'!=''">"$(Protacoc)" -I "$(ProjectDir)..\schemas" --cpp_out "$(ProjectDir)..\gen\cpp" --cs_out "$(ProjectDir)..\gen\cs"</Command>
+      <Command Condition="'$(Protacoc)'!=''">"$(Protacoc)" -I "$(ProjectDir)..\schemas" --cpp_out "$(ProjectDir)..\taco_generated\cpp" --cs_out "$(ProjectDir)..\taco_generated\cs"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -56,9 +56,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\schemas\*.yaml" />
-    <ClInclude Include="..\gen\cpp\*.g.h" />
-    <ClInclude Include="..\gen\cpp\*.enum.h" />
-    <ClInclude Include="..\gen\cpp\Protaco.hpp" />
+    <ClInclude Include="..\taco_generated\cpp\*.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\*.enum.h" />
+    <ClInclude Include="..\taco_generated\cpp\Protaco.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -18,21 +18,21 @@ This folder contains YAML schemas, generated code, and C++, C#, and Python progr
 ```text
 examples/
   schemas/
-  gen/
+  taco_generated/
     cpp/                  *.g.h, *.enum.h, Protaco.hpp
     cs/                   *.g.cs, *.enum.cs, Protaco.cs
     py/
       protaco.py
       demo/               *_g.py, *_enum.py
-  cpp/
+  cpp_examples/
     main.cpp
     example.vcxproj
     example.vcxproj.filters
-  cs/
+  cs_examples/
     Program.cs
     example_cs.csproj
     example_cs.net.csproj
-  py/
+  python_examples/
     main.py
   examples.sln
 ```
@@ -57,14 +57,14 @@ For manual commands, use a Visual Studio developer command prompt with MSBuild o
 
 ```bat
 msbuild protaco_compiler\protacoc\protacoc.csproj /p:Configuration=Release
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py
 msbuild examples\examples.sln /p:Configuration=Release /p:Platform=x64
 bin\Release\protaco_example.exe
 bin\Release\protaco_example_cs.exe
-python examples\py\main.py
+python examples\python_examples\main.py
 ```
 
-[example.vcxproj](cpp/example.vcxproj) adds `$(ProjectDir)..\gen\cpp` to the include path. Its Pre-Build Event uses `bin\Release\protacoc.exe` if available, otherwise `bin\Debug\protacoc.exe`, to generate C++ and C# code. Generate Python code with the `--py_out` command above or the full build script. The project uses v141 x64, C++17, `/W4 /WX`, and `/utf-8`. No separate runtime library is linked. [Cpp14Check.cpp](../protaco_compiler/tests/cpp/Cpp14Check.cpp) checks the generated headers for C++14 compatibility.
+[example.vcxproj](cpp_examples/example.vcxproj) adds `$(ProjectDir)..\taco_generated\cpp` to the include path. Its Pre-Build Event uses `bin\Release\protacoc.exe` if available, otherwise `bin\Debug\protacoc.exe`, to generate C++ and C# code. Generate Python code with the `--py_out` command above or the full build script. The project uses v141 x64, C++17, `/W4 /WX`, and `/utf-8`. No separate runtime library is linked. [Cpp14Check.cpp](../protaco_compiler/tests/cpp_tests/Cpp14Check.cpp) checks the generated headers for C++14 compatibility.
 
 ### Linux
 
@@ -82,13 +82,13 @@ To build and run just the examples manually:
 
 ```sh
 dotnet build protaco_compiler/protacoc/protacoc.net.csproj -c Release
-bin/Release/net8.0/protacoc -I examples/schemas --cpp_out examples/gen/cpp --cs_out examples/gen/cs --py_out examples/gen/py
+bin/Release/net8.0/protacoc -I examples/schemas --cpp_out examples/taco_generated/cpp --cs_out examples/taco_generated/cs --py_out examples/taco_generated/py
 mkdir -p bin/Release
-g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -Iexamples/gen/cpp examples/cpp/main.cpp -o bin/Release/protaco_example
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -Iexamples/taco_generated/cpp examples/cpp_examples/main.cpp -o bin/Release/protaco_example
 bin/Release/protaco_example
-dotnet build examples/cs/example_cs.net.csproj -c Release
+dotnet build examples/cs_examples/example_cs.net.csproj -c Release
 bin/Release/net8.0/protaco_example_cs
-python3 examples/py/main.py
+python3 examples/python_examples/main.py
 ```
 
 The Windows script accepts `MSBUILD` and `PYTHON`; the Linux script accepts `DOTNET`, `CXX`, and `PYTHON`. If .NET is not installed system-wide, use `DOTNET=~/.dotnet/dotnet sh build.sh`. For manual commands, also set `DOTNET_ROOT` to the installation path so the .NET app hosts can find the runtime.
@@ -169,7 +169,7 @@ Quote `map<K, V>` inside YAML `{...}` because it contains a comma. `Category.sub
 
 ## 4. Program walkthrough
 
-The [C++ program](cpp/main.cpp) runs the eight steps below. The [C# program](cs/Program.cs) has seven steps, without the fixed-buffer step. The [Python program](py/main.py) has seven steps, without the zero-copy step. This is actual C++ output. The envelope timestamps vary between runs; the ids follow the order in which the example creates messages.
+The [C++ program](cpp_examples/main.cpp) runs the eight steps below. The [C# program](cs_examples/Program.cs) has seven steps, without the fixed-buffer step. The [Python program](python_examples/main.py) has seven steps, without the zero-copy step. This is actual C++ output. The envelope timestamps vary between runs; the ids follow the order in which the example creates messages.
 
 ```text
 DeliveryRoute: 182 bytes
@@ -584,11 +584,11 @@ A new message automatically gets an ID and the current timestamp in UTC microsec
 
 ## 5. Generated code
 
-These are selected excerpts from the actual files in [gen/](gen/). Comments mark omitted members.
+These are selected excerpts from the actual files in [taco_generated/](taco_generated/). Comments mark omitted members.
 
 ### 5.1 C++
 
-The fixed-string setter in [RouteStop.g.h](gen/cpp/RouteStop.g.h) checks the UTF-8 byte limit: 16 bytes for `orderId` and 48 for `address`. The integer setter writes directly to a fixed position in the buffer.
+The fixed-string setter in [RouteStop.g.h](taco_generated/cpp/RouteStop.g.h) checks the UTF-8 byte limit: 16 bytes for `orderId` and 48 for `address`. The integer setter writes directly to a fixed position in the buffer.
 
 **C++**
 
@@ -614,7 +614,7 @@ void set_etaMin(int32_t value)
 }
 ```
 
-This excerpt from [Heartbeat.g.h](gen/cpp/Heartbeat.g.h) shows `View` with the other field accessors omitted.
+This excerpt from [Heartbeat.g.h](taco_generated/cpp/Heartbeat.g.h) shows `View` with the other field accessors omitted.
 
 **C++**
 
@@ -636,7 +636,7 @@ public:
 };
 ```
 
-The enum and name conversion come from [PizzaSize.enum.h](gen/cpp/PizzaSize.enum.h). Undeclared numbers return `nullptr`.
+The enum and name conversion come from [PizzaSize.enum.h](taco_generated/cpp/PizzaSize.enum.h). Undeclared numbers return `nullptr`.
 
 **C++**
 
@@ -668,7 +668,7 @@ inline const char* EnumName(PizzaSize value)
 }
 ```
 
-These map accessors come from [Menu.g.h](gen/cpp/Menu.g.h). Exposing a mutable reference records that later changes cannot be tracked.
+These map accessors come from [Menu.g.h](taco_generated/cpp/Menu.g.h). Exposing a mutable reference records that later changes cannot be tracked.
 
 **C++**
 
@@ -696,7 +696,7 @@ void set_prices(const std::unordered_map<std::string, double>& value)
 <details>
 <summary>C#</summary>
 
-These properties and the serialization method come from [Menu.g.cs](gen/cs/Menu.g.cs). C# uses PascalCase properties and serializes the object's envelope.
+These properties and the serialization method come from [Menu.g.cs](taco_generated/cs/Menu.g.cs). C# uses PascalCase properties and serializes the object's envelope.
 
 ```csharp
 public PizzaSize DefaultSize { get; set; } = PizzaSize.Large;
@@ -718,7 +718,7 @@ public byte[] Serialize()
 <details>
 <summary>Python</summary>
 
-This is part of the class declaration and the `_Bind` call from [Menu_g.py](gen/py/demo/Menu_g.py). The constructor body is omitted. `_Bind` registers the generated class's fixed and variable field layout with the runtime. Add `examples/gen/py` to `sys.path` to import the `demo` package.
+This is part of the class declaration and the `_Bind` call from [Menu_g.py](taco_generated/py/demo/Menu_g.py). The constructor body is omitted. `_Bind` registers the generated class's fixed and variable field layout with the runtime. Add `examples/taco_generated/py` to `sys.path` to import the `demo` package.
 
 ```python
 class Menu(protaco.Message):
@@ -808,7 +808,7 @@ fields:
 
 An older-version class has the same fingerprint as the class originally shipped at that version. For example, `build3::v1::Order::MsgSchemaHash()` equals `build1::Order::MsgSchemaHash()`.
 
-The corresponding C# names are `build3.Order` and `build3.v1.Order`. In Python, add `protaco_compiler/tests/gen/py` to the module path and use `Order` and `v1.Order` from the same module.
+The corresponding C# names are `build3.Order` and `build3.v1.Order`. In Python, add `protaco_compiler/tests/taco_generated/py` to the module path and use `Order` and `v1.Order` from the same module.
 
 <details>
 <summary>Python</summary>

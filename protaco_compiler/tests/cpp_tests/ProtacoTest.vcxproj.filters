@@ -2,55 +2,55 @@
 <!-- Filters follow the real folders. -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="cpp">
+    <Filter Include="cpp_tests">
       <UniqueIdentifier>{9A21A56A-123E-5BA0-9939-A92F5F65B7DC}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen">
+    <Filter Include="taco_generated">
       <UniqueIdentifier>{C99319FD-483C-592A-BDF4-F8C85822C11D}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp">
+    <Filter Include="taco_generated\cpp">
       <UniqueIdentifier>{99C687F9-87F9-5ADB-80C8-4E2542AF8DCC}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\alt">
+    <Filter Include="taco_generated\cpp\alt">
       <UniqueIdentifier>{45B521A6-F699-5A13-80A5-435C00E70419}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\build1">
+    <Filter Include="taco_generated\cpp\build1">
       <UniqueIdentifier>{894FB66F-435B-54CA-8AC3-D4DE60B38C25}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\build2">
+    <Filter Include="taco_generated\cpp\build2">
       <UniqueIdentifier>{91BE6FEB-DF55-5348-8CC9-198DF36A07A3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\build3">
+    <Filter Include="taco_generated\cpp\build3">
       <UniqueIdentifier>{6911A701-7174-506F-9EBF-295D8E120D82}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\build4">
+    <Filter Include="taco_generated\cpp\build4">
       <UniqueIdentifier>{FF05FA02-DDE8-5964-ACFC-A8586FB92FB9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\deep">
+    <Filter Include="taco_generated\cpp\deep">
       <UniqueIdentifier>{3D992345-4483-5EAE-8617-43CCA99FA3ED}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\demo">
+    <Filter Include="taco_generated\cpp\demo">
       <UniqueIdentifier>{EBC3CCA2-3493-5B16-BD6A-5C628AD64908}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\enums">
+    <Filter Include="taco_generated\cpp\enums">
       <UniqueIdentifier>{B6775DAE-09C3-5B17-9AD5-B6F26FC5075A}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\maps">
+    <Filter Include="taco_generated\cpp\maps">
       <UniqueIdentifier>{B573B2D2-64E3-596F-9E71-DA2674C30852}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\partial">
+    <Filter Include="taco_generated\cpp\partial">
       <UniqueIdentifier>{58797306-821B-54D9-8F37-3DD231C58845}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\recursive">
+    <Filter Include="taco_generated\cpp\recursive">
       <UniqueIdentifier>{E92BA104-1AE7-541C-AD1C-433520DC4A13}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\scalars">
+    <Filter Include="taco_generated\cpp\scalars">
       <UniqueIdentifier>{57E4C229-818C-5AAD-8514-3337D3FBA117}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\ver_v1">
+    <Filter Include="taco_generated\cpp\ver_v1">
       <UniqueIdentifier>{F4E53695-BCBB-597E-B062-5922E6898C09}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gen\cpp\ver_v2">
+    <Filter Include="taco_generated\cpp\ver_v2">
       <UniqueIdentifier>{0EB11328-CE63-5DA8-B8AB-0157B91C6317}</UniqueIdentifier>
     </Filter>
     <Filter Include="googletest">
@@ -140,132 +140,132 @@
       <Filter>googletest\src\gtest\src</Filter>
     </ClCompile>
     <ClCompile Include="Cpp14Check.cpp">
-      <Filter>cpp</Filter>
+      <Filter>cpp_tests</Filter>
     </ClCompile>
     <ClCompile Include="Cpp14CheckTest.cpp">
-      <Filter>cpp</Filter>
+      <Filter>cpp_tests</Filter>
     </ClCompile>
     <ClCompile Include="ProtacoTest.cpp">
-      <Filter>cpp</Filter>
+      <Filter>cpp_tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\include\cpp\Protaco.hpp">
       <Filter>include\cpp</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\alt\Recipe.g.h">
-      <Filter>gen\cpp\alt</Filter>
+    <ClInclude Include="..\taco_generated\cpp\alt\Recipe.g.h">
+      <Filter>taco_generated\cpp\alt</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\build1\Order.g.h">
-      <Filter>gen\cpp\build1</Filter>
+    <ClInclude Include="..\taco_generated\cpp\build1\Order.g.h">
+      <Filter>taco_generated\cpp\build1</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\build1\Ping.g.h">
-      <Filter>gen\cpp\build1</Filter>
+    <ClInclude Include="..\taco_generated\cpp\build1\Ping.g.h">
+      <Filter>taco_generated\cpp\build1</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\build2\Order.g.h">
-      <Filter>gen\cpp\build2</Filter>
+    <ClInclude Include="..\taco_generated\cpp\build2\Order.g.h">
+      <Filter>taco_generated\cpp\build2</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\build2\Ping.g.h">
-      <Filter>gen\cpp\build2</Filter>
+    <ClInclude Include="..\taco_generated\cpp\build2\Ping.g.h">
+      <Filter>taco_generated\cpp\build2</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\build3\Order.g.h">
-      <Filter>gen\cpp\build3</Filter>
+    <ClInclude Include="..\taco_generated\cpp\build3\Order.g.h">
+      <Filter>taco_generated\cpp\build3</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\build4\Order.g.h">
-      <Filter>gen\cpp\build4</Filter>
+    <ClInclude Include="..\taco_generated\cpp\build4\Order.g.h">
+      <Filter>taco_generated\cpp\build4</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D0.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D0.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D1.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D1.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D2.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D2.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D3.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D3.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D4.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D4.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D5.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D5.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D6.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D6.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D7.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D7.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\deep\D8.g.h">
-      <Filter>gen\cpp\deep</Filter>
+    <ClInclude Include="..\taco_generated\cpp\deep\D8.g.h">
+      <Filter>taco_generated\cpp\deep</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\Delivery.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\Delivery.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\DeliveryProof.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\DeliveryProof.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\DeliveryRoute.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\DeliveryRoute.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\Heartbeat.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\Heartbeat.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\PizzaOrder.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\PizzaOrder.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\RouteStop.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\RouteStop.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\demo\Topping.g.h">
-      <Filter>gen\cpp\demo</Filter>
+    <ClInclude Include="..\taco_generated\cpp\demo\Topping.g.h">
+      <Filter>taco_generated\cpp\demo</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\enums\Pie.g.h">
-      <Filter>gen\cpp\enums</Filter>
+    <ClInclude Include="..\taco_generated\cpp\enums\Pie.g.h">
+      <Filter>taco_generated\cpp\enums</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\enums\PizzaSize.enum.h">
-      <Filter>gen\cpp\enums</Filter>
+    <ClInclude Include="..\taco_generated\cpp\enums\PizzaSize.enum.h">
+      <Filter>taco_generated\cpp\enums</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\maps\Dish.g.h">
-      <Filter>gen\cpp\maps</Filter>
+    <ClInclude Include="..\taco_generated\cpp\maps\Dish.g.h">
+      <Filter>taco_generated\cpp\maps</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\maps\Grade.enum.h">
-      <Filter>gen\cpp\maps</Filter>
+    <ClInclude Include="..\taco_generated\cpp\maps\Grade.enum.h">
+      <Filter>taco_generated\cpp\maps</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\maps\Menu.g.h">
-      <Filter>gen\cpp\maps</Filter>
+    <ClInclude Include="..\taco_generated\cpp\maps\Menu.g.h">
+      <Filter>taco_generated\cpp\maps</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\partial\Delivery.g.h">
-      <Filter>gen\cpp\partial</Filter>
+    <ClInclude Include="..\taco_generated\cpp\partial\Delivery.g.h">
+      <Filter>taco_generated\cpp\partial</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\partial\DeliveryRoute.g.h">
-      <Filter>gen\cpp\partial</Filter>
+    <ClInclude Include="..\taco_generated\cpp\partial\DeliveryRoute.g.h">
+      <Filter>taco_generated\cpp\partial</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\partial\PizzaOrder.g.h">
-      <Filter>gen\cpp\partial</Filter>
+    <ClInclude Include="..\taco_generated\cpp\partial\PizzaOrder.g.h">
+      <Filter>taco_generated\cpp\partial</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\partial\Topping.g.h">
-      <Filter>gen\cpp\partial</Filter>
+    <ClInclude Include="..\taco_generated\cpp\partial\Topping.g.h">
+      <Filter>taco_generated\cpp\partial</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\recursive\Node.g.h">
-      <Filter>gen\cpp\recursive</Filter>
+    <ClInclude Include="..\taco_generated\cpp\recursive\Node.g.h">
+      <Filter>taco_generated\cpp\recursive</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\scalars\Move.g.h">
-      <Filter>gen\cpp\scalars</Filter>
+    <ClInclude Include="..\taco_generated\cpp\scalars\Move.g.h">
+      <Filter>taco_generated\cpp\scalars</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\scalars\Numbers.g.h">
-      <Filter>gen\cpp\scalars</Filter>
+    <ClInclude Include="..\taco_generated\cpp\scalars\Numbers.g.h">
+      <Filter>taco_generated\cpp\scalars</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\scalars\Tick.g.h">
-      <Filter>gen\cpp\scalars</Filter>
+    <ClInclude Include="..\taco_generated\cpp\scalars\Tick.g.h">
+      <Filter>taco_generated\cpp\scalars</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\ver_v1\Recipe.g.h">
-      <Filter>gen\cpp\ver_v1</Filter>
+    <ClInclude Include="..\taco_generated\cpp\ver_v1\Recipe.g.h">
+      <Filter>taco_generated\cpp\ver_v1</Filter>
     </ClInclude>
-    <ClInclude Include="..\gen\cpp\ver_v2\Recipe.g.h">
-      <Filter>gen\cpp\ver_v2</Filter>
+    <ClInclude Include="..\taco_generated\cpp\ver_v2\Recipe.g.h">
+      <Filter>taco_generated\cpp\ver_v2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

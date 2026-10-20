@@ -144,9 +144,9 @@ Selecting targets still loads and validates every input. Referenced definitions 
 **Windows command prompt**
 
 ```bat
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py --check
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp Menu Category PizzaSize
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py --check
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp Menu Category PizzaSize
 ```
 
 **Exit codes and byte rules**
@@ -426,7 +426,7 @@ Maps serialize in container iteration order. Identical contents can produce a di
 
 **Optional self-reference fields**
 
-These signatures are from the single `next` field in the [test Node](../protaco_compiler/tests/gen/cpp/recursive/Node.g.h). The example uses it as a linked node of menu categories.
+These signatures are from the single `next` field in the [test Node](../protaco_compiler/tests/taco_generated/cpp/recursive/Node.g.h). The example uses it as a linked node of menu categories.
 
 **C++**
 
@@ -567,7 +567,7 @@ uint16_t version = demo::DeliveryRoute::MsgVersion();
 uint16_t minimum = demo::DeliveryRoute::MsgMinVersion();
 uint32_t hash = demo::DeliveryRoute::MsgSchemaHash();
 
-build3::v1::Order oldOrder; // tests/gen/cpp/build3/Order.g.h
+build3::v1::Order oldOrder; // tests/taco_generated/cpp/build3/Order.g.h
 auto restored = protaco::ToObject<build3::v1::Order>(oldOrder.Serialize());
 ```
 
@@ -1621,7 +1621,7 @@ Put the output root on sys.path. The namespace `demo` becomes `demo/`, and `pizz
 ```python
 # From the repository root:
 import sys
-sys.path.insert(0, "examples/gen/py")
+sys.path.insert(0, "examples/taco_generated/py")
 import protaco
 from demo.DeliveryRoute_g import DeliveryRoute
 from demo.RouteStop_g import RouteStop
@@ -1668,7 +1668,7 @@ route.stops.append(RouteStop(orderId="A-100", address="1 Pizza St", etaMin=10))
 data = route.Serialize()
 schema_hash = DeliveryRoute.MsgSchemaHash
 
-# With protaco_compiler/tests/gen/py on sys.path:
+# With protaco_compiler/tests/taco_generated/py on sys.path:
 from build3.Order_g import v1
 old_order = v1.Order()
 restored = protaco.ToObject(v1.Order, old_order.Serialize())
@@ -1920,19 +1920,19 @@ include/
 protaco_compiler/
   protacoc/
   tests/
-    cpp/
-    cs/
-    py/
+    cpp_tests/
+    cs_tests/
+    py_tests/
     schemas/
-    gen/
+    taco_generated/
     golden/
     googletest/
 examples/
   schemas/
-  gen/
-  cpp/
-  cs/
-  py/
+  taco_generated/
+  cpp_examples/
+  cs_examples/
+  python_examples/
 docs/
   benchmark/
   img/
@@ -1947,7 +1947,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 The 0.6.0 verification record: 41 C++ tests, 36 C# tests, and 26 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
-Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs/Program.cs), and [Python tests](../protaco_compiler/tests/py/test_protaco.py).
+Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 
 - Generator: YAML per error code, cycles, mixed namespaces, the nesting limit, the version-feature restriction on field-type messages, enum defaults, input-order independence, and `--check` results for up-to-date and modified files
 - Schema contract: FNV-1a canonical text; name, version, and fingerprint mismatches; old fingerprints kept; reading a new frame as one's own version; choosing an older type; the sender's min_version check

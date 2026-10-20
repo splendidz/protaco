@@ -1,5 +1,5 @@
 # test_protaco.py. Tests for the Python runtime (include/python/protaco.py) and protacoc generated Python code.
-# Run: python test_protaco.py <tests folder> (protaco_compiler/tests). Generated packages: <tests folder>/gen/py.
+# Run: python test_protaco.py <tests folder> (protaco_compiler/tests). Generated packages: <tests folder>/taco_generated/py.
 # Same values and texts as the C++ (ProtacoTest.cpp) and C# (Program.cs) tests; golden files come from C++.
 import datetime
 import os
@@ -9,7 +9,7 @@ import unittest
 
 TESTS = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(TESTS, "..", "..", "include", "python"))
-sys.path.insert(0, os.path.join(TESTS, "gen", "py"))
+sys.path.insert(0, os.path.join(TESTS, "taco_generated", "py"))
 
 import protaco  # noqa: E402
 from alt.Recipe_g import Recipe as AltRecipe  # noqa: E402

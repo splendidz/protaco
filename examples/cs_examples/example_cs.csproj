@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- C# example using protacoc generated code. .NET Framework 4.6.1, C# 7.3. Compiles examples\gen\cs (messages and Protaco.cs).
+<!-- C# example using protacoc generated code. .NET Framework 4.6.1, C# 7.3. Compiles examples\taco_generated\cs (messages and Protaco.cs).
      Output: bin\<Configuration>\protaco_example_cs.exe. Intermediates: .IntermediateDirectory\example_cs\. -->
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
@@ -29,8 +29,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <Compile Include="..\gen\cs\*.cs">
-      <Link>gen\cs\%(Filename)%(Extension)</Link>
+    <Compile Include="..\taco_generated\cs\*.cs">
+      <Link>taco_generated\cs\%(Filename)%(Extension)</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>

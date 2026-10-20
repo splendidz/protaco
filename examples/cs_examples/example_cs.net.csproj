@@ -18,7 +18,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\gen\cs\*.cs" Link="gen\cs\%(Filename)%(Extension)" />
+    <Compile Include="..\taco_generated\cs\*.cs" Link="taco_generated\cs\%(Filename)%(Extension)" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

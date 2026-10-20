@@ -1,4 +1,4 @@
-// Program.cs. How to use protacoc generated code from C#. Same steps as ../cpp/main.cpp.
+// Program.cs. How to use protacoc generated code from C#. Same steps as ../cpp_examples/main.cpp.
 using System;
 using demo;
 

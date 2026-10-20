@@ -144,9 +144,9 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 **Windows 명령 프롬프트**
 
 ```bat
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py --check
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp Menu Category PizzaSize
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py --check
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp Menu Category PizzaSize
 ```
 
 **종료 코드와 바이트 규칙**
@@ -426,7 +426,7 @@ map 직렬화 순서는 컨테이너 순회 순서입니다. 같은 내용도 �
 
 **선택 자기 참조 필드**
 
-[시험용 Node](../protaco_compiler/tests/gen/cpp/recursive/Node.g.h)의 단일 `next` 필드 시그니처입니다. 이 예제에서는 메뉴 분류의 연결 노드로 사용합니다.
+[시험용 Node](../protaco_compiler/tests/taco_generated/cpp/recursive/Node.g.h)의 단일 `next` 필드 시그니처입니다. 이 예제에서는 메뉴 분류의 연결 노드로 사용합니다.
 
 **C++**
 
@@ -567,7 +567,7 @@ uint16_t version = demo::DeliveryRoute::MsgVersion();
 uint16_t minimum = demo::DeliveryRoute::MsgMinVersion();
 uint32_t hash = demo::DeliveryRoute::MsgSchemaHash();
 
-build3::v1::Order oldOrder; // tests/gen/cpp/build3/Order.g.h
+build3::v1::Order oldOrder; // tests/taco_generated/cpp/build3/Order.g.h
 auto restored = protaco::ToObject<build3::v1::Order>(oldOrder.Serialize());
 ```
 
@@ -1621,7 +1621,7 @@ public const int MaxFrameBytes = 0x7FFFFFC7;
 ```python
 # From the repository root:
 import sys
-sys.path.insert(0, "examples/gen/py")
+sys.path.insert(0, "examples/taco_generated/py")
 import protaco
 from demo.DeliveryRoute_g import DeliveryRoute
 from demo.RouteStop_g import RouteStop
@@ -1668,7 +1668,7 @@ route.stops.append(RouteStop(orderId="A-100", address="1 Pizza St", etaMin=10))
 data = route.Serialize()
 schema_hash = DeliveryRoute.MsgSchemaHash
 
-# With protaco_compiler/tests/gen/py on sys.path:
+# With protaco_compiler/tests/taco_generated/py on sys.path:
 from build3.Order_g import v1
 old_order = v1.Order()
 restored = protaco.ToObject(v1.Order, old_order.Serialize())
@@ -1920,19 +1920,19 @@ include/
 protaco_compiler/
   protacoc/
   tests/
-    cpp/
-    cs/
-    py/
+    cpp_tests/
+    cs_tests/
+    py_tests/
     schemas/
-    gen/
+    taco_generated/
     golden/
     googletest/
 examples/
   schemas/
-  gen/
-  cpp/
-  cs/
-  py/
+  taco_generated/
+  cpp_examples/
+  cs_examples/
+  python_examples/
 docs/
   benchmark/
   img/
@@ -1947,7 +1947,7 @@ bin/
 
 0.6.0 검증 기록은 Windows와 Linux 모두 C++ 41개, C# 36개, Python 26개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
-시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs/Program.cs), [Python 시험](../protaco_compiler/tests/py/test_protaco.py)에 있습니다.
+시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 
 - 생성기: 오류 코드별 YAML, 순환, namespace 혼용, 중첩 limit, 필드 타입 메시지의 version 기능 제한, enum default, 입력 순서 무관, `--check`의 최신·변조 결과 판정
 - 스키마 계약: FNV-1a canonical text, 이름·version·fingerprint 불일치, 옛 fingerprint 유지, 새 프레임을 자기 version으로 읽기, 옛 타입 선택, 송신 min_version 검사

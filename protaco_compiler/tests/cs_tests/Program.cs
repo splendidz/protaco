@@ -207,7 +207,7 @@ namespace Protacoc.Tests
         private static void GeneratorCheckUpToDate()
         {
             GenResult result = Protacoc("-I", Demo(), "--no_runtime",
-                "--cpp_out", Path.Combine(tests_, "gen", "cpp", "demo"), "--cs_out", Path.Combine(tests_, "gen", "cs", "demo"), "--check");
+                "--cpp_out", Path.Combine(tests_, "taco_generated", "cpp", "demo"), "--cs_out", Path.Combine(tests_, "taco_generated", "cs", "demo"), "--check");
             Equal(0, result.Exit, "exit code (" + result.Output.Trim() + ")");
         }
 

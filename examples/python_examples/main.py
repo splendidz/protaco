@@ -1,10 +1,10 @@
-# main.py. How to use protacoc generated Python code. Same steps as cpp/main.cpp.
+# main.py. How to use protacoc generated Python code. Same steps as cpp_examples/main.cpp.
 # Steps: import the generated module, set values and call Serialize(), receiver calls protaco.ToObject(type, data).
-# Run: python examples/py/main.py (generated packages and protaco.py in examples/gen/py).
+# Run: python examples/python_examples/main.py (generated packages and protaco.py in examples/taco_generated/py).
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "gen", "py"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "taco_generated", "py"))
 
 import protaco  # noqa: E402
 from demo.Category_g import Category  # noqa: E402

@@ -20,7 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\..\include\cs\Protaco.cs" Link="include\cs\Protaco.cs" />
-    <Compile Include="..\gen\cs\**\*.cs" Link="gen\cs\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\taco_generated\cs\**\*.cs" Link="taco_generated\cs\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

@@ -41,7 +41,7 @@
       <SDLCheck>true</SDLCheck>
       <!-- /utf-8: sources are UTF-8. gtest header warnings are silenced as external. -->
       <AdditionalOptions>/utf-8 /experimental:external /external:I "$(GTestDir)include" /external:W0 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\cpp;$(ProjectDir)..\gen\cpp\demo;$(ProjectDir)..\gen\cpp;$(GTestDir)include;$(GTestDir)src\gtest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include\cpp;$(ProjectDir)..\taco_generated\cpp\demo;$(ProjectDir)..\taco_generated\cpp;$(GTestDir)include;$(GTestDir)src\gtest;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>
       <Optimization Condition="'$(Configuration)'=='Release'">MaxSpeed</Optimization>
@@ -72,8 +72,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\include\cpp\Protaco.hpp" />
-    <ClInclude Include="..\gen\cpp\**\*.g.h" />
-    <ClInclude Include="..\gen\cpp\**\*.enum.h" />
+    <ClInclude Include="..\taco_generated\cpp\**\*.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\**\*.enum.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\schemas\**\*.yaml" />

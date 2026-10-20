@@ -18,21 +18,21 @@
 ```text
 examples/
   schemas/
-  gen/
+  taco_generated/
     cpp/                  *.g.h, *.enum.h, Protaco.hpp
     cs/                   *.g.cs, *.enum.cs, Protaco.cs
     py/
       protaco.py
       demo/               *_g.py, *_enum.py
-  cpp/
+  cpp_examples/
     main.cpp
     example.vcxproj
     example.vcxproj.filters
-  cs/
+  cs_examples/
     Program.cs
     example_cs.csproj
     example_cs.net.csproj
-  py/
+  python_examples/
     main.py
   examples.sln
 ```
@@ -57,14 +57,14 @@ build.cmd
 
 ```bat
 msbuild protaco_compiler\protacoc\protacoc.csproj /p:Configuration=Release
-bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\gen\cpp --cs_out examples\gen\cs --py_out examples\gen\py
+bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py
 msbuild examples\examples.sln /p:Configuration=Release /p:Platform=x64
 bin\Release\protaco_example.exe
 bin\Release\protaco_example_cs.exe
-python examples\py\main.py
+python examples\python_examples\main.py
 ```
 
-[example.vcxproj](cpp/example.vcxproj)의 include 경로는 `$(ProjectDir)..\gen\cpp`입니다. Pre-Build Event는 `bin\Release\protacoc.exe`가 있으면 사용하고, 없으면 `bin\Debug\protacoc.exe`를 사용해 C++과 C# 코드를 생성합니다. Python 코드는 위의 `--py_out` 명령이나 전체 빌드 스크립트로 생성합니다. 프로젝트 설정은 v141 x64, C++17, `/W4 /WX`, `/utf-8`이며 별도 런타임 라이브러리를 링크하지 않습니다. 생성 헤더의 C++14 호환성은 [Cpp14Check.cpp](../protaco_compiler/tests/cpp/Cpp14Check.cpp)에서 검사합니다.
+[example.vcxproj](cpp_examples/example.vcxproj)의 include 경로는 `$(ProjectDir)..\taco_generated\cpp`입니다. Pre-Build Event는 `bin\Release\protacoc.exe`가 있으면 사용하고, 없으면 `bin\Debug\protacoc.exe`를 사용해 C++과 C# 코드를 생성합니다. Python 코드는 위의 `--py_out` 명령이나 전체 빌드 스크립트로 생성합니다. 프로젝트 설정은 v141 x64, C++17, `/W4 /WX`, `/utf-8`이며 별도 런타임 라이브러리를 링크하지 않습니다. 생성 헤더의 C++14 호환성은 [Cpp14Check.cpp](../protaco_compiler/tests/cpp_tests/Cpp14Check.cpp)에서 검사합니다.
 
 ### Linux
 
@@ -82,13 +82,13 @@ sh build.sh
 
 ```sh
 dotnet build protaco_compiler/protacoc/protacoc.net.csproj -c Release
-bin/Release/net8.0/protacoc -I examples/schemas --cpp_out examples/gen/cpp --cs_out examples/gen/cs --py_out examples/gen/py
+bin/Release/net8.0/protacoc -I examples/schemas --cpp_out examples/taco_generated/cpp --cs_out examples/taco_generated/cs --py_out examples/taco_generated/py
 mkdir -p bin/Release
-g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -Iexamples/gen/cpp examples/cpp/main.cpp -o bin/Release/protaco_example
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -Iexamples/taco_generated/cpp examples/cpp_examples/main.cpp -o bin/Release/protaco_example
 bin/Release/protaco_example
-dotnet build examples/cs/example_cs.net.csproj -c Release
+dotnet build examples/cs_examples/example_cs.net.csproj -c Release
 bin/Release/net8.0/protaco_example_cs
-python3 examples/py/main.py
+python3 examples/python_examples/main.py
 ```
 
 Windows 스크립트는 `MSBUILD`·`PYTHON`, Linux 스크립트는 `DOTNET`·`CXX`·`PYTHON` 환경 변수를 받습니다. .NET이 시스템 전체에 설치되어 있지 않으면 `DOTNET=~/.dotnet/dotnet sh build.sh`처럼 실행합니다. 수동 실행에서는 .NET 앱 호스트가 런타임을 찾을 수 있도록 `DOTNET_ROOT`도 설치 경로로 설정합니다.
@@ -169,7 +169,7 @@ values:
 
 ## 4. 프로그램 설명
 
-[C++](cpp/main.cpp)은 아래 8단계를 실행합니다. [C#](cs/Program.cs)은 고정 버퍼 단계가 없는 7단계이고, [Python](py/main.py)은 zero-copy 단계가 없는 7단계입니다. 다음은 C++의 실제 실행 출력입니다. Envelope 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
+[C++](cpp_examples/main.cpp)은 아래 8단계를 실행합니다. [C#](cs_examples/Program.cs)은 고정 버퍼 단계가 없는 7단계이고, [Python](python_examples/main.py)은 zero-copy 단계가 없는 7단계입니다. 다음은 C++의 실제 실행 출력입니다. Envelope 시각은 실행마다 달라지고, id는 예제의 메시지 생성 순서로 정해집니다.
 
 ```text
 DeliveryRoute: 182 bytes
@@ -584,11 +584,11 @@ if when:
 
 ## 5. 생성 코드
 
-아래는 [gen/](gen/)의 실제 생성 코드에서 필요한 부분만 발췌한 것입니다. 생략한 멤버는 주석으로 표시했습니다.
+아래는 [taco_generated/](taco_generated/)의 실제 생성 코드에서 필요한 부분만 발췌한 것입니다. 생략한 멤버는 주석으로 표시했습니다.
 
 ### 5.1 C++
 
-[RouteStop.g.h](gen/cpp/RouteStop.g.h)의 고정 문자열 setter는 UTF-8 바이트 limit을 검사합니다. `orderId`는 16바이트, `address`는 48바이트입니다. 정수 setter는 버퍼의 고정 위치에 기록합니다.
+[RouteStop.g.h](taco_generated/cpp/RouteStop.g.h)의 고정 문자열 setter는 UTF-8 바이트 limit을 검사합니다. `orderId`는 16바이트, `address`는 48바이트입니다. 정수 setter는 버퍼의 고정 위치에 기록합니다.
 
 **C++**
 
@@ -614,7 +614,7 @@ void set_etaMin(int32_t value)
 }
 ```
 
-[Heartbeat.g.h](gen/cpp/Heartbeat.g.h)의 `View` 발췌입니다. 나머지 필드 접근자는 생략했습니다.
+[Heartbeat.g.h](taco_generated/cpp/Heartbeat.g.h)의 `View` 발췌입니다. 나머지 필드 접근자는 생략했습니다.
 
 **C++**
 
@@ -636,7 +636,7 @@ public:
 };
 ```
 
-[PizzaSize.enum.h](gen/cpp/PizzaSize.enum.h)의 enum과 이름 변환입니다. 선언되지 않은 번호는 `nullptr`를 반환합니다.
+[PizzaSize.enum.h](taco_generated/cpp/PizzaSize.enum.h)의 enum과 이름 변환입니다. 선언되지 않은 번호는 `nullptr`를 반환합니다.
 
 **C++**
 
@@ -668,7 +668,7 @@ inline const char* EnumName(PizzaSize value)
 }
 ```
 
-[Menu.g.h](gen/cpp/Menu.g.h)의 map 접근자입니다. mutable 참조를 노출하면 이후 변경을 추적할 수 없다는 표시를 남깁니다.
+[Menu.g.h](taco_generated/cpp/Menu.g.h)의 map 접근자입니다. mutable 참조를 노출하면 이후 변경을 추적할 수 없다는 표시를 남깁니다.
 
 **C++**
 
@@ -696,7 +696,7 @@ void set_prices(const std::unordered_map<std::string, double>& value)
 <details>
 <summary>C#</summary>
 
-[Menu.g.cs](gen/cs/Menu.g.cs)의 속성과 직렬화 메서드입니다. C#은 PascalCase 속성을 사용하고 객체의 Envelope를 직렬화합니다.
+[Menu.g.cs](taco_generated/cs/Menu.g.cs)의 속성과 직렬화 메서드입니다. C#은 PascalCase 속성을 사용하고 객체의 Envelope를 직렬화합니다.
 
 ```csharp
 public PizzaSize DefaultSize { get; set; } = PizzaSize.Large;
@@ -718,7 +718,7 @@ public byte[] Serialize()
 <details>
 <summary>Python</summary>
 
-[Menu_g.py](gen/py/demo/Menu_g.py)의 클래스 선언 일부와 `_Bind` 호출입니다. 생성자 본문은 생략했습니다. `_Bind`는 생성 클래스의 고정·가변 필드 layout을 런타임에 등록합니다. `examples/gen/py`를 `sys.path`에 넣으면 `demo` 패키지를 import할 수 있습니다.
+[Menu_g.py](taco_generated/py/demo/Menu_g.py)의 클래스 선언 일부와 `_Bind` 호출입니다. 생성자 본문은 생략했습니다. `_Bind`는 생성 클래스의 고정·가변 필드 layout을 런타임에 등록합니다. `examples/taco_generated/py`를 `sys.path`에 넣으면 `demo` 패키지를 import할 수 있습니다.
 
 ```python
 class Menu(protaco.Message):
@@ -808,7 +808,7 @@ fields:
 
 옛 version 클래스의 fingerprint는 그 version을 배포한 클래스와 같습니다. 예를 들어 `build3::v1::Order::MsgSchemaHash()`와 `build1::Order::MsgSchemaHash()`는 같은 값입니다.
 
-C#의 대응 이름은 `build3.Order`, `build3.v1.Order`입니다. Python은 `protaco_compiler/tests/gen/py`를 모듈 경로에 넣고 같은 모듈의 `Order`와 `v1.Order`를 사용합니다.
+C#의 대응 이름은 `build3.Order`, `build3.v1.Order`입니다. Python은 `protaco_compiler/tests/taco_generated/py`를 모듈 경로에 넣고 같은 모듈의 `Order`와 `v1.Order`를 사용합니다.
 
 <details>
 <summary>Python</summary>
