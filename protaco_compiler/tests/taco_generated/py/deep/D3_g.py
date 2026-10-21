@@ -1,4 +1,4 @@
-﻿# D3_g.py. protacoc 0.6.0, source D3.yaml (sha1 5f1911271792). Do not edit.
+﻿# D3_g.py. protacoc 0.7.0, source D3.yaml (sha1 5f1911271792). Do not edit.
 import protaco
 from .D2_g import D2
 

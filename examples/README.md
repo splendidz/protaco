@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md) · [README](../README.md) · [Reference](../docs/reference.md)
 
-This folder contains YAML schemas, generated code, and C++, C#, and Python programs for protaco 0.6.0. Pizza orders and delivery routes demonstrate the API. The final section follows the revision history of `Order` to explain version management.
+This folder contains YAML schemas, generated code, and C++, C#, and Python programs for protaco 0.7.0. Pizza orders and delivery routes demonstrate the API. The final section follows the revision history of `Order` to explain version management.
 
 ## Contents
 

@@ -1,4 +1,4 @@
-﻿# RouteStop_g.py. protacoc 0.6.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
+﻿# RouteStop_g.py. protacoc 0.7.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
 import protaco
 
 

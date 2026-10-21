@@ -1,4 +1,4 @@
-﻿# Spot_g.py. protacoc 0.6.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
+﻿# Spot_g.py. protacoc 0.7.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
 import protaco
 
 

@@ -1,4 +1,4 @@
-﻿# DeliveryProof_g.py. protacoc 0.6.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
+﻿# DeliveryProof_g.py. protacoc 0.7.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
 import protaco
 
 

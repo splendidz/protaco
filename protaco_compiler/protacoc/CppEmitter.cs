@@ -677,9 +677,9 @@ namespace Protacoc
                 w.Line("/// Fixed fields only. " + (message.AllowExtension ? "With an empty ext, serializing" : "Serializing") + " costs nothing.");
             w.Line("/// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.");
             w.Line("/// The returned reference is valid until this object is modified.");
-            Method(w, "const std::vector<uint8_t>& Serialize() const", "return protaco::detail::Access::Serialize(*this);");
+            Method(w, "const std::vector<uint8_t>& Serialize() const override", "return protaco::detail::Access::Serialize(*this);");
             w.Line("/// Text for logs: field names and values" + (message.AllowExtension ? ", ext entries under ext{...}" : "") + ". protaco::TextStyle::Pretty() for one field per line.");
-            w.Line("std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const");
+            w.Line("std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const override");
             w.Line("{");
             w.Line("    return protaco::detail::Access::ToText(*this, style);");
             w.Line("}");

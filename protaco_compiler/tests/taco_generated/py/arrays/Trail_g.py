@@ -1,4 +1,4 @@
-﻿# Trail_g.py. protacoc 0.6.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
+﻿# Trail_g.py. protacoc 0.7.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
 import protaco
 from .Point_g import Point
 

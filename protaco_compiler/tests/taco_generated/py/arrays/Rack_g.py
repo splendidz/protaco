@@ -1,4 +1,4 @@
-﻿# Rack_g.py. protacoc 0.6.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
+﻿# Rack_g.py. protacoc 0.7.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
 import protaco
 from .Point_g import Point
 from .Slot_g import Slot

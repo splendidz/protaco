@@ -1,4 +1,4 @@
-﻿# Pie_g.py. protacoc 0.6.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
+﻿# Pie_g.py. protacoc 0.7.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
 import protaco
 from .PizzaSize_enum import PizzaSize, PizzaSizeNames
 

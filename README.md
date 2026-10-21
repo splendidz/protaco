@@ -7,7 +7,7 @@
 
 [한국어](README.ko.md) · [Examples](examples/README.md) · [Reference](docs/reference.md) · [Benchmark](docs/benchmark/README.md)
 
-Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.6.0 and serialization format v4.
+Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.7.0 and serialization format v4.
 
 ### When you need serialization
 
@@ -850,6 +850,7 @@ Classes are generated as `<ns>::<Name>`. `<k>` is a field key from the YAML, and
 | Serialization | `const std::vector<uint8_t>& Serialize() const` | Reference to the object's frame buffer |
 | Logging | `std::string ToString(const protaco::TextStyle& = protaco::TextStyle()) const` | [9. Text output](#9-text-output) |
 | Static info | `MsgName()`, `MsgVersion()`, `MsgMinVersion()`, `MsgSchemaHash()` | Branching and diagnostics |
+| Common base | `protaco::IMessage` (`Name()`, `Serialize()`, `As<T>()`, ...) | Any message without its type; `As<T>()` back to the type, [reference](docs/reference.md#41-generated-classes) |
 | Read view | `class View` | Messages with only fixed fields, [6.6](#66-zero-copy) |
 
 `get_`, `set_`, `mutable_`, `has_`, and `clear_` are only for field accessors; every other public function is PascalCase. `mutable_<k>()` hands out a reference so you can change the value, which is why it does not start with `get_`.

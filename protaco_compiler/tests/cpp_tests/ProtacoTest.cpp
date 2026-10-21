@@ -1,6 +1,7 @@
 ﻿// ProtacoTest.cpp. Unit tests (gtest) for the Protaco.hpp runtime and protacoc generated code.
 // Covers: round trip, in-place fixed fields, Serialize() reuse, defaults, version and schema checks, supported versions,
-// closed messages, nesting depth, error paths, ext, ToString, corrupt input, golden bytes, cost of the contract checks.
+// closed messages, nesting depth, error paths, ext, ToString, message base (IMessage), corrupt input, golden bytes,
+// cost of the contract checks.
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include <ctime>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <random>
 #include <string>
 #include <type_traits>
@@ -1136,6 +1138,46 @@ TEST(Protaco, EnvelopeIsStampedOnCreation)
     EXPECT_EQ(77u, reply.GetId());
     EXPECT_GT(reply.GetTimestamp(), protaco::kTimestampMin);
     EXPECT_EQ(first.GetId(), protaco::ToObject<DeliveryRoute>(reply.Serialize()).GetCorr());
+}
+
+// IMessage: messages of different types through one base (name, version, envelope, Serialize, ToString, ownership).
+// As<T> returns the object only as its own C++ type: not as an older version type, not as a same-named type elsewhere.
+TEST(Protaco, MessageBaseHandlesAnyType)
+{
+    std::vector<std::unique_ptr<protaco::IMessage>> messages;
+    messages.push_back(std::make_unique<DeliveryRoute>(MakeDeliveryRoute()));
+    messages.push_back(std::make_unique<Heartbeat>());
+    messages.push_back(std::make_unique<build3::v1::Order>());
+
+    const protaco::IMessage& route = *messages[0];
+    EXPECT_STREQ("DeliveryRoute", route.Name());
+    EXPECT_EQ(DeliveryRoute::MsgVersion(), route.Version());
+    EXPECT_EQ(DeliveryRoute::MsgSchemaHash(), route.SchemaHash());
+    const DeliveryRoute* typed = route.As<DeliveryRoute>();
+    ASSERT_NE(nullptr, typed);
+    EXPECT_EQ(typed->Serialize(), route.Serialize());
+    EXPECT_EQ(typed->ToString(), route.ToString());
+    EXPECT_EQ(typed->ToString(protaco::TextStyle::Pretty()), route.ToString(protaco::TextStyle::Pretty()));
+    EXPECT_EQ(MakeDeliveryRoute().get_stops().size(), protaco::ToObject<DeliveryRoute>(route.Serialize()).get_stops().size());
+    EXPECT_EQ(nullptr, route.As<Heartbeat>());
+
+    protaco::Envelope env;
+    env.id = 5;
+    env.corr = 6;
+    env.ts = 7;
+    messages[1]->SetEnvelope(env);
+    const Heartbeat* beat = messages[1]->As<Heartbeat>();
+    ASSERT_NE(nullptr, beat);
+    EXPECT_EQ(5u, beat->GetId());
+    EXPECT_EQ(6u, beat->GetCorr());
+    EXPECT_EQ(7, beat->GetTimestamp());
+    EXPECT_EQ(5u, messages[1]->GetEnvelope().id);
+
+    protaco::IMessage& old = *messages[2];
+    EXPECT_EQ(1, old.Version());
+    EXPECT_NE(nullptr, old.As<build3::v1::Order>());
+    EXPECT_EQ(nullptr, old.As<build3::Order>());
+    EXPECT_EQ(nullptr, old.As<build1::Order>());
 }
 
 // auto_envelope false (Tick) and DisableAutoEnvelope() leave id and ts at 0 and take no id from the counter.

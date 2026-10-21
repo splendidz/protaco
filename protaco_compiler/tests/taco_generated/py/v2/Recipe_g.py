@@ -1,4 +1,4 @@
-﻿# Recipe_g.py. protacoc 0.6.0, source Recipe.yaml (sha1 f97dfa2fc24c). Do not edit.
+﻿# Recipe_g.py. protacoc 0.7.0, source Recipe.yaml (sha1 f97dfa2fc24c). Do not edit.
 import protaco
 
 

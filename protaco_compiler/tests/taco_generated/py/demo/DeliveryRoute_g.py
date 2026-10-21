@@ -1,4 +1,4 @@
-﻿# DeliveryRoute_g.py. protacoc 0.6.0, source DeliveryRoute.yaml (sha1 c54af80e4be8). Do not edit.
+﻿# DeliveryRoute_g.py. protacoc 0.7.0, source DeliveryRoute.yaml (sha1 c54af80e4be8). Do not edit.
 import protaco
 from .RouteStop_g import RouteStop
 

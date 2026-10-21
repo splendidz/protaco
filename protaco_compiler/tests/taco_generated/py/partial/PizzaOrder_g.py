@@ -1,4 +1,4 @@
-﻿# PizzaOrder_g.py. protacoc 0.6.0, source PizzaOrder.yaml (sha1 300feed1cc93). Do not edit.
+﻿# PizzaOrder_g.py. protacoc 0.7.0, source PizzaOrder.yaml (sha1 300feed1cc93). Do not edit.
 import protaco
 from .Delivery_g import Delivery
 from .Topping_g import Topping

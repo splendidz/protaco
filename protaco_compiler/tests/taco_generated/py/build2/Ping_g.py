@@ -1,4 +1,4 @@
-﻿# Ping_g.py. protacoc 0.6.0, source Ping.yaml (sha1 dd3741203727). Do not edit.
+﻿# Ping_g.py. protacoc 0.7.0, source Ping.yaml (sha1 dd3741203727). Do not edit.
 import protaco
 
 

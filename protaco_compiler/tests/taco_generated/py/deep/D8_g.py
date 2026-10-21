@@ -1,4 +1,4 @@
-﻿# D8_g.py. protacoc 0.6.0, source D8.yaml (sha1 547614165651). Do not edit.
+﻿# D8_g.py. protacoc 0.7.0, source D8.yaml (sha1 547614165651). Do not edit.
 import protaco
 from .D7_g import D7
 

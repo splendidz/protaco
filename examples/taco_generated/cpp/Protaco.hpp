@@ -2423,13 +2423,73 @@ bool Access::MutableViewOf(uint8_t* data, size_t size, typename T::MutableView* 
 }
 }  // namespace detail
 
-/// Envelope API shared by every generated message (CRTP base). The envelope lives in the frame header, so these calls
-/// read and write the frame bytes directly. A new object gets id = NextId() and ts = NowUs(); corr starts at 0.
-/// auto_envelope false in the yaml, or DisableAutoEnvelope(), leaves id and ts at 0.
-template <class T>
-class CMessage
+/// Common base of every generated message, for code that handles messages without knowing their type: name, version,
+/// envelope, Serialize and ToString through a reference or pointer, As<T>() back to the generated type.
+/// std::unique_ptr<IMessage> owns any message. Copy and move the generated type, not IMessage.
+class IMessage
 {
 public:
+    virtual ~IMessage() = default;
+
+    /// MsgName, MsgVersion and MsgSchemaHash of the generated type.
+    virtual const char* Name() const = 0;
+    virtual uint16_t Version() const = 0;
+    virtual uint32_t SchemaHash() const = 0;
+
+    virtual Envelope GetEnvelope() const = 0;
+    virtual void SetEnvelope(const Envelope& env) = 0;
+
+    /// Same as Serialize and ToString of the generated type.
+    virtual const std::vector<uint8_t>& Serialize() const = 0;
+    virtual std::string ToString(const TextStyle& style) const = 0;
+
+    std::string ToString() const
+    {
+        return ToString(TextStyle());
+    }
+
+    /// This message as the generated type T, or nullptr if it is another type. The check is the C++ type (dynamic_cast,
+    /// needs RTTI): an older version type (v1::T) and a same-named type of another namespace are other types.
+    template <class T>
+    T* As()
+    {
+        return dynamic_cast<T*>(this);
+    }
+
+    template <class T>
+    const T* As() const
+    {
+        return dynamic_cast<const T*>(this);
+    }
+
+protected:
+    IMessage() = default;
+    IMessage(const IMessage&) = default;
+    IMessage& operator=(const IMessage&) = default;
+};
+
+/// Envelope API shared by every generated message (CRTP base, derived from IMessage). The envelope lives in the frame
+/// header, so these calls read and write the frame bytes directly. A new object gets id = NextId() and ts = NowUs();
+/// corr starts at 0. auto_envelope false in the yaml, or DisableAutoEnvelope(), leaves id and ts at 0.
+template <class T>
+class CMessage : public IMessage
+{
+public:
+    const char* Name() const override
+    {
+        return T::MsgName();
+    }
+
+    uint16_t Version() const override
+    {
+        return T::MsgVersion();
+    }
+
+    uint32_t SchemaHash() const override
+    {
+        return T::MsgSchemaHash();
+    }
+
     uint32_t GetId() const
     {
         return detail::LoadEnvelope(Frame()).id;
@@ -2467,12 +2527,12 @@ public:
         SetTimestamp(NowUs());
     }
 
-    Envelope GetEnvelope() const
+    Envelope GetEnvelope() const override
     {
         return detail::LoadEnvelope(Frame());
     }
 
-    void SetEnvelope(const Envelope& env)
+    void SetEnvelope(const Envelope& env) override
     {
         detail::StoreEnvelope(Buffer(), env);
     }

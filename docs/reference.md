@@ -2,7 +2,7 @@
 
 [한국어](reference.ko.md) · [README](../README.md) · [Examples](../examples/README.md)
 
-Detailed reference for protacoc 0.6.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
+Detailed reference for protacoc 0.7.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
 
 1. [Schema fingerprint](#1-schema-fingerprint)
 2. [Command line](#2-command-line)
@@ -650,6 +650,49 @@ restored = protaco.ToObject(v1.Order, old_order.Serialize())
 ```
 
 </details>
+
+**Common base IMessage**
+
+**C++**
+
+```cpp
+class IMessage
+{
+public:
+    virtual ~IMessage();
+    virtual const char* Name() const;        // MsgName()
+    virtual uint16_t Version() const;        // MsgVersion()
+    virtual uint32_t SchemaHash() const;     // MsgSchemaHash()
+    virtual protaco::Envelope GetEnvelope() const;
+    virtual void SetEnvelope(const protaco::Envelope& env);
+    virtual const std::vector<uint8_t>& Serialize() const;
+    virtual std::string ToString(const protaco::TextStyle& style) const;
+    std::string ToString() const;
+    template <class T> T* As();
+    template <class T> const T* As() const;
+};
+```
+
+Every generated class derives from `protaco::IMessage` through `CMessage<T>`. Code that does not know the type handles any message through `IMessage&`, `IMessage*`, or `std::unique_ptr<IMessage>`: name and version, envelope, serialization, and text. `As<T>()` gives the object back as the generated type.
+
+- Returns: `Name`, `Version`, and `SchemaHash` are the static info of the generated type; the other functions behave as the generated functions of the same name
+- `As<T>`: nullptr when the object is not a T. The check is the C++ type (`dynamic_cast`, needs RTTI): an older version type `v1::T` and a same-named type of another namespace are other types
+- Ownership: deleting through `std::unique_ptr<IMessage>` is safe (virtual destructor). Copy and move the generated type, not IMessage
+- Cost: each generated object holds one virtual table pointer. Calls on the generated type are unchanged
+- C# classes share the base class `Protaco.Message`; Python needs no base
+
+**C++**
+
+```cpp
+std::vector<std::unique_ptr<protaco::IMessage>> outbox;
+outbox.push_back(std::make_unique<demo::DeliveryRoute>(route));
+outbox.push_back(std::make_unique<demo::Heartbeat>());
+for (const std::unique_ptr<protaco::IMessage>& message : outbox)
+    std::printf("%s v%u %zu bytes: %s\n", message->Name(), unsigned(message->Version()), message->Serialize().size(), message->ToString().c_str());
+demo::Heartbeat* beat = outbox[1]->As<demo::Heartbeat>();
+if (beat != nullptr)
+    beat->SetTimestampAsNow();
+```
 
 **View**
 
@@ -1946,7 +1989,7 @@ The decoder keeps an unknown number as a plain int. An enum member that is a Pyt
 <summary>Python constants</summary>
 
 ```python
-protaco.VERSION              # "0.6.0"
+protaco.VERSION              # "0.7.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2035,7 +2078,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 ### 7.3 Test coverage
 
-The 0.6.0 verification record: 41 C++ tests, 36 C# tests, and 26 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
+The 0.7.0 verification record: 48 C++ tests, 42 C# tests, and 30 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
 Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 

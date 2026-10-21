@@ -1,4 +1,4 @@
-﻿# Sizes_const.py. protacoc 0.6.0, source Sizes.const.yaml (sha1 9377a07f753a). Do not edit.
+﻿# Sizes_const.py. protacoc 0.7.0, source Sizes.const.yaml (sha1 9377a07f753a). Do not edit.
 
 
 class Sizes:

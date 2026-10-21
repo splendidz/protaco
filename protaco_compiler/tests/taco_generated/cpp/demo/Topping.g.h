@@ -1,4 +1,4 @@
-﻿// Topping.g.h. protacoc 0.6.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
+﻿// Topping.g.h. protacoc 0.7.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -90,13 +90,13 @@ public:
     /// Fixed fields only. With an empty ext, serializing costs nothing.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
-    const std::vector<uint8_t>& Serialize() const
+    const std::vector<uint8_t>& Serialize() const override
     {
         return protaco::detail::Access::Serialize(*this);
     }
 
     /// Text for logs: field names and values, ext entries under ext{...}. protaco::TextStyle::Pretty() for one field per line.
-    std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const
+    std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const override
     {
         return protaco::detail::Access::ToText(*this, style);
     }

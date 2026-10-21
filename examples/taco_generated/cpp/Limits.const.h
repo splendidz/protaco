@@ -1,4 +1,4 @@
-﻿// Limits.const.h. protacoc 0.6.0, source Limits.const.yaml (sha1 932fbc356699). Do not edit.
+﻿// Limits.const.h. protacoc 0.7.0, source Limits.const.yaml (sha1 932fbc356699). Do not edit.
 #pragma once
 
 #include <cstdint>

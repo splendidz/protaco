@@ -2,7 +2,7 @@
 
 [English](reference.md) · [README](../README.ko.md) · [예제](../examples/README.ko.md)
 
-protacoc 0.6.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
+protacoc 0.7.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
 1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
@@ -650,6 +650,49 @@ restored = protaco.ToObject(v1.Order, old_order.Serialize())
 ```
 
 </details>
+
+**공통 기반 IMessage**
+
+**C++**
+
+```cpp
+class IMessage
+{
+public:
+    virtual ~IMessage();
+    virtual const char* Name() const;        // MsgName()
+    virtual uint16_t Version() const;        // MsgVersion()
+    virtual uint32_t SchemaHash() const;     // MsgSchemaHash()
+    virtual protaco::Envelope GetEnvelope() const;
+    virtual void SetEnvelope(const protaco::Envelope& env);
+    virtual const std::vector<uint8_t>& Serialize() const;
+    virtual std::string ToString(const protaco::TextStyle& style) const;
+    std::string ToString() const;
+    template <class T> T* As();
+    template <class T> const T* As() const;
+};
+```
+
+모든 생성 클래스는 `CMessage<T>`를 거쳐 `protaco::IMessage`를 상속합니다. 타입을 모르는 코드는 `IMessage&`, `IMessage*`, `std::unique_ptr<IMessage>`로 어떤 메시지든 다룹니다. 이름과 version, envelope, 직렬화, 텍스트를 쓸 수 있고, `As<T>()`로 생성 타입으로 되돌립니다.
+
+- 반환: `Name`, `Version`, `SchemaHash`는 생성 타입의 정적 정보, 나머지는 생성 타입의 같은 이름 함수와 같은 동작
+- `As<T>`: T가 아니면 nullptr. 판정은 C++ 타입(`dynamic_cast`, RTTI 필요). 옛 version 타입 `v1::T`와 다른 namespace의 같은 이름 타입은 다른 타입
+- 소유: `std::unique_ptr<IMessage>`로 지워도 안전(가상 소멸자). 복사와 이동은 IMessage가 아니라 생성 타입으로
+- 비용: 생성 객체마다 가상 함수 표 포인터 1개. 생성 타입으로 부르는 호출은 그대로
+- C# 클래스는 기반 클래스 `Protaco.Message`를 공유하고, Python은 기반이 필요 없음
+
+**C++**
+
+```cpp
+std::vector<std::unique_ptr<protaco::IMessage>> outbox;
+outbox.push_back(std::make_unique<demo::DeliveryRoute>(route));
+outbox.push_back(std::make_unique<demo::Heartbeat>());
+for (const std::unique_ptr<protaco::IMessage>& message : outbox)
+    std::printf("%s v%u %zu bytes: %s\n", message->Name(), unsigned(message->Version()), message->Serialize().size(), message->ToString().c_str());
+demo::Heartbeat* beat = outbox[1]->As<demo::Heartbeat>();
+if (beat != nullptr)
+    beat->SetTimestampAsNow();
+```
 
 **View**
 
@@ -1946,7 +1989,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 <summary>Python — 상수</summary>
 
 ```python
-protaco.VERSION              # "0.6.0"
+protaco.VERSION              # "0.7.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2035,7 +2078,7 @@ bin/
 
 ### 7.3 시험 범위
 
-0.6.0 검증 기록은 Windows와 Linux 모두 C++ 41개, C# 36개, Python 26개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
+0.7.0 검증 기록은 Windows와 Linux 모두 C++ 48개, C# 42개, Python 30개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 

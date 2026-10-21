@@ -1,4 +1,4 @@
-﻿// Spot.g.h. protacoc 0.6.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
+﻿// Spot.g.h. protacoc 0.7.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -87,13 +87,13 @@ public:
     /// Fixed fields only. Serializing costs nothing.
     /// Unchanged variable fields and ext reuse the last bytes. After a mutable_ call the variable block is rebuilt every time.
     /// The returned reference is valid until this object is modified.
-    const std::vector<uint8_t>& Serialize() const
+    const std::vector<uint8_t>& Serialize() const override
     {
         return protaco::detail::Access::Serialize(*this);
     }
 
     /// Text for logs: field names and values. protaco::TextStyle::Pretty() for one field per line.
-    std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const
+    std::string ToString(const protaco::TextStyle& style = protaco::TextStyle()) const override
     {
         return protaco::detail::Access::ToText(*this, style);
     }
