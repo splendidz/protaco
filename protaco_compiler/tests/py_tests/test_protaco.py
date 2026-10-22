@@ -429,6 +429,21 @@ class ProtacoTest(unittest.TestCase):
         self.assertGreater(reply.GetTimestamp(), protaco.TIMESTAMP_MIN)
         self.assertEqual(first.GetId(), protaco.ToObject(DeliveryRoute, reply.Serialize()).GetCorr())
 
+    def test_envelope_set_from_values(self):
+        # SetEnvelope(id, corr, ts): corr 0 and ts NowUs() by default. Same as the C++ test.
+        protaco.SetClock(lambda: 1760000000123456)
+        try:
+            route = DeliveryRoute()
+            route.SetEnvelope(41)
+            beat = Heartbeat()
+            beat.SetEnvelope(42, 7)
+        finally:
+            protaco.SetClock(None)
+        self.assertEqual(protaco.Envelope(41, 0, 1760000000123456), route.GetEnvelope())
+        self.assertEqual(protaco.Envelope(42, 7, 1760000000123456), beat.GetEnvelope())
+        route.SetEnvelope(43, 8, 9)
+        self.assertEqual(protaco.Envelope(43, 8, 9), protaco.ToObject(DeliveryRoute, route.Serialize()).GetEnvelope())
+
     def test_auto_envelope_can_be_turned_off(self):
         # auto_envelope false (Tick) and DisableAutoEnvelope() leave id and ts at 0 and take no id from the counter.
         before = DeliveryRoute()

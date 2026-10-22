@@ -1,4 +1,4 @@
-﻿# Tick_g.py. protacoc 0.7.0, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
+﻿# Tick_g.py. protacoc 0.7.1, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
 import protaco
 
 

@@ -2,7 +2,7 @@
 
 [English](README.md) · [README](../README.ko.md) · [상세 참조](../docs/reference.ko.md)
 
-이 폴더에는 protaco 0.7.0의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
+이 폴더에는 protaco 0.7.1의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
 
 ## 목차
 

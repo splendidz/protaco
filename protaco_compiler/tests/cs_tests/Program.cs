@@ -51,6 +51,7 @@ namespace Protacoc.Tests
             Run("C#: unsigned types and UTF-8 match C++", UnsignedTypesAndUtf8);
             Run("C#: envelope stamped on creation, not on decode", EnvelopeIsStampedOnCreation);
             Run("C#: auto_envelope false and DisableAutoEnvelope", AutoEnvelopeCanBeTurnedOff);
+            Run("C#: SetEnvelope from values", EnvelopeSetFromValues);
             Run("C#: const values", ConstValues);
             Run("generator: a const set is not a type PC304", GeneratorConstIsNotAType);
             Run("C#: enum fields match C++", EnumFields);
@@ -630,6 +631,27 @@ namespace Protacoc.Tests
             Check(reply.GetTimestamp() > Protaco.Envelopes.TimestampMin, "system clock");
             Equal(first.GetId(), Protaco.Codec.ToObject<DeliveryRoute>(reply.Serialize()).GetCorr(), "corr");
             Check(order.GetId() == second.GetId() + 1, "order id");
+        }
+
+        // SetEnvelope(id, corr, ts): corr 0 and ts NowUs() by default. Same as the C++ test.
+        private static void EnvelopeSetFromValues()
+        {
+            Protaco.Envelopes.SetClock(() => 1760000000123456L);
+            DeliveryRoute route = new DeliveryRoute();
+            route.SetEnvelope(41);
+            Heartbeat beat = new Heartbeat();
+            beat.SetEnvelope(42, 7);
+            Protaco.Envelopes.SetClock(null);
+            Equal(41u, route.GetId(), "id");
+            Equal(0u, route.GetCorr(), "default corr");
+            Equal(1760000000123456L, route.GetTimestamp(), "default ts");
+            Equal(42u, beat.GetId(), "id with corr");
+            Equal(7u, beat.GetCorr(), "corr");
+            route.SetEnvelope(43, 8, 9);
+            DeliveryRoute decoded = Protaco.Codec.ToObject<DeliveryRoute>(route.Serialize());
+            Equal(43u, decoded.GetId(), "decoded id");
+            Equal(8u, decoded.GetCorr(), "decoded corr");
+            Equal(9L, decoded.GetTimestamp(), "decoded ts");
         }
 
         // auto_envelope false (Tick) and DisableAutoEnvelope() leave Id and Ts at 0 and take no id from the counter.

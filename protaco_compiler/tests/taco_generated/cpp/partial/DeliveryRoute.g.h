@@ -1,4 +1,4 @@
-﻿// DeliveryRoute.g.h. protacoc 0.7.0, source DeliveryRoute.yaml (sha1 974fbf1766a4). Do not edit.
+﻿// DeliveryRoute.g.h. protacoc 0.7.1, source DeliveryRoute.yaml (sha1 974fbf1766a4). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -1,4 +1,4 @@
-﻿// Trail.g.h. protacoc 0.7.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
+﻿// Trail.g.h. protacoc 0.7.1, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

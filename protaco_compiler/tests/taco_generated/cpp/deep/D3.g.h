@@ -1,4 +1,4 @@
-﻿// D3.g.h. protacoc 0.7.0, source D3.yaml (sha1 5f1911271792). Do not edit.
+﻿// D3.g.h. protacoc 0.7.1, source D3.yaml (sha1 5f1911271792). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

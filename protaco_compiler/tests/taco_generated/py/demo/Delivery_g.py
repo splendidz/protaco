@@ -1,4 +1,4 @@
-﻿# Delivery_g.py. protacoc 0.7.0, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
+﻿# Delivery_g.py. protacoc 0.7.1, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
 import protaco
 
 

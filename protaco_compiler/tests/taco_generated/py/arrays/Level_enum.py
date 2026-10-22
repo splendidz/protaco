@@ -1,4 +1,4 @@
-﻿# Level_enum.py. protacoc 0.7.0, source Level.enum.yaml (sha1 50e0c504e666). Do not edit.
+﻿# Level_enum.py. protacoc 0.7.1, source Level.enum.yaml (sha1 50e0c504e666). Do not edit.
 import enum
 
 import protaco

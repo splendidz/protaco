@@ -2,7 +2,7 @@
 
 [한국어](reference.ko.md) · [README](../README.md) · [Examples](../examples/README.md)
 
-Detailed reference for protacoc 0.7.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
+Detailed reference for protacoc 0.7.1 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
 
 1. [Schema fingerprint](#1-schema-fingerprint)
 2. [Command line](#2-command-line)
@@ -665,6 +665,7 @@ public:
     virtual uint32_t SchemaHash() const;     // MsgSchemaHash()
     virtual protaco::Envelope GetEnvelope() const;
     virtual void SetEnvelope(const protaco::Envelope& env);
+    void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = protaco::NowUs());
     virtual const std::vector<uint8_t>& Serialize() const;
     virtual std::string ToString(const protaco::TextStyle& style) const;
     std::string ToString() const;
@@ -720,11 +721,12 @@ void SetTimestamp(int64_t timestampUs);
 void SetTimestampAsNow();
 protaco::Envelope GetEnvelope() const;
 void SetEnvelope(const protaco::Envelope& env);
+void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = protaco::NowUs());
 ```
 
 `id` is the message id, `corr` identifies the request this reply answers, and `ts` is UTC microseconds since 1970-01-01. Construction sets id and ts automatically; corr starts at 0 and is set by the caller. A message with `auto_envelope: false`, or any message after `DisableAutoEnvelope()`, starts with id and ts at 0 as well.
 
-- Parameters: each setter's new value, or the complete `env`
+- Parameters: each setter's new value, the complete `env`, or its values `id`, `corr`, `ts` (`corr` 0 and `ts` NowUs() when omitted)
 - Returns: getters return copies; setters return void
 - Storage: the frame header. SetTimestampAsNow writes the current NowUs value
 - Notes: serialization and decoding do not issue a new id; decoding preserves the received envelope
@@ -1545,6 +1547,7 @@ public void SetTimestamp(long timestampUs);
 public void SetTimestampAsNow();
 public Protaco.Envelope GetEnvelope();
 public void SetEnvelope(Protaco.Envelope env);
+public void SetEnvelope(uint id, uint corr = 0, long? ts = null);   // ts null: Envelopes.NowUs()
 
 public bool TryGetTimeFromTimestamp(out string date, out string time);
 public bool TryGetTimeFromTimestamp(out string date, out string time, out string error);
@@ -1904,6 +1907,7 @@ message.SetTimestamp(timestamp_us)
 message.SetTimestampAsNow()
 message.GetEnvelope()
 message.SetEnvelope(env)
+message.SetEnvelope(id, corr=0, ts=None)   # ts None: NowUs()
 message.TryGetTimeFromTimestamp()
 message.TryGetTimeFromTimestampParts()
 
@@ -1989,7 +1993,7 @@ The decoder keeps an unknown number as a plain int. An enum member that is a Pyt
 <summary>Python constants</summary>
 
 ```python
-protaco.VERSION              # "0.7.0"
+protaco.VERSION              # "0.7.1"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2078,7 +2082,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 ### 7.3 Test coverage
 
-The 0.7.0 verification record: 48 C++ tests, 42 C# tests, and 30 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
+The 0.7.1 verification record: 49 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
 Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 

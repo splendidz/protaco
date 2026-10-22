@@ -1,4 +1,4 @@
-﻿// Numbers.g.h. protacoc 0.7.0, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
+﻿// Numbers.g.h. protacoc 0.7.1, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -1,4 +1,4 @@
-﻿// Recipe.g.h. protacoc 0.7.0, source Recipe.yaml (sha1 f97dfa2fc24c). Do not edit.
+﻿// Recipe.g.h. protacoc 0.7.1, source Recipe.yaml (sha1 f97dfa2fc24c). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

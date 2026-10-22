@@ -215,6 +215,14 @@ namespace Protaco
             env_ = env;
         }
 
+        /// <summary>Envelope from its values: id, corr (default 0), ts (default Envelopes.NowUs()).</summary>
+        public void SetEnvelope(uint id, uint corr = 0, long? ts = null)
+        {
+            env_.Id = id;
+            env_.Corr = corr;
+            env_.Ts = ts ?? Envelopes.NowUs();
+        }
+
         /// <summary>Timestamp as local "yyyy-MM-dd" and "HH:mm:ss.ffffff". False if the timestamp is not a time.</summary>
         public bool TryGetTimeFromTimestamp(out string date, out string time)
         {

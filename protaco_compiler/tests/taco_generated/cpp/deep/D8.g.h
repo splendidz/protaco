@@ -1,4 +1,4 @@
-﻿// D8.g.h. protacoc 0.7.0, source D8.yaml (sha1 547614165651). Do not edit.
+﻿// D8.g.h. protacoc 0.7.1, source D8.yaml (sha1 547614165651). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

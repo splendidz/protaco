@@ -1,4 +1,4 @@
-﻿# Point_g.py. protacoc 0.7.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
+﻿# Point_g.py. protacoc 0.7.1, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
 import protaco
 
 

@@ -1,4 +1,4 @@
-﻿// Pie.g.h. protacoc 0.7.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
+﻿// Pie.g.h. protacoc 0.7.1, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

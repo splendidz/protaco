@@ -1,4 +1,4 @@
-﻿// Tick.g.h. protacoc 0.7.0, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
+﻿// Tick.g.h. protacoc 0.7.1, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -1,4 +1,4 @@
-﻿# Topping_g.py. protacoc 0.7.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
+﻿# Topping_g.py. protacoc 0.7.1, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
 import protaco
 
 

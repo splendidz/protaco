@@ -1,4 +1,4 @@
-﻿// Sizes.const.h. protacoc 0.7.0, source Sizes.const.yaml (sha1 9377a07f753a). Do not edit.
+﻿// Sizes.const.h. protacoc 0.7.1, source Sizes.const.yaml (sha1 9377a07f753a). Do not edit.
 #pragma once
 
 #include <cstdint>

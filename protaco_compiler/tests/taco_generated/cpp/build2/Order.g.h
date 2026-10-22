@@ -1,4 +1,4 @@
-﻿// Order.g.h. protacoc 0.7.0, source Order.yaml (sha1 d90a16ea2114). Do not edit.
+﻿// Order.g.h. protacoc 0.7.1, source Order.yaml (sha1 d90a16ea2114). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

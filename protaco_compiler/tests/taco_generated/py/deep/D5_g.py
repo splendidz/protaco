@@ -1,4 +1,4 @@
-﻿# D5_g.py. protacoc 0.7.0, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
+﻿# D5_g.py. protacoc 0.7.1, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
 import protaco
 from .D4_g import D4
 

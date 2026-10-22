@@ -2,7 +2,7 @@
 
 [English](reference.md) · [README](../README.ko.md) · [예제](../examples/README.ko.md)
 
-protacoc 0.7.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
+protacoc 0.7.1과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
 1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
@@ -665,6 +665,7 @@ public:
     virtual uint32_t SchemaHash() const;     // MsgSchemaHash()
     virtual protaco::Envelope GetEnvelope() const;
     virtual void SetEnvelope(const protaco::Envelope& env);
+    void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = protaco::NowUs());
     virtual const std::vector<uint8_t>& Serialize() const;
     virtual std::string ToString(const protaco::TextStyle& style) const;
     std::string ToString() const;
@@ -720,11 +721,12 @@ void SetTimestamp(int64_t timestampUs);
 void SetTimestampAsNow();
 protaco::Envelope GetEnvelope() const;
 void SetEnvelope(const protaco::Envelope& env);
+void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = protaco::NowUs());
 ```
 
 `id`는 메시지 id, `corr`는 이 응답이 가리키는 요청 id, `ts`는 1970-01-01 이후 UTC 마이크로초입니다. 메시지 생성 시 id·ts를 자동 설정하고 corr은 0으로 시작합니다. corr은 사용자가 설정합니다. `auto_envelope: false`인 메시지, 그리고 `DisableAutoEnvelope()` 호출 뒤의 모든 메시지는 id·ts도 0으로 시작합니다.
 
-- 매개변수: 각 setter의 새 값, 또는 Envelope 전체 `env`
+- 매개변수: 각 setter의 새 값, Envelope 전체 `env`, 또는 그 값 `id`·`corr`·`ts`(생략하면 `corr` 0, `ts` NowUs())
 - 반환값: getter는 값 복사, setter는 void
 - 저장 위치: 프레임 헤더. SetTimestampAsNow는 NowUs의 현재 값을 기록
 - 주의: 직렬화·디코딩은 새 id를 발급하지 않으며, 디코딩한 Envelope를 보존
@@ -1545,6 +1547,7 @@ public void SetTimestamp(long timestampUs);
 public void SetTimestampAsNow();
 public Protaco.Envelope GetEnvelope();
 public void SetEnvelope(Protaco.Envelope env);
+public void SetEnvelope(uint id, uint corr = 0, long? ts = null);   // ts null: Envelopes.NowUs()
 
 public bool TryGetTimeFromTimestamp(out string date, out string time);
 public bool TryGetTimeFromTimestamp(out string date, out string time, out string error);
@@ -1904,6 +1907,7 @@ message.SetTimestamp(timestamp_us)
 message.SetTimestampAsNow()
 message.GetEnvelope()
 message.SetEnvelope(env)
+message.SetEnvelope(id, corr=0, ts=None)   # ts None: NowUs()
 message.TryGetTimeFromTimestamp()
 message.TryGetTimeFromTimestampParts()
 
@@ -1989,7 +1993,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 <summary>Python — 상수</summary>
 
 ```python
-protaco.VERSION              # "0.7.0"
+protaco.VERSION              # "0.7.1"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2078,7 +2082,7 @@ bin/
 
 ### 7.3 시험 범위
 
-0.7.0 검증 기록은 Windows와 Linux 모두 C++ 48개, C# 42개, Python 30개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
+0.7.1 검증 기록은 Windows와 Linux 모두 C++ 49개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 

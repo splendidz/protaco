@@ -1,4 +1,4 @@
-﻿// Move.g.h. protacoc 0.7.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
+﻿// Move.g.h. protacoc 0.7.1, source Move.yaml (sha1 a06bba8225f5). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -1,4 +1,4 @@
-﻿// PizzaOrder.g.h. protacoc 0.7.0, source PizzaOrder.yaml (sha1 a1af26cb1afe). Do not edit.
+﻿// PizzaOrder.g.h. protacoc 0.7.1, source PizzaOrder.yaml (sha1 a1af26cb1afe). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

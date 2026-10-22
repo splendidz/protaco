@@ -1,4 +1,4 @@
-﻿// D5.g.h. protacoc 0.7.0, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
+﻿// D5.g.h. protacoc 0.7.1, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -2353,6 +2353,12 @@ public:
         SetTimestamp(env.ts);
     }
 
+    /// Envelope from its values: id, corr (default 0), ts (default NowUs()).
+    void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = NowUs())
+    {
+        SetEnvelope(Envelope{id, corr, ts});
+    }
+
 protected:
     uint8_t* Fixed() const
     {
@@ -2439,6 +2445,12 @@ public:
     virtual Envelope GetEnvelope() const = 0;
     virtual void SetEnvelope(const Envelope& env) = 0;
 
+    /// Envelope from its values: id, corr (default 0), ts (default NowUs()).
+    void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = NowUs())
+    {
+        SetEnvelope(Envelope{id, corr, ts});
+    }
+
     /// Same as Serialize and ToString of the generated type.
     virtual const std::vector<uint8_t>& Serialize() const = 0;
     virtual std::string ToString(const TextStyle& style) const = 0;
@@ -2475,6 +2487,8 @@ template <class T>
 class CMessage : public IMessage
 {
 public:
+    using IMessage::SetEnvelope;
+
     const char* Name() const override
     {
         return T::MsgName();

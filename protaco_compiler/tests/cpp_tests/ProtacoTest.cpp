@@ -1140,6 +1140,29 @@ TEST(Protaco, EnvelopeIsStampedOnCreation)
     EXPECT_EQ(first.GetId(), protaco::ToObject<DeliveryRoute>(reply.Serialize()).GetCorr());
 }
 
+// SetEnvelope(id, corr, ts): corr 0 and ts NowUs() by default, on the generated type and through IMessage.
+TEST(Protaco, EnvelopeSetFromValues)
+{
+    protaco::SetClock([]() -> int64_t { return 1760000000123456; });
+    DeliveryRoute route;
+    route.SetEnvelope(41);
+    std::unique_ptr<protaco::IMessage> beat = std::make_unique<Heartbeat>();
+    beat->SetEnvelope(42, 7);
+    protaco::SetClock(nullptr);
+    EXPECT_EQ(41u, route.GetId());
+    EXPECT_EQ(0u, route.GetCorr());
+    EXPECT_EQ(1760000000123456, route.GetTimestamp());
+    EXPECT_EQ(42u, beat->GetEnvelope().id);
+    EXPECT_EQ(7u, beat->GetEnvelope().corr);
+    EXPECT_EQ(1760000000123456, beat->GetEnvelope().ts);
+
+    route.SetEnvelope(43, 8, 9);
+    const DeliveryRoute decoded = protaco::ToObject<DeliveryRoute>(route.Serialize());
+    EXPECT_EQ(43u, decoded.GetId());
+    EXPECT_EQ(8u, decoded.GetCorr());
+    EXPECT_EQ(9, decoded.GetTimestamp());
+}
+
 // IMessage: messages of different types through one base (name, version, envelope, Serialize, ToString, ownership).
 // As<T> returns the object only as its own C++ type: not as an older version type, not as a same-named type elsewhere.
 TEST(Protaco, MessageBaseHandlesAnyType)

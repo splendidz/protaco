@@ -1,4 +1,4 @@
-﻿# Heartbeat_g.py. protacoc 0.7.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
+﻿# Heartbeat_g.py. protacoc 0.7.1, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
 import protaco
 
 

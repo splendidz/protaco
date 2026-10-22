@@ -1,4 +1,4 @@
-﻿// Delivery.g.h. protacoc 0.7.0, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
+﻿// Delivery.g.h. protacoc 0.7.1, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

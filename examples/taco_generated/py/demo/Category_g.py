@@ -1,4 +1,4 @@
-﻿# Category_g.py. protacoc 0.7.0, source Category.yaml (sha1 9b036f2023ea). Do not edit.
+﻿# Category_g.py. protacoc 0.7.1, source Category.yaml (sha1 9b036f2023ea). Do not edit.
 import protaco
 
 

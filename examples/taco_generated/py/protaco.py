@@ -12,7 +12,7 @@ import struct
 import threading
 import time
 
-VERSION = "0.7.0"
+VERSION = "0.7.1"
 
 FRAME_VERSION = 4
 MAX_DEPTH = 100
@@ -766,8 +766,12 @@ class Message:
         env = self._env
         return Envelope(env.id, env.corr, env.ts)
 
-    def SetEnvelope(self, env):
-        self._env = Envelope(env.id, env.corr, env.ts)
+    def SetEnvelope(self, env, corr=0, ts=None):
+        """env: an Envelope, or the id with corr (default 0) and ts (default NowUs())."""
+        if isinstance(env, Envelope):
+            self._env = Envelope(env.id, env.corr, env.ts)
+        else:
+            self._env = Envelope(env, corr, NowUs() if ts is None else ts)
 
     def GetId(self):
         return self._env.id

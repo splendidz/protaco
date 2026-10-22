@@ -1,4 +1,4 @@
-﻿# Slot_g.py. protacoc 0.7.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
+﻿# Slot_g.py. protacoc 0.7.1, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
 import protaco
 from .Level_enum import Level, LevelNames
 from .Point_g import Point

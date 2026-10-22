@@ -1,4 +1,4 @@
-﻿// DeliveryProof.g.h. protacoc 0.7.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
+﻿// DeliveryProof.g.h. protacoc 0.7.1, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
