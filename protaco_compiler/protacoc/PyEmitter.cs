@@ -1,4 +1,4 @@
-// PyEmitter.cs. One message -> <Name>_g.py, one enum -> <Name>_enum.py (Python 3.8 and later, standard library only).
+// PyEmitter.cs. One message -> <Name>_g.py, one enum -> <Name>_enum_g.py (Python 3.8 and later, standard library only).
 // Files go to <py_out>/<namespace as folders>/ and import each other relatively; the runtime protaco.py goes to <py_out>.
 // The latest version is <Name>. Older supported versions are v<N>.<Name> (class v<N> in the same module).
 // Field attributes are the yaml keys; a Python keyword gets a trailing '_' (from -> from_). Same bytes as C++.
@@ -28,7 +28,7 @@ namespace Protacoc
             w.Line("# " + message.Name + "_g.py. protacoc " + Naming.Version + ", source " + message.FileName + " (sha1 " + message.Sha1 + "). Do not edit.");
             w.Line("import protaco");
             foreach (EnumDef dep in message.EnumDependencies.OrderBy(d => d.Name, System.StringComparer.Ordinal))
-                w.Line("from ." + dep.Name + "_enum import " + dep.Name + ", " + dep.Name + "Names");
+                w.Line("from ." + dep.Name + "_enum_g import " + dep.Name + ", " + dep.Name + "Names");
             foreach (MessageDef dep in message.Dependencies.OrderBy(d => d.Name, System.StringComparer.Ordinal))
                 w.Line("from ." + dep.Name + "_g import " + dep.Name);
             w.Line();
@@ -58,7 +58,7 @@ namespace Protacoc
         public static string EmitEnum(EnumDef enumDef)
         {
             CodeWriter w = new CodeWriter();
-            w.Line("# " + enumDef.Name + "_enum.py. protacoc " + Naming.Version + ", source " + enumDef.FileName + " (sha1 " + enumDef.Sha1 + "). Do not edit.");
+            w.Line("# " + enumDef.Name + "_enum_g.py. protacoc " + Naming.Version + ", source " + enumDef.FileName + " (sha1 " + enumDef.Sha1 + "). Do not edit.");
             w.Line("import enum");
             w.Line();
             w.Line("import protaco");
@@ -104,7 +104,7 @@ namespace Protacoc
         public static string EmitConst(ConstDef constDef)
         {
             CodeWriter w = new CodeWriter();
-            w.Line("# " + constDef.Name + "_const.py. protacoc " + Naming.Version + ", source " + constDef.FileName + " (sha1 " + constDef.Sha1 + "). Do not edit.");
+            w.Line("# " + constDef.Name + "_const_g.py. protacoc " + Naming.Version + ", source " + constDef.FileName + " (sha1 " + constDef.Sha1 + "). Do not edit.");
             w.Line();
             w.Line();
             w.Line("class " + constDef.Name + ":");

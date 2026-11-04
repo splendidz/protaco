@@ -1,4 +1,4 @@
-﻿# PizzaSize_enum.py. protacoc 0.7.1, source PizzaSize.enum.yaml (sha1 ba3536e7746d). Do not edit.
+﻿# PizzaSize_enum_g.py. protacoc 0.8.0, source PizzaSize.enum.yaml (sha1 ba3536e7746d). Do not edit.
 import enum
 
 import protaco

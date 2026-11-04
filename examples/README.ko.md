@@ -2,7 +2,7 @@
 
 [English](README.md) · [README](../README.ko.md) · [상세 참조](../docs/reference.ko.md)
 
-이 폴더에는 protaco 0.7.1의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
+이 폴더에는 protaco 0.8.0의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
 
 ## 목차
 
@@ -19,11 +19,11 @@
 examples/
   schemas/
   taco_generated/
-    cpp/                  *.g.h, *.enum.h, *.const.h, Protaco.hpp
-    cs/                   *.g.cs, *.enum.cs, *.const.cs, Protaco.cs
+    cpp/                  *.g.h, *.enum.g.h, *.const.g.h, Protaco.hpp
+    cs/                   *.g.cs, *.enum.g.cs, *.const.g.cs, Protaco.cs
     py/
       protaco.py
-      demo/               *_g.py, *_enum.py, *_const.py
+      demo/               *_g.py, *_enum_g.py, *_const_g.py
   cpp_examples/
     main.cpp
     example.vcxproj
@@ -758,7 +758,7 @@ public:
 };
 ```
 
-[PizzaSize.enum.h](taco_generated/cpp/PizzaSize.enum.h)의 enum과 이름 변환입니다. 선언되지 않은 번호는 `nullptr`를 반환합니다.
+[PizzaSize.enum.g.h](taco_generated/cpp/PizzaSize.enum.g.h)의 enum과 이름 변환입니다. 선언되지 않은 번호는 `nullptr`를 반환합니다.
 
 **C++**
 

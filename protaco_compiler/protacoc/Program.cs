@@ -125,9 +125,9 @@ namespace Protacoc
             Console.WriteLine("protacoc " + Naming.Version + ". message yaml to C++ (.g.h) / C# (.g.cs) / Python (_g.py)");
             Console.WriteLine("usage: protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [options] [message...]");
             Console.WriteLine("  -I, --proto_path <dir>   yaml folder. Several folders share one name space");
-            Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h, <enum>.enum.h, <const>.const.h and the runtime Protaco.hpp");
-            Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.cs, <const>.const.cs and the runtime Protaco.cs");
-            Console.WriteLine("  --py_out <dir>           writes <namespace folders>/<message>_g.py, <enum>_enum.py, <const>_const.py and the runtime protaco.py");
+            Console.WriteLine("  --cpp_out <dir>          writes <message>.g.h, <enum>.enum.g.h, <const>.const.g.h and the runtime Protaco.hpp");
+            Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.g.cs, <const>.const.g.cs and the runtime Protaco.cs");
+            Console.WriteLine("  --py_out <dir>           writes <namespace folders>/<message>_g.py, <enum>_enum_g.py, <const>_const_g.py and the runtime protaco.py");
             Console.WriteLine("  --no_runtime             skips the runtime files");
             Console.WriteLine("  --check                  checks without writing. Exit code 3 if anything differs");
             Console.WriteLine("  name...                  generates only these messages, enums or consts (name or yaml path). Default: all");
@@ -180,20 +180,20 @@ namespace Protacoc
             foreach (ConstDef constDef in targets.OfType<ConstDef>().OrderBy(c => c.Name, StringComparer.Ordinal))
             {
                 if (options.CppOut != null)
-                    output.Write(Path.Combine(options.CppOut, constDef.Name + ".const.h"), CppEmitter.EmitConst(constDef, constDef.Namespace.Split('.')));
+                    output.Write(Path.Combine(options.CppOut, constDef.Name + ".const.g.h"), CppEmitter.EmitConst(constDef, constDef.Namespace.Split('.')));
                 if (options.CsOut != null)
-                    output.Write(Path.Combine(options.CsOut, constDef.Name + ".const.cs"), CsEmitter.EmitConst(constDef, constDef.Namespace));
+                    output.Write(Path.Combine(options.CsOut, constDef.Name + ".const.g.cs"), CsEmitter.EmitConst(constDef, constDef.Namespace));
                 if (options.PyOut != null)
-                    output.Write(Path.Combine(PyPackage(options.PyOut, constDef), constDef.Name + "_const.py"), PyEmitter.EmitConst(constDef));
+                    output.Write(Path.Combine(PyPackage(options.PyOut, constDef), constDef.Name + "_const_g.py"), PyEmitter.EmitConst(constDef));
             }
             foreach (EnumDef enumDef in enums.Where(targets.Contains))
             {
                 if (options.CppOut != null)
-                    output.Write(Path.Combine(options.CppOut, enumDef.Name + ".enum.h"), CppEmitter.EmitEnum(enumDef, enumDef.Namespace.Split('.')));
+                    output.Write(Path.Combine(options.CppOut, enumDef.Name + ".enum.g.h"), CppEmitter.EmitEnum(enumDef, enumDef.Namespace.Split('.')));
                 if (options.CsOut != null)
-                    output.Write(Path.Combine(options.CsOut, enumDef.Name + ".enum.cs"), CsEmitter.EmitEnum(enumDef, enumDef.Namespace));
+                    output.Write(Path.Combine(options.CsOut, enumDef.Name + ".enum.g.cs"), CsEmitter.EmitEnum(enumDef, enumDef.Namespace));
                 if (options.PyOut != null)
-                    output.Write(Path.Combine(PyPackage(options.PyOut, enumDef), enumDef.Name + "_enum.py"), PyEmitter.EmitEnum(enumDef));
+                    output.Write(Path.Combine(PyPackage(options.PyOut, enumDef), enumDef.Name + "_enum_g.py"), PyEmitter.EmitEnum(enumDef));
             }
             foreach (MessageDef message in order.Where(targets.Contains))
             {

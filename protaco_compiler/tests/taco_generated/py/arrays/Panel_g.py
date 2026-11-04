@@ -1,6 +1,6 @@
-﻿# Panel_g.py. protacoc 0.7.1, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
+﻿# Panel_g.py. protacoc 0.8.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
 import protaco
-from .Level_enum import Level, LevelNames
+from .Level_enum_g import Level, LevelNames
 
 
 class Panel(protaco.Message):

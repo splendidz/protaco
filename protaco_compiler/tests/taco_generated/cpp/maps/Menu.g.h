@@ -1,8 +1,8 @@
-﻿// Menu.g.h. protacoc 0.7.1, source Menu.yaml (sha1 95302b23b98e). Do not edit.
+﻿// Menu.g.h. protacoc 0.8.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
-#include "Grade.enum.h"
+#include "Grade.enum.g.h"
 #include "Dish.g.h"
 
 namespace maps

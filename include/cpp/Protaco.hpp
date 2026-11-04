@@ -1146,7 +1146,7 @@ struct Codec<int32_t> : PodCodec<int32_t, TacoType::Int>
 {
 };
 
-// Enums (generated .enum.h): int32 in the serialized data. Numbers this build does not know are kept as they are.
+// Enums (generated .enum.g.h): int32 in the serialized data. Numbers this build does not know are kept as they are.
 template <class T>
 struct Codec<T, typename std::enable_if<std::is_enum<T>::value>::type>
 {
@@ -1910,7 +1910,7 @@ private:
         Close("]");
     }
 
-    // Enum: Name(number), ?(number) for a number this build does not know. EnumName comes from the generated .enum.h.
+    // Enum: Name(number), ?(number) for a number this build does not know. EnumName comes from the generated .enum.g.h.
     template <class T>
     void ValueOf(T value, std::true_type)
     {

@@ -7,7 +7,7 @@
 
 [English](README.md) · [예제](examples/README.ko.md) · [상세 참조](docs/reference.ko.md) · [벤치마크](docs/benchmark/README.ko.md)
 
-Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 주는 가벼운 직렬화 도구입니다. 구조체를 선언하듯 YAML에 메시지를 적으면 생성기 `protacoc`가 세 언어의 클래스를 만들어 줍니다. 이 문서는 protacoc 0.7.1과 직렬화 형식 v4를 기준으로 합니다.
+Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 주는 가벼운 직렬화 도구입니다. 구조체를 선언하듯 YAML에 메시지를 적으면 생성기 `protacoc`가 세 언어의 클래스를 만들어 줍니다. 이 문서는 protacoc 0.8.0과 직렬화 형식 v4를 기준으로 합니다.
 
 ### 직렬화가 필요한 순간
 
@@ -209,7 +209,7 @@ Protaco는 Protocol Buffers보다 좁은 범위를 다룹니다. 지원 언어�
 
 ![스키마에서 생성 코드와 런타임을 거쳐 C++, C#, Python이 통신하는 흐름](docs/img/flow.svg)
 
-메시지 하나에서 언어마다 파일 하나가 나오고, 아직 지원하는 옛 version 클래스도 그 파일에 함께 들어갑니다. enum은 `<Name>.enum.h`, `<Name>.enum.cs`, `<Name>_enum.py`로, const 파일은 `<Name>.const.h`, `<Name>.const.cs`, `<Name>_const.py`로 나옵니다.
+메시지 하나에서 언어마다 파일 하나가 나오고, 아직 지원하는 옛 version 클래스도 그 파일에 함께 들어갑니다. enum은 `<Name>.enum.g.h`, `<Name>.enum.g.cs`, `<Name>_enum_g.py`로, const 파일은 `<Name>.const.g.h`, `<Name>.const.g.cs`, `<Name>_const_g.py`로 나옵니다.
 
 ## 3. 시작하기
 
@@ -421,9 +421,9 @@ values:
 
 언어별 생성 결과입니다.
 
-- C++ `PizzaSize.enum.h`: `enum class PizzaSize : int32_t`, `const char* EnumName(PizzaSize)`, `bool TryParseEnum(const std::string& name, PizzaSize* out, std::string* error = nullptr)`
-- C# `PizzaSize.enum.cs`: `enum PizzaSize : int`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name, out value)`
-- Python `PizzaSize_enum.py`: `class PizzaSize(enum.IntEnum)`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name)`
+- C++ `PizzaSize.enum.g.h`: `enum class PizzaSize : int32_t`, `const char* EnumName(PizzaSize)`, `bool TryParseEnum(const std::string& name, PizzaSize* out, std::string* error = nullptr)`
+- C# `PizzaSize.enum.g.cs`: `enum PizzaSize : int`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name, out value)`
+- Python `PizzaSize_enum_g.py`: `class PizzaSize(enum.IntEnum)`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name)`
 
 **C++**
 
@@ -459,7 +459,7 @@ if (!demo.PizzaSizeNames.TryParse("Kids", out size))
 
 ```python
 from demo.Menu_g import Menu
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 
 menu = Menu(defaultSize=PizzaSize.Medium)
 print(PizzaSizeNames.Name(menu.defaultSize))   # 출력: Medium
@@ -616,9 +616,9 @@ values:
 
 언어별 생성 결과입니다.
 
-- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxSpots = 4; ... }`. namespace 범위 `constexpr`라서 C++14에서도 클래스 밖 정의가 필요 없음
-- C# `Limits.const.cs`: `public static class Limits { public const int MaxSpots = 4; ... }`
-- Python `Limits_const.py`: int 클래스 속성을 가진 `class Limits`(Python 키워드인 key는 끝에 `_`가 붙음)
+- C++ `Limits.const.g.h`: `namespace Limits { constexpr int32_t MaxSpots = 4; ... }`. namespace 범위 `constexpr`라서 C++14에서도 클래스 밖 정의가 필요 없음
+- C# `Limits.const.g.cs`: `public static class Limits { public const int MaxSpots = 4; ... }`
+- Python `Limits_const_g.py`: int 클래스 속성을 가진 `class Limits`(Python 키워드인 key는 끝에 `_`가 붙음)
 
 ### 4.9 고정 길이 배열
 

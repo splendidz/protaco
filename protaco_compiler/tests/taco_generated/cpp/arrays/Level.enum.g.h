@@ -1,4 +1,4 @@
-﻿// Level.enum.h. protacoc 0.7.1, source Level.enum.yaml (sha1 50e0c504e666). Do not edit.
+﻿// Level.enum.g.h. protacoc 0.8.0, source Level.enum.yaml (sha1 50e0c504e666). Do not edit.
 #pragma once
 
 #include <cstdint>

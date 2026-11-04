@@ -161,7 +161,7 @@
     <ClInclude Include="..\taco_generated\cpp\alt\Recipe.g.h">
       <Filter>taco_generated\cpp\alt</Filter>
     </ClInclude>
-    <ClInclude Include="..\taco_generated\cpp\arrays\Level.enum.h">
+    <ClInclude Include="..\taco_generated\cpp\arrays\Level.enum.g.h">
       <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\arrays\Panel.g.h">
@@ -173,7 +173,7 @@
     <ClInclude Include="..\taco_generated\cpp\arrays\Rack.g.h">
       <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
-    <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.h">
+    <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.g.h">
       <Filter>taco_generated\cpp\arrays</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\arrays\Slot.g.h">
@@ -251,13 +251,13 @@
     <ClInclude Include="..\taco_generated\cpp\enums\Pie.g.h">
       <Filter>taco_generated\cpp\enums</Filter>
     </ClInclude>
-    <ClInclude Include="..\taco_generated\cpp\enums\PizzaSize.enum.h">
+    <ClInclude Include="..\taco_generated\cpp\enums\PizzaSize.enum.g.h">
       <Filter>taco_generated\cpp\enums</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\maps\Dish.g.h">
       <Filter>taco_generated\cpp\maps</Filter>
     </ClInclude>
-    <ClInclude Include="..\taco_generated\cpp\maps\Grade.enum.h">
+    <ClInclude Include="..\taco_generated\cpp\maps\Grade.enum.g.h">
       <Filter>taco_generated\cpp\maps</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\maps\Menu.g.h">

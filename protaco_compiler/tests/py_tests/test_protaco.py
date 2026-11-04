@@ -13,11 +13,11 @@ sys.path.insert(0, os.path.join(TESTS, "taco_generated", "py"))
 
 import protaco  # noqa: E402
 from alt.Recipe_g import Recipe as AltRecipe  # noqa: E402
-from arrays.Level_enum import Level  # noqa: E402
+from arrays.Level_enum_g import Level  # noqa: E402
 from arrays.Panel_g import Panel  # noqa: E402
 from arrays.Point_g import Point  # noqa: E402
 from arrays.Rack_g import Rack  # noqa: E402
-from arrays.Sizes_const import Sizes  # noqa: E402
+from arrays.Sizes_const_g import Sizes  # noqa: E402
 from arrays.Trail_g import Trail  # noqa: E402
 from build1.Order_g import Order as Order1  # noqa: E402
 from build1.Ping_g import Ping as Ping1  # noqa: E402
@@ -33,9 +33,9 @@ from demo.PizzaOrder_g import PizzaOrder  # noqa: E402
 from demo.RouteStop_g import RouteStop  # noqa: E402
 from demo.Topping_g import Topping  # noqa: E402
 from enums.Pie_g import Pie  # noqa: E402
-from enums.PizzaSize_enum import PizzaSize, PizzaSizeNames  # noqa: E402
+from enums.PizzaSize_enum_g import PizzaSize, PizzaSizeNames  # noqa: E402
 from maps.Dish_g import Dish  # noqa: E402
-from maps.Grade_enum import Grade  # noqa: E402
+from maps.Grade_enum_g import Grade  # noqa: E402
 from maps.Menu_g import Menu  # noqa: E402
 from partial.DeliveryRoute_g import DeliveryRoute as PartialRoute  # noqa: E402
 from partial.PizzaOrder_g import PizzaOrder as PartialOrder  # noqa: E402

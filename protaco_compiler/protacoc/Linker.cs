@@ -252,7 +252,7 @@ namespace Protacoc
             }
         }
 
-        // One run = one namespace, so output files stay flat (<Name>.g.h, <Name>.enum.h) and references need no qualification.
+        // One run = one namespace, so output files stay flat (<Name>.g.h, <Name>.enum.g.h) and references need no qualification.
         private static void CheckNamespaces(List<SchemaDef> defs, Diag diag)
         {
             List<SchemaDef> sorted = defs.OrderBy(m => m.FilePath, StringComparer.Ordinal).ToList();

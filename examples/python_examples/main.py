@@ -11,10 +11,10 @@ from demo.Board_g import Board  # noqa: E402
 from demo.Category_g import Category  # noqa: E402
 from demo.DeliveryRoute_g import DeliveryRoute  # noqa: E402
 from demo.Heartbeat_g import Heartbeat  # noqa: E402
-from demo.Limits_const import Limits  # noqa: E402
+from demo.Limits_const_g import Limits  # noqa: E402
 from demo.Menu_g import Menu  # noqa: E402
 from demo.PizzaOrder_g import PizzaOrder  # noqa: E402
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames  # noqa: E402
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames  # noqa: E402
 from demo.RouteStop_g import RouteStop  # noqa: E402
 from demo.Topping_g import Topping  # noqa: E402
 

@@ -114,10 +114,10 @@
     <ClInclude Include="..\taco_generated\cpp\scalars\Tick.g.h" />
     <ClInclude Include="..\taco_generated\cpp\ver_v1\Recipe.g.h" />
     <ClInclude Include="..\taco_generated\cpp\ver_v2\Recipe.g.h" />
-    <ClInclude Include="..\taco_generated\cpp\arrays\Level.enum.h" />
-    <ClInclude Include="..\taco_generated\cpp\enums\PizzaSize.enum.h" />
-    <ClInclude Include="..\taco_generated\cpp\maps\Grade.enum.h" />
-    <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.h" />
+    <ClInclude Include="..\taco_generated\cpp\arrays\Level.enum.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\enums\PizzaSize.enum.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\maps\Grade.enum.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\arrays\Sizes.const.g.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\schemas\alt\Recipe.yaml" />

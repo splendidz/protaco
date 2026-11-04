@@ -2,7 +2,7 @@
 
 [한국어](reference.ko.md) · [README](../README.md) · [Examples](../examples/README.md)
 
-Detailed reference for protacoc 0.7.1 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
+Detailed reference for protacoc 0.8.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
 
 1. [Schema fingerprint](#1-schema-fingerprint)
 2. [Command line](#2-command-line)
@@ -135,9 +135,11 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 
 | Language | Output paths |
 |---|---|
-| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.h`, `<Const>.const.h`, `Protaco.hpp` |
-| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `<Const>.const.cs`, `Protaco.cs` |
-| Python | `<py_out>/<namespace folders>/<Name>_g.py`, `<Enum>_enum.py`, `<Const>_const.py`; runtime at `<py_out>/protaco.py` |
+| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.g.h`, `<Const>.const.g.h`, `Protaco.hpp` |
+| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.g.cs`, `<Const>.const.g.cs`, `Protaco.cs` |
+| Python | `<py_out>/<namespace folders>/<Name>_g.py`, `<Enum>_enum_g.py`, `<Const>_const_g.py`; runtime at `<py_out>/protaco.py` |
+
+Every generated file name carries the generated marker (`.g.h`, `.g.cs`, `_g.py`), so searching for `*.g.h`, `*.g.cs`, or `*_g.py` finds all generated files. Up to 0.7.1, enum and const files had no marker (`<Enum>.enum.h`, `<Enum>.enum.cs`, `<Enum>_enum.py`); code that includes or imports them uses the new names from 0.8.0.
 
 Each input folder supplies its `*.yaml` files, subfolders excluded. A file whose name contains `.bak` (any case) is skipped and reported as `protacoc: skipped <path> (.bak in the file name)`; no valid file matches, because a definition name has no `.`.
 
@@ -1392,7 +1394,7 @@ DeliveryRoute{
 **C++**
 
 ```cpp
-// PizzaSize.enum.h, namespace demo
+// PizzaSize.enum.g.h, namespace demo
 enum class PizzaSize : int32_t { Small = 1, Medium = 2, Large = 3 };
 const char* EnumName(PizzaSize value);
 bool TryParseEnum(const std::string& name, PizzaSize* out,
@@ -1428,7 +1430,7 @@ string name = demo.PizzaSizeNames.Name(size);
 <summary>Python</summary>
 
 ```python
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 
 result = PizzaSizeNames.TryParse("Medium")
 if result:
@@ -1748,7 +1750,7 @@ Put the output root on sys.path. The namespace `demo` becomes `demo/`, and `pizz
   demo/
     DeliveryRoute_g.py
     RouteStop_g.py
-    PizzaSize_enum.py
+    PizzaSize_enum_g.py
 ```
 
 <details>
@@ -1761,7 +1763,7 @@ sys.path.insert(0, "examples/taco_generated/py")
 import protaco
 from demo.DeliveryRoute_g import DeliveryRoute
 from demo.RouteStop_g import RouteStop
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 ```
 
 </details>
@@ -1993,7 +1995,7 @@ The decoder keeps an unknown number as a plain int. An enum member that is a Pyt
 <summary>Python constants</summary>
 
 ```python
-protaco.VERSION              # "0.7.1"
+protaco.VERSION              # "0.8.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2082,7 +2084,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 ### 7.3 Test coverage
 
-The 0.7.1 verification record: 49 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
+The 0.8.0 verification record: 49 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
 Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 

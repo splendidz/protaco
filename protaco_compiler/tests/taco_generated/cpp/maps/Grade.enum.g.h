@@ -1,4 +1,4 @@
-﻿// Grade.enum.h. protacoc 0.7.1, source Grade.enum.yaml (sha1 4a4ddba23d94). Do not edit.
+﻿// Grade.enum.g.h. protacoc 0.8.0, source Grade.enum.yaml (sha1 4a4ddba23d94). Do not edit.
 #pragma once
 
 #include <cstdint>

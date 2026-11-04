@@ -31,7 +31,7 @@
 #include "build4/Order.g.h"
 #include "arrays/Panel.g.h"
 #include "arrays/Rack.g.h"
-#include "arrays/Sizes.const.h"
+#include "arrays/Sizes.const.g.h"
 #include "arrays/Trail.g.h"
 #include "deep/D8.g.h"
 #include "partial/PizzaOrder.g.h"

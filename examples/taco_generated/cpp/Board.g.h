@@ -1,8 +1,8 @@
-﻿// Board.g.h. protacoc 0.7.1, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
+﻿// Board.g.h. protacoc 0.8.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
-#include "PizzaSize.enum.h"
+#include "PizzaSize.enum.g.h"
 #include "Spot.g.h"
 
 namespace demo

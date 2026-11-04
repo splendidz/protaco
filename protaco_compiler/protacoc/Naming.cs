@@ -9,7 +9,7 @@ namespace Protacoc
 {
     internal static class Naming
     {
-        public const string Version = "0.7.1";
+        public const string Version = "0.8.0";
 
         // C# property name: first letter upper-cased (prevState -> PrevState).
         public static string CsProperty(string key)

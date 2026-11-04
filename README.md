@@ -7,7 +7,7 @@
 
 [한국어](README.ko.md) · [Examples](examples/README.md) · [Reference](docs/reference.md) · [Benchmark](docs/benchmark/README.md)
 
-Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.7.1 and serialization format v4.
+Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.8.0 and serialization format v4.
 
 ### When you need serialization
 
@@ -209,7 +209,7 @@ At build time, `protacoc` reads the YAML and writes the message classes and the 
 
 ![Schemas become generated code and runtimes for C++, C#, and Python](docs/img/flow.svg)
 
-Each message produces one file per language, and the classes for older versions you still support go into the same file. Enums come out as `<Name>.enum.h`, `<Name>.enum.cs`, and `<Name>_enum.py`, and const files as `<Name>.const.h`, `<Name>.const.cs`, and `<Name>_const.py`.
+Each message produces one file per language, and the classes for older versions you still support go into the same file. Enums come out as `<Name>.enum.g.h`, `<Name>.enum.g.cs`, and `<Name>_enum_g.py`, and const files as `<Name>.const.g.h`, `<Name>.const.g.cs`, and `<Name>_const_g.py`.
 
 ## 3. Getting started
 
@@ -421,9 +421,9 @@ A message field uses the enum name as its type: `{key: defaultSize, type: PizzaS
 
 Generated code per language:
 
-- C++ `PizzaSize.enum.h`: `enum class PizzaSize : int32_t`, `const char* EnumName(PizzaSize)`, `bool TryParseEnum(const std::string& name, PizzaSize* out, std::string* error = nullptr)`
-- C# `PizzaSize.enum.cs`: `enum PizzaSize : int`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name, out value)`
-- Python `PizzaSize_enum.py`: `class PizzaSize(enum.IntEnum)`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name)`
+- C++ `PizzaSize.enum.g.h`: `enum class PizzaSize : int32_t`, `const char* EnumName(PizzaSize)`, `bool TryParseEnum(const std::string& name, PizzaSize* out, std::string* error = nullptr)`
+- C# `PizzaSize.enum.g.cs`: `enum PizzaSize : int`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name, out value)`
+- Python `PizzaSize_enum_g.py`: `class PizzaSize(enum.IntEnum)`, `PizzaSizeNames.Name(value)`, `PizzaSizeNames.TryParse(name)`
 
 **C++**
 
@@ -459,7 +459,7 @@ if (!demo.PizzaSizeNames.TryParse("Kids", out size))
 
 ```python
 from demo.Menu_g import Menu
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 
 menu = Menu(defaultSize=PizzaSize.Medium)
 print(PizzaSizeNames.Name(menu.defaultSize))   # Medium
@@ -616,9 +616,9 @@ values:
 
 Generated code per language:
 
-- C++ `Limits.const.h`: `namespace Limits { constexpr int32_t MaxSpots = 4; ... }`. Namespace-scope `constexpr` works in C++14 without out-of-line definitions
-- C# `Limits.const.cs`: `public static class Limits { public const int MaxSpots = 4; ... }`
-- Python `Limits_const.py`: `class Limits` with int class attributes (a Python keyword key gets a trailing `_`)
+- C++ `Limits.const.g.h`: `namespace Limits { constexpr int32_t MaxSpots = 4; ... }`. Namespace-scope `constexpr` works in C++14 without out-of-line definitions
+- C# `Limits.const.g.cs`: `public static class Limits { public const int MaxSpots = 4; ... }`
+- Python `Limits_const_g.py`: `class Limits` with int class attributes (a Python keyword key gets a trailing `_`)
 
 ### 4.9 Fixed-length arrays
 

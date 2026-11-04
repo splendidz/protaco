@@ -2,7 +2,7 @@
 
 [English](reference.md) · [README](../README.ko.md) · [예제](../examples/README.ko.md)
 
-protacoc 0.7.1과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
+protacoc 0.8.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
 1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
@@ -135,9 +135,11 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 
 | 언어 | 출력 경로 |
 |---|---|
-| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.h`, `<Const>.const.h`, `Protaco.hpp` |
-| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.cs`, `<Const>.const.cs`, `Protaco.cs` |
-| Python | `<py_out>/<namespace 폴더>/<Name>_g.py`, `<Enum>_enum.py`, `<Const>_const.py`; 런타임은 `<py_out>/protaco.py` |
+| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.g.h`, `<Const>.const.g.h`, `Protaco.hpp` |
+| C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.g.cs`, `<Const>.const.g.cs`, `Protaco.cs` |
+| Python | `<py_out>/<namespace 폴더>/<Name>_g.py`, `<Enum>_enum_g.py`, `<Const>_const_g.py`; 런타임은 `<py_out>/protaco.py` |
+
+생성 파일 이름은 모두 생성 표지(`.g.h`, `.g.cs`, `_g.py`)를 가지므로 `*.g.h`, `*.g.cs`, `*_g.py`로 찾으면 생성 파일이 모두 나옵니다. 0.7.1까지 enum과 const 파일에는 표지가 없었습니다(`<Enum>.enum.h`, `<Enum>.enum.cs`, `<Enum>_enum.py`). 0.8.0부터는 include와 import에 새 이름을 씁니다.
 
 입력 폴더마다 하위 폴더를 제외한 `*.yaml` 파일을 읽습니다. 파일 이름에 `.bak`(대소문자 무관)가 들어 있으면 건너뛰고 `protacoc: skipped <path> (.bak in the file name)`으로 알립니다. 정의 이름에는 `.`이 없으므로 올바른 파일이 건너뛰어지는 일은 없습니다.
 
@@ -1392,7 +1394,7 @@ DeliveryRoute{
 **C++**
 
 ```cpp
-// PizzaSize.enum.h, namespace demo
+// PizzaSize.enum.g.h, namespace demo
 enum class PizzaSize : int32_t { Small = 1, Medium = 2, Large = 3 };
 const char* EnumName(PizzaSize value);
 bool TryParseEnum(const std::string& name, PizzaSize* out,
@@ -1428,7 +1430,7 @@ string name = demo.PizzaSizeNames.Name(size);
 <summary>Python</summary>
 
 ```python
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 
 result = PizzaSizeNames.TryParse("Medium")
 if result:
@@ -1748,7 +1750,7 @@ public const int MaxFrameBytes = 0x7FFFFFC7;
   demo/
     DeliveryRoute_g.py
     RouteStop_g.py
-    PizzaSize_enum.py
+    PizzaSize_enum_g.py
 ```
 
 <details>
@@ -1761,7 +1763,7 @@ sys.path.insert(0, "examples/taco_generated/py")
 import protaco
 from demo.DeliveryRoute_g import DeliveryRoute
 from demo.RouteStop_g import RouteStop
-from demo.PizzaSize_enum import PizzaSize, PizzaSizeNames
+from demo.PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 ```
 
 </details>
@@ -1993,7 +1995,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 <summary>Python — 상수</summary>
 
 ```python
-protaco.VERSION              # "0.7.1"
+protaco.VERSION              # "0.8.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2082,7 +2084,7 @@ bin/
 
 ### 7.3 시험 범위
 
-0.7.1 검증 기록은 Windows와 Linux 모두 C++ 49개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
+0.8.0 검증 기록은 Windows와 Linux 모두 C++ 49개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 

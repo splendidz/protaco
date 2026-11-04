@@ -1,4 +1,4 @@
-﻿// CppEmitter.cs. One message -> <Name>.g.h, one enum -> <Name>.enum.h (C++14 compatible, header-only).
+﻿// CppEmitter.cs. One message -> <Name>.g.h, one enum -> <Name>.enum.g.h (C++14 compatible, header-only).
 // The latest version is <ns>::<Name>. Older supported versions are <ns>::v<N>::<Name>.
 // Public: user API only (constructor, get_/set_/mutable_ field accessors, GetExt/GetMutableExt when allowed, envelope,
 // Serialize, ToString). Field accessors are snake_case get_<key>; everything else is PascalCase.
@@ -23,7 +23,7 @@ namespace Protacoc
             w.Line();
             w.Line("#include \"Protaco.hpp\"");
             foreach (EnumDef dep in message.EnumDependencies.OrderBy(d => d.Name, System.StringComparer.Ordinal))
-                w.Line("#include \"" + dep.Name + ".enum.h\"");
+                w.Line("#include \"" + dep.Name + ".enum.g.h\"");
             foreach (MessageDef dep in message.Dependencies.OrderBy(d => d.Name, System.StringComparer.Ordinal))
                 w.Line("#include \"" + dep.Name + ".g.h\"");
             w.Line();
@@ -50,7 +50,7 @@ namespace Protacoc
         public static string EmitEnum(EnumDef enumDef, string[] ns)
         {
             CodeWriter w = new CodeWriter();
-            w.Line("// " + enumDef.Name + ".enum.h. protacoc " + Naming.Version + ", source " + enumDef.FileName + " (sha1 " + enumDef.Sha1 + "). Do not edit.");
+            w.Line("// " + enumDef.Name + ".enum.g.h. protacoc " + Naming.Version + ", source " + enumDef.FileName + " (sha1 " + enumDef.Sha1 + "). Do not edit.");
             w.Line("#pragma once");
             w.Line();
             w.Line("#include <cstdint>");
@@ -114,7 +114,7 @@ namespace Protacoc
         public static string EmitConst(ConstDef constDef, string[] ns)
         {
             CodeWriter w = new CodeWriter();
-            w.Line("// " + constDef.Name + ".const.h. protacoc " + Naming.Version + ", source " + constDef.FileName + " (sha1 " + constDef.Sha1 + "). Do not edit.");
+            w.Line("// " + constDef.Name + ".const.g.h. protacoc " + Naming.Version + ", source " + constDef.FileName + " (sha1 " + constDef.Sha1 + "). Do not edit.");
             w.Line("#pragma once");
             w.Line();
             w.Line("#include <cstdint>");

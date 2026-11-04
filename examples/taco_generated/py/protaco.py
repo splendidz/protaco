@@ -1,4 +1,4 @@
-﻿# protaco.py. Python runtime for protacoc generated code (<Name>_g.py, <Enum>_enum.py). Python 3.8 or newer,
+﻿# protaco.py. Python runtime for protacoc generated code (<Name>_g.py, <Enum>_enum_g.py). Python 3.8 or newer,
 # standard library only. Produces the same bytes as the C++ runtime (Protaco.hpp). Format v4: README.md
 # "Serialization format". Strings are UTF-8 on every platform.
 # Try* calls return a Result (false on failure, with the reason) and never raise for bad input.
@@ -12,7 +12,7 @@ import struct
 import threading
 import time
 
-VERSION = "0.7.1"
+VERSION = "0.8.0"
 
 FRAME_VERSION = 4
 MAX_DEPTH = 100

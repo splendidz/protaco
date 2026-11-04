@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md) · [README](../README.md) · [Reference](../docs/reference.md)
 
-This folder contains YAML schemas, generated code, and C++, C#, and Python programs for protaco 0.7.1. Pizza orders and delivery routes demonstrate the API. The final section follows the revision history of `Order` to explain version management.
+This folder contains YAML schemas, generated code, and C++, C#, and Python programs for protaco 0.8.0. Pizza orders and delivery routes demonstrate the API. The final section follows the revision history of `Order` to explain version management.
 
 ## Contents
 
@@ -19,11 +19,11 @@ This folder contains YAML schemas, generated code, and C++, C#, and Python progr
 examples/
   schemas/
   taco_generated/
-    cpp/                  *.g.h, *.enum.h, *.const.h, Protaco.hpp
-    cs/                   *.g.cs, *.enum.cs, *.const.cs, Protaco.cs
+    cpp/                  *.g.h, *.enum.g.h, *.const.g.h, Protaco.hpp
+    cs/                   *.g.cs, *.enum.g.cs, *.const.g.cs, Protaco.cs
     py/
       protaco.py
-      demo/               *_g.py, *_enum.py, *_const.py
+      demo/               *_g.py, *_enum_g.py, *_const_g.py
   cpp_examples/
     main.cpp
     example.vcxproj
@@ -758,7 +758,7 @@ public:
 };
 ```
 
-The enum and name conversion come from [PizzaSize.enum.h](taco_generated/cpp/PizzaSize.enum.h). Undeclared numbers return `nullptr`.
+The enum and name conversion come from [PizzaSize.enum.g.h](taco_generated/cpp/PizzaSize.enum.g.h). Undeclared numbers return `nullptr`.
 
 **C++**
 

@@ -38,7 +38,7 @@
     <ClInclude Include="..\taco_generated\cpp\Heartbeat.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
-    <ClInclude Include="..\taco_generated\cpp\Limits.const.h">
+    <ClInclude Include="..\taco_generated\cpp\Limits.const.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\Menu.g.h">
@@ -47,7 +47,7 @@
     <ClInclude Include="..\taco_generated\cpp\PizzaOrder.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
-    <ClInclude Include="..\taco_generated\cpp\PizzaSize.enum.h">
+    <ClInclude Include="..\taco_generated\cpp\PizzaSize.enum.g.h">
       <Filter>taco_generated\cpp</Filter>
     </ClInclude>
     <ClInclude Include="..\taco_generated\cpp\Protaco.hpp">

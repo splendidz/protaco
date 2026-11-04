@@ -80,8 +80,8 @@
     <ClInclude Include="..\taco_generated\cpp\RouteStop.g.h" />
     <ClInclude Include="..\taco_generated\cpp\Spot.g.h" />
     <ClInclude Include="..\taco_generated\cpp\Topping.g.h" />
-    <ClInclude Include="..\taco_generated\cpp\PizzaSize.enum.h" />
-    <ClInclude Include="..\taco_generated\cpp\Limits.const.h" />
+    <ClInclude Include="..\taco_generated\cpp\PizzaSize.enum.g.h" />
+    <ClInclude Include="..\taco_generated\cpp\Limits.const.g.h" />
     <ClInclude Include="..\taco_generated\cpp\Protaco.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

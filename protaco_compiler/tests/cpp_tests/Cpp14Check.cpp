@@ -9,7 +9,7 @@
 #include "PizzaOrder.g.h"
 #include "arrays/Panel.g.h"
 #include "arrays/Rack.g.h"
-#include "arrays/Sizes.const.h"
+#include "arrays/Sizes.const.g.h"
 #include "enums/Pie.g.h"
 #include "maps/Menu.g.h"
 #include "recursive/Node.g.h"
