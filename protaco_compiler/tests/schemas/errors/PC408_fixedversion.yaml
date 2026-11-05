@@ -6,4 +6,4 @@ namespace: errors
 fixed: true
 fields:
   - {key: a, type: int}
-  - {key: b, type: int, added: 2}
+  - {key: b, type: int, added_version: 2}

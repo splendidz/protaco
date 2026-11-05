@@ -17,7 +17,7 @@ namespace Protacoc
 
         // protaco-schema-1|<name>|<version>|<ext 0/1>|<key>:<type>[!][=<default>];...
         // Fields in serialization order. A removed fixed field keeps its bytes and is written ~<key>:<type>;
-        // a removed variable field is left out. added and removed themselves are not part of the text,
+        // a removed variable field is left out. added_version and removed_version themselves are not part of the text,
         // so adding a version leaves the fingerprints of older versions unchanged.
         // Namespace, comments and desc are not part of the serialized contract.
         public static string CanonicalText(MessageDef message, int version)

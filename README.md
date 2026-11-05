@@ -7,7 +7,7 @@
 
 [한국어](README.ko.md) · [Examples](examples/README.md) · [Reference](docs/reference.md) · [Benchmark](docs/benchmark/README.md)
 
-Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.8.0 and serialization format v4.
+Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.9.0 and serialization format v4.
 
 ### When you need serialization
 
@@ -60,7 +60,7 @@ shop::Order order;          // current version 3
 shop::v1::Order legacy;     // version 1 class from the same header, for peers still on v1
 ```
 
-Which versions can talk to each other is set by `min_version` and the per-field `added` and `removed` in the YAML. A peer whose support has ended gets an error that says why instead of misreading the data ([7. Version management](#7-version-management)).
+Which versions can talk to each other is set by `min_version` and the per-field `added_version` and `removed_version` in the YAML. A peer whose support has ended gets an error that says why instead of misreading the data ([7. Version management](#7-version-management)).
 
 ### Stable and robust
 
@@ -178,7 +178,7 @@ if not ok:
 - Every run writes the matching runtime next to the generated code, so the generator and runtime versions can never drift apart.
 - ⚡ In C++, fixed-field setters write the final bytes directly, and when nothing has changed, `Serialize()` hands back the last bytes as they are. Receivers read them without a copy through `TryView` (C++ and C#).
 - 🛡️ Receivers check the name, version, and schema fingerprint. Broken data is never read silently.
-- Versioning works per field. Each field records its history with `added` and `removed`, and the generator also produces classes for the older versions you still support, each in its own namespace such as `v1::Order`.
+- Versioning works per field. Each field records its history with `added_version` and `removed_version`, and the generator also produces classes for the older versions you still support, each in its own namespace such as `v1::Order`.
 - Extension data (ext) carries key-value pairs that are not in the schema. Turn it off with `allow_extension: false` when you do not need it.
 - The API is exception-free by default. `Try*` functions return success or failure and report the reason as a `path: reason` string.
 - Every message has an envelope: an id, a correlation id, and a microsecond timestamp. A new object gets the next id and the current time automatically, and a reply carries the request's id as its correlation id.
@@ -319,7 +319,7 @@ allow_extension: true
 desc: a pizza order
 fields:
   - {key: orderId, type: string(32), desc: order number}
-  - {key: giftNote, type: string, added: 2}
+  - {key: giftNote, type: string, added_version: 2}
 ```
 
 | Key | Required | Meaning |
@@ -346,9 +346,11 @@ The namespace `shop.orders` becomes `shop::orders` in C++, `shop.orders` in C#, 
 | `type` | Field type | See [4.4 Types](#44-types) |
 | `required` | The entry must be present on receive | Variable fields only; default `false` |
 | `default` | Initial value | Type and notation checked at generation |
-| `added` | Version that first has the field | Default 1; at most the current `version` |
-| `removed` | First version without the field | Greater than `added`; at most the current `version` |
+| `added_version` | Version that first has the field | Default 1; at most the current `version` |
+| `removed_version` | First version without the field | Greater than `added_version`; at most the current `version` |
 | `desc` | Field description | Goes into the docstring |
+
+Up to 0.8.0 the two version attributes of fields and enum values were `added` and `removed`. 0.9.0 names them `added_version` and `removed_version` and rejects the old names (PC203).
 
 Keys cannot start with `_`, `get_`, `set_`, `mutable_`, `has_`, or `clear_`. C++ and C# keywords and generated member names (`ext`, `serialize`, `tostring`, `view`, and others) are PC303 as well. A C# property name is the key with its first letter capitalized, so two keys that collide after capitalization are PC311. When a key is a Python keyword, the Python attribute name gets a trailing `_` (`from` → `from_`).
 
@@ -413,8 +415,8 @@ values:
 
 A message field uses the enum name as its type: `{key: defaultSize, type: PizzaSize, default: Large}`.
 
-- Top-level keys: `enum`, `version`, `min_version`, `namespace`, `desc`, `values`. Value attributes: `key`, `value` (int32), `added`, `removed`, `desc`
-- A value number is never reused (PC318). To drop a value, keep its line and add `removed: N`. The number stays taken, and old frames still print its name
+- Top-level keys: `enum`, `version`, `min_version`, `namespace`, `desc`, `values`. Value attributes: `key`, `value` (int32), `added_version`, `removed_version`, `desc`
+- A value number is never reused (PC318). To drop a value, keep its line and add `removed_version: N`. The number stays taken, and old frames still print its name
 - The serialized data carries the int32 number. A receiver keeps numbers it does not know instead of dropping them
 - The schema fingerprint holds only the enum name. Adding values does not change the fingerprint of messages that use the enum
 - `ToString()` prints `name(number)`: `defaultSize=Large(3)`. An unknown number prints as `?(9)`
@@ -559,7 +561,7 @@ Rules:
 - A recursive field (`list<Self>` or a single `Self`) cannot be `required` (PC306)
 - A map value cannot be the message itself (PC403), because libstdc++'s `std::unordered_map` needs a complete type
 - Two messages that refer to each other (A → B → A) are PC403
-- A recursive message is the type of its own field, so it cannot use version features (`min_version`, `added`, `removed`) (PC407, [7.9](#79-layout-rules))
+- A recursive message is the type of its own field, so it cannot use version features (`min_version`, `added_version`, `removed_version`) (PC407, [7.9](#79-layout-rules))
 - Decoding fails with `nesting too deep` when the actual nesting exceeds 100 levels
 
 **C++**
@@ -703,7 +705,7 @@ fields:
   - {key: label, type: string(16)}
 ```
 
-- A `fixed: true` message has fixed fields only: scalars, `string(N)`, enums, other fixed messages, and `T[N]` of those. A variable field, `min_version`, `added`, `removed`, `allow_extension: true`, or a field of its own type is PC408
+- A `fixed: true` message has fixed fields only: scalars, `string(N)`, enums, other fixed messages, and `T[N]` of those. A variable field, `min_version`, `added_version`, `removed_version`, `allow_extension: true`, or a field of its own type is PC408
 - It carries no extension data. Its frames, when sent on their own, are like those of any fixed-only message
 - Inside `list<T>` or `map<K, V>` it stays a nested body, as before
 - A message that uses it has `fixed(Spot@xxxxxxxx)` in its fingerprint text, so turning `fixed` on or off changes that message's layout and fingerprint
@@ -756,7 +758,7 @@ data = board.Serialize()
 
 Extension data holds key-value entries that are not in the YAML. Some senders use it to attach extras such as a delivery channel, a priority, or a receipt without changing the YAML or the version. Receivers keep entries they do not know, so data passes through relay programs even before they are updated.
 
-Data that becomes part of the contract belongs in a proper field with `added`. Key-value data with fixed types belongs in a [map](#46-maps). Use extension data for experiments, optional extras, and relay information. For a fixed-field message sent very often, `allow_extension: false` makes the intent clear.
+Data that becomes part of the contract belongs in a proper field with `added_version`. Key-value data with fixed types belongs in a [map](#46-maps). Use extension data for experiments, optional extras, and relay information. For a fixed-field message sent very often, `allow_extension: false` makes the intent clear.
 
 ### 5.2 Writing and reading
 
@@ -1117,12 +1119,12 @@ Programs are never all updated at once. While new and old builds talk to each ot
 
 | Change | What to do in the YAML | What happens in old builds |
 |---|---|---|
-| Small change (add or remove a field) | Raise `version`; add `added`/`removed` to the field | They keep talking |
+| Small change (add or remove a field) | Raise `version`; add `added_version`/`removed_version` to the field | They keep talking |
 | Breaking change | Raise `version` and `min_version` | No misreads; an error that says why |
 
 ### 7.2 Small changes
 
-To add or remove a field, raise `version` and give the field `added` or `removed`. Leave `min_version` alone. The fingerprints of the old layouts stay the same, so new and old builds keep talking. If you removed a variable field that an old receiver requires, send to it with an older class, as described in the [layout rules](#79-layout-rules).
+To add or remove a field, raise `version` and give the field `added_version` or `removed_version`. Leave `min_version` alone. The fingerprints of the old layouts stay the same, so new and old builds keep talking. If you removed a variable field that an old receiver requires, send to it with an older class, as described in the [layout rules](#79-layout-rules).
 
 ### 7.3 Breaking changes
 
@@ -1132,7 +1134,7 @@ Drop old versions you can no longer support by raising `min_version`. For exampl
 message version too new: Order reads version 1, sender supports 3..3
 ```
 
-New builds reject frames that are too old with `message version too old`. Different layouts are never misread. For a field that changes a lot, keep the old field as `removed` and add a field with a new key as `added`.
+New builds reject frames that are too old with `message version too old`. Different layouts are never misread. For a field that changes a lot, keep the old field as `removed_version` and add a field with a new key as `added_version`.
 
 ### 7.4 Declaring versions
 
@@ -1143,16 +1145,16 @@ min_version: 1      # oldest supported version; defaults to version
 namespace: shop
 fields:
   - {key: id,     type: string(8)}
-  - {key: weight, type: double, default: 0.5, added: 2}
-  - {key: qty,    type: int, default: 1, removed: 3}  # fixed bytes stay, filled with the default
-  - {key: note,   type: string, removed: 3}           # no longer sent from version 3
+  - {key: weight, type: double, default: 0.5, added_version: 2}
+  - {key: qty,    type: int, default: 1, removed_version: 3}  # fixed bytes stay, filled with the default
+  - {key: note,   type: string, removed_version: 3}           # no longer sent from version 3
   - {key: color,  type: string, required: true}
-  - {key: tags,   type: list<string>, added: 2}
-  - {key: label,  type: string, added: 3}
-  - {key: rush,   type: bool, added: 3}
+  - {key: tags,   type: list<string>, added_version: 2}
+  - {key: label,  type: string, added_version: 3}
+  - {key: rush,   type: bool, added_version: 3}
 ```
 
-A field first exists in the version given by `added` and is gone from the version given by `removed`. `added` defaults to 1.
+A field first exists in the version given by `added_version` and is gone from the version given by `removed_version`. `added_version` defaults to 1.
 
 `version` is the current version, and `min_version` is the oldest version still supported. Without it, only the current version is supported. A message supports at most 255 versions.
 
@@ -1213,16 +1215,16 @@ sequenceDiagram
 
 - Fixed fields are laid out by the version that added them, then by declaration order. Fixed fields of a new version go at the end of the existing fixed block
 - The bytes of a removed fixed field stay and are filled with the default. Its line stays in the YAML
-- A removed variable field is no longer sent. Once `min_version` reaches its `removed`, delete its line from the YAML (PC313)
+- A removed variable field is no longer sent. Once `min_version` reaches its `removed_version`, delete its line from the YAML (PC313)
 - If a removed variable field was `required` in an older version, a new frame can be rejected with `missing required (frame version 4 read as 2)`. Send to such peers with an older class that still has the field
-- A message used as a field type cannot use `min_version`, `added`, or `removed` (PC407), because a nested body carries no version. To change a nested structure, add a new message. A recursive message is the type of its own field, so the same rule applies
-- To add or remove enum values, raise the enum's `version` and give the values `added` and `removed`. The fingerprint holds only the enum name, so message compatibility does not change. Receivers keep numbers they do not know
+- A message used as a field type cannot use `min_version`, `added_version`, or `removed_version` (PC407), because a nested body carries no version. To change a nested structure, add a new message. A recursive message is the type of its own field, so the same rule applies
+- To add or remove enum values, raise the enum's `version` and give the values `added_version` and `removed_version`. The fingerprint holds only the enum name, so message compatibility does not change. Receivers keep numbers they do not know
 
 ### 7.10 Changing a deployed schema
 
 Before shipping, change anything and keep the version. Once a version ships, its contract is frozen.
 
-- Adding a field (`added`), removing a field (`removed`), and raising `min_version` each take a `version` bump. You can always add new messages
+- Adding a field (`added_version`), removing a field (`removed_version`), and raising `min_version` each take a `version` bump. You can always add new messages
 - Changing an existing field's type, `required`, `default`, name, or order, or reusing a removed key, breaks compatibility with the old contract. Remove the old field and add one with a new key
 - An array length is part of the field type. Changing N, or the const or enum value it names, breaks the contract like any type change
 - Changing the message name or `allow_extension` also breaks the existing contract. Split it into a new message or end support for old versions

@@ -1,4 +1,4 @@
-﻿# Menu_g.py. protacoc 0.8.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
+﻿# Menu_g.py. protacoc 0.9.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
 import protaco
 from .Grade_enum_g import Grade, GradeNames
 from .Dish_g import Dish

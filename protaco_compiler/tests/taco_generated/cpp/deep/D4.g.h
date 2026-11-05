@@ -1,4 +1,4 @@
-﻿// D4.g.h. protacoc 0.8.0, source D4.yaml (sha1 9998c5d5943b). Do not edit.
+﻿// D4.g.h. protacoc 0.9.0, source D4.yaml (sha1 9998c5d5943b). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

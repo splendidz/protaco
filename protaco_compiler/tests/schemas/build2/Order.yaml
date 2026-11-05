@@ -6,8 +6,8 @@ namespace: build2
 fields:
   - {key: id, type: string(8)}
   # Declared in the middle, laid out after the version 1 fields.
-  - {key: weight, type: double, default: 0.5, added: 2}
+  - {key: weight, type: double, default: 0.5, added_version: 2}
   - {key: qty, type: int, default: 1}
   - {key: note, type: string}
   - {key: color, type: string, required: true}
-  - {key: tags, type: list<string>, added: 2}
+  - {key: tags, type: list<string>, added_version: 2}

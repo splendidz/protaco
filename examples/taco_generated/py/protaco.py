@@ -12,7 +12,7 @@ import struct
 import threading
 import time
 
-VERSION = "0.8.0"
+VERSION = "0.9.0"
 
 FRAME_VERSION = 4
 MAX_DEPTH = 100

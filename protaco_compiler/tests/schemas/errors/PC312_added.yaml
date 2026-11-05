@@ -3,4 +3,4 @@ message: PC312_added
 version: 2
 namespace: errors
 fields:
-  - {key: a, type: int, added: 3}
+  - {key: a, type: int, added_version: 3}

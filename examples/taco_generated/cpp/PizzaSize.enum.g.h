@@ -1,4 +1,4 @@
-﻿// PizzaSize.enum.g.h. protacoc 0.8.0, source PizzaSize.enum.yaml (sha1 1b92f7597053). Do not edit.
+﻿// PizzaSize.enum.g.h. protacoc 0.9.0, source PizzaSize.enum.yaml (sha1 1b92f7597053). Do not edit.
 #pragma once
 
 #include <cstdint>

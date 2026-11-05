@@ -1,4 +1,4 @@
-﻿# Board_g.py. protacoc 0.8.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
+﻿# Board_g.py. protacoc 0.9.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
 import protaco
 from .PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 from .Spot_g import Spot

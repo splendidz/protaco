@@ -1,4 +1,4 @@
-﻿// Panel.g.h. protacoc 0.8.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
+﻿// Panel.g.h. protacoc 0.9.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

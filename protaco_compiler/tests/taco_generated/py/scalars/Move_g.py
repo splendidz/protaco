@@ -1,4 +1,4 @@
-﻿# Move_g.py. protacoc 0.8.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
+﻿# Move_g.py. protacoc 0.9.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
 import protaco
 
 

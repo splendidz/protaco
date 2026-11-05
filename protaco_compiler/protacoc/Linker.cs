@@ -141,7 +141,7 @@ namespace Protacoc
             return true;
         }
 
-        // added/removed of one field or enum value.
+        // added_version/removed_version of one field or enum value.
         private static void CheckLifetime(string key, int added, int removed, bool keepsBytes, SchemaDef def, SourcePos pos, Diag diag)
         {
             if (added > def.Version)
@@ -221,7 +221,7 @@ namespace Protacoc
                 diag.Error(message.Pos, Codes.FixedMessage, "'" + message.Name + "' is fixed: true and cannot allow extension data");
             message.AllowExtension = false;
             if (message.UsesVersions)
-                diag.Error(message.Pos, Codes.FixedMessage, "'" + message.Name + "' is fixed: true and has one layout: no min_version, added or removed");
+                diag.Error(message.Pos, Codes.FixedMessage, "'" + message.Name + "' is fixed: true and has one layout: no min_version, added_version or removed_version");
             foreach (FieldDef field in message.Fields)
             {
                 if (field.Type.Named().Any(t => t.Resolved == message))
@@ -246,7 +246,7 @@ namespace Protacoc
                         if (target == null || !target.UsesVersions || !reported.Add(target))
                             continue;
                         diag.Error(target.Pos, Codes.NestedVersion, "'" + target.Name + "' is used as a field type (" + message.Name + "." + field.Key
-                            + ") and cannot use min_version, added or removed. Nested bodies carry no version: add a new message instead");
+                            + ") and cannot use min_version, added_version or removed_version. Nested bodies carry no version: add a new message instead");
                     }
                 }
             }

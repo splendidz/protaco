@@ -1,4 +1,4 @@
-﻿// Menu.g.h. protacoc 0.8.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
+﻿// Menu.g.h. protacoc 0.9.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -7,7 +7,7 @@
 
 [English](README.md) · [예제](examples/README.ko.md) · [상세 참조](docs/reference.ko.md) · [벤치마크](docs/benchmark/README.ko.md)
 
-Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 주는 가벼운 직렬화 도구입니다. 구조체를 선언하듯 YAML에 메시지를 적으면 생성기 `protacoc`가 세 언어의 클래스를 만들어 줍니다. 이 문서는 protacoc 0.8.0과 직렬화 형식 v4를 기준으로 합니다.
+Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 주는 가벼운 직렬화 도구입니다. 구조체를 선언하듯 YAML에 메시지를 적으면 생성기 `protacoc`가 세 언어의 클래스를 만들어 줍니다. 이 문서는 protacoc 0.9.0과 직렬화 형식 v4를 기준으로 합니다.
 
 ### 직렬화가 필요한 순간
 
@@ -60,7 +60,7 @@ shop::Order order;          // 현재 version 3
 shop::v1::Order legacy;     // 같은 헤더에 생성된 version 1 클래스. 아직 v1인 상대와 주고받을 때
 ```
 
-어떤 version끼리 통신할지는 YAML의 `min_version`과 필드별 `added`·`removed`로 정합니다. 지원이 끝난 상대는 잘못 읽는 대신 이유가 적힌 오류를 받습니다([7. 버전 관리](#7-버전-관리)).
+어떤 version끼리 통신할지는 YAML의 `min_version`과 필드별 `added_version`·`removed_version`로 정합니다. 지원이 끝난 상대는 잘못 읽는 대신 이유가 적힌 오류를 받습니다([7. 버전 관리](#7-버전-관리)).
 
 ### 안정적이고 강건합니다
 
@@ -178,7 +178,7 @@ if not ok:
 - 생성할 때마다 코드 옆에 같은 버전의 런타임을 씁니다. 생성기와 런타임 버전이 어긋날 일이 없습니다.
 - ⚡ C++에서는 고정 필드의 setter가 최종 바이트를 바로 기록하고, 바뀐 것이 없으면 `Serialize()`가 마지막 바이트를 그대로 돌려줍니다. 받는 쪽은 `TryView`로 복사 없이 읽습니다(C++, C#).
 - 🛡️ 받을 때 이름, version, 스키마 fingerprint를 모두 확인합니다. 깨진 데이터가 조용히 읽히는 일이 없습니다.
-- 버전 관리가 필드 단위입니다. 필드마다 `added`와 `removed`로 이력을 남기고, 아직 지원하는 옛 version의 클래스도 `v1::Order`처럼 namespace로 나눠 함께 생성합니다.
+- 버전 관리가 필드 단위입니다. 필드마다 `added_version`와 `removed_version`로 이력을 남기고, 아직 지원하는 옛 version의 클래스도 `v1::Order`처럼 namespace로 나눠 함께 생성합니다.
 - 스키마에 없는 키-값도 확장 데이터(ext)로 실어 보낼 수 있습니다. 필요 없으면 `allow_extension: false`로 끕니다.
 - 예외 없는 API가 기본입니다. `Try*` 함수는 성공 여부를 돌려주고 실패 이유를 `경로: 이유` 형태의 문자열로 알려 줍니다.
 - 메시지마다 Envelope(id, correlation id, 마이크로초 시각)가 있습니다. 객체를 만들면 1씩 늘어나는 id와 현재 시각이 자동으로 찍히고, 응답에는 요청의 id를 correlation id로 담습니다.
@@ -319,7 +319,7 @@ allow_extension: true
 desc: a pizza order
 fields:
   - {key: orderId, type: string(32), desc: order number}
-  - {key: giftNote, type: string, added: 2}
+  - {key: giftNote, type: string, added_version: 2}
 ```
 
 | 키 | 필수 | 의미 |
@@ -346,9 +346,11 @@ namespace `shop.orders`는 C++에서 `shop::orders`, C#에서 `shop.orders`, Pyt
 | `type` | 필드 타입 | [4.4 타입](#44-타입) 참고 |
 | `required` | 수신할 때 항목이 꼭 있어야 함 | 가변 필드만, 기본값 `false` |
 | `default` | 초기값 | 생성 시점에 타입과 표기 검사 |
-| `added` | 처음 추가된 version | 기본값 1, 현재 `version` 이하 |
-| `removed` | 처음 제거된 version | `added`보다 크고 현재 `version` 이하 |
+| `added_version` | 처음 추가된 version | 기본값 1, 현재 `version` 이하 |
+| `removed_version` | 처음 제거된 version | `added_version`보다 크고 현재 `version` 이하 |
 | `desc` | 필드 설명 | docstring에 기록 |
+
+0.8.0까지 필드와 enum 값의 version 속성 이름은 `added`·`removed`였습니다. 0.9.0은 `added_version`·`removed_version`이고 옛 이름은 PC203으로 거부합니다.
 
 키는 `_`, `get_`, `set_`, `mutable_`, `has_`, `clear_`로 시작할 수 없습니다. C++·C# 예약어와 생성 멤버 이름(`ext`, `serialize`, `tostring`, `view` 등)도 PC303입니다. C# 속성 이름은 첫 글자를 대문자로 바꾼 키라서, 바꾼 이름끼리 겹치면 PC311입니다. 키가 Python 예약어이면 Python 속성 이름 끝에 `_`를 붙입니다(`from` → `from_`).
 
@@ -413,8 +415,8 @@ values:
 
 메시지 필드에서는 enum 이름을 타입으로 씁니다: `{key: defaultSize, type: PizzaSize, default: Large}`.
 
-- 최상위 키: `enum`, `version`, `min_version`, `namespace`, `desc`, `values`. 값 속성: `key`, `value`(int32), `added`, `removed`, `desc`
-- 값 번호는 한 번 쓰면 다시 쓰지 않음(PC318). 값을 빼려면 줄을 지우지 않고 `removed: N`을 붙임. 번호를 계속 점유하고, 옛 프레임을 출력할 때 이름이 나옴
+- 최상위 키: `enum`, `version`, `min_version`, `namespace`, `desc`, `values`. 값 속성: `key`, `value`(int32), `added_version`, `removed_version`, `desc`
+- 값 번호는 한 번 쓰면 다시 쓰지 않음(PC318). 값을 빼려면 줄을 지우지 않고 `removed_version: N`을 붙임. 번호를 계속 점유하고, 옛 프레임을 출력할 때 이름이 나옴
 - 직렬화 데이터에는 int32 번호가 실림. 받는 쪽이 모르는 번호도 버리지 않고 그대로 보관
 - 스키마 fingerprint에는 enum 이름만 들어감. 값을 추가해도 이 enum을 쓰는 메시지의 fingerprint는 그대로
 - `ToString()`은 `이름(번호)`로 출력: `defaultSize=Large(3)`. 모르는 번호는 `?(9)`
@@ -559,7 +561,7 @@ fields:
 - 재귀 필드(`list<Self>`, 단일 `Self`)는 `required` 불가(PC306)
 - map 값으로 자기 자신을 쓸 수 없음(PC403). libstdc++의 `std::unordered_map`이 완전한 타입을 요구하기 때문
 - 두 메시지가 서로 참조하는 순환(A → B → A)은 PC403
-- 재귀 메시지는 자기 필드의 타입으로 쓰이므로 version 기능(`min_version`, `added`, `removed`)을 쓸 수 없음(PC407, [7.9](#79-layout-규칙))
+- 재귀 메시지는 자기 필드의 타입으로 쓰이므로 version 기능(`min_version`, `added_version`, `removed_version`)을 쓸 수 없음(PC407, [7.9](#79-layout-규칙))
 - 디코딩할 때 실제 중첩이 100단계를 넘으면 `nesting too deep`
 
 **C++**
@@ -703,7 +705,7 @@ fields:
   - {key: label, type: string(16)}
 ```
 
-- `fixed: true` 메시지는 fixed 필드만 가짐: 스칼라, `string(N)`, enum, 다른 fixed 메시지, 이들의 `T[N]`. 가변 필드, `min_version`, `added`, `removed`, `allow_extension: true`, 자기 타입 필드는 PC408
+- `fixed: true` 메시지는 fixed 필드만 가짐: 스칼라, `string(N)`, enum, 다른 fixed 메시지, 이들의 `T[N]`. 가변 필드, `min_version`, `added_version`, `removed_version`, `allow_extension: true`, 자기 타입 필드는 PC408
 - 확장 데이터를 싣지 않음. 단독으로 보내는 프레임은 다른 fixed 전용 메시지와 같음
 - `list<T>`나 `map<K, V>` 안에서는 지금처럼 중첩 본문
 - 이 메시지를 쓰는 쪽의 fingerprint에는 `fixed(Spot@xxxxxxxx)`가 들어감. `fixed`를 켜거나 끄면 layout과 fingerprint가 바뀜
@@ -756,7 +758,7 @@ data = board.Serialize()
 
 확장 데이터는 YAML에 없는 키-값 항목입니다. YAML과 version을 바꾸지 않고 일부 송신자만 배달 채널, 우선순위, 영수증 같은 부가 정보를 붙일 때 씁니다. 받는 쪽은 모르는 항목도 보관하므로 중계 프로그램을 먼저 갱신하지 않아도 데이터가 전달됩니다.
 
-계약의 일부가 될 데이터는 `added`를 붙인 정식 필드로 선언합니다. 타입이 정해진 키-값 묶음은 [map](#46-map)으로 선언합니다. 실험, 선택적 부가 정보, 중계용 정보에는 확장 데이터를 씁니다. 자주 보내는 고정 필드 메시지는 `allow_extension: false`로 닫으면 의도가 분명해집니다.
+계약의 일부가 될 데이터는 `added_version`를 붙인 정식 필드로 선언합니다. 타입이 정해진 키-값 묶음은 [map](#46-map)으로 선언합니다. 실험, 선택적 부가 정보, 중계용 정보에는 확장 데이터를 씁니다. 자주 보내는 고정 필드 메시지는 `allow_extension: false`로 닫으면 의도가 분명해집니다.
 
 ### 5.2 쓰기와 읽기
 
@@ -1117,12 +1119,12 @@ demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(byt
 
 | 변경 | YAML에서 할 일 | 옛 빌드에서 일어나는 일 |
 |---|---|---|
-| 작은 변경(필드 추가·제거) | `version` 올림, 필드에 `added`/`removed` | 계속 통신 |
+| 작은 변경(필드 추가·제거) | `version` 올림, 필드에 `added_version`/`removed_version` | 계속 통신 |
 | 개편 수준 변경 | `version` 올림, `min_version` 올림 | 잘못 읽지 않고 이유가 적힌 오류 |
 
 ### 7.2 작은 변경
 
-필드를 추가하거나 제거할 때는 `version`을 올리고 그 필드에 `added`나 `removed`를 붙입니다. `min_version`은 그대로 둡니다. 옛 layout의 fingerprint가 유지되므로 새 빌드와 옛 빌드가 계속 통신합니다. 옛 수신 측이 필수로 요구하는 가변 필드를 제거했다면 [layout 규칙](#79-layout-규칙)에 따라 옛 클래스로 보냅니다.
+필드를 추가하거나 제거할 때는 `version`을 올리고 그 필드에 `added_version`나 `removed_version`를 붙입니다. `min_version`은 그대로 둡니다. 옛 layout의 fingerprint가 유지되므로 새 빌드와 옛 빌드가 계속 통신합니다. 옛 수신 측이 필수로 요구하는 가변 필드를 제거했다면 [layout 규칙](#79-layout-규칙)에 따라 옛 클래스로 보냅니다.
 
 ### 7.3 개편 수준 변경
 
@@ -1132,7 +1134,7 @@ demo::DeliveryRoute route = protaco::ToObject<demo::DeliveryRoute>(std::move(byt
 message version too new: Order reads version 1, sender supports 3..3
 ```
 
-새 빌드도 너무 오래된 프레임을 `message version too old`로 거부합니다. 서로 다른 layout을 잘못 읽는 일은 생기지 않습니다. 크게 바뀌는 필드는 기존 필드를 `removed`로 남기고 새 키의 필드를 `added`로 추가합니다.
+새 빌드도 너무 오래된 프레임을 `message version too old`로 거부합니다. 서로 다른 layout을 잘못 읽는 일은 생기지 않습니다. 크게 바뀌는 필드는 기존 필드를 `removed_version`로 남기고 새 키의 필드를 `added_version`로 추가합니다.
 
 ### 7.4 version 선언
 
@@ -1143,16 +1145,16 @@ min_version: 1      # 가장 오래된 지원 version, 생략하면 version과 �
 namespace: shop
 fields:
   - {key: id,     type: string(8)}
-  - {key: weight, type: double, default: 0.5, added: 2}
-  - {key: qty,    type: int, default: 1, removed: 3}  # 고정 바이트 유지, 기본값으로 채움
-  - {key: note,   type: string, removed: 3}           # version 3부터 보내지 않음
+  - {key: weight, type: double, default: 0.5, added_version: 2}
+  - {key: qty,    type: int, default: 1, removed_version: 3}  # 고정 바이트 유지, 기본값으로 채움
+  - {key: note,   type: string, removed_version: 3}           # version 3부터 보내지 않음
   - {key: color,  type: string, required: true}
-  - {key: tags,   type: list<string>, added: 2}
-  - {key: label,  type: string, added: 3}
-  - {key: rush,   type: bool, added: 3}
+  - {key: tags,   type: list<string>, added_version: 2}
+  - {key: label,  type: string, added_version: 3}
+  - {key: rush,   type: bool, added_version: 3}
 ```
 
-필드는 `added`에 적힌 version에서 처음 생기고, `removed`에 적힌 version부터 없습니다. `added`의 기본값은 1입니다.
+필드는 `added_version`에 적힌 version에서 처음 생기고, `removed_version`에 적힌 version부터 없습니다. `added_version`의 기본값은 1입니다.
 
 `version`은 현재 version, `min_version`은 아직 지원하는 가장 오래된 version입니다. 생략하면 현재 version 하나만 지원합니다. 지원하는 version은 메시지당 최대 255개입니다.
 
@@ -1213,16 +1215,16 @@ sequenceDiagram
 
 - 고정 필드는 추가된 version, 그다음 선언 순으로 놓음. 새 version의 고정 필드는 기존 고정 영역 끝에 붙음
 - 제거된 고정 필드의 바이트는 계속 남고 기본값으로 채움. YAML의 그 줄도 남김
-- 제거된 가변 필드는 보내지 않음. `min_version`이 그 필드의 `removed`에 도달하면 YAML의 그 줄을 지움(PC313)
+- 제거된 가변 필드는 보내지 않음. `min_version`이 그 필드의 `removed_version`에 도달하면 YAML의 그 줄을 지움(PC313)
 - 제거된 가변 필드가 옛 version에서 `required`였다면 새 프레임은 `missing required (frame version 4 read as 2)`로 거부될 수 있음. 이런 상대에게는 그 필드가 남아 있는 옛 클래스로 보냄
-- 필드 타입으로 쓰이는 메시지는 `min_version`, `added`, `removed`를 쓸 수 없음(PC407). 중첩 본문에는 version이 실리지 않기 때문. 중첩 구조를 바꿔야 하면 새 메시지를 추가. 재귀 메시지도 자기 필드의 타입이므로 같은 규칙
-- enum 값의 추가·제거는 enum의 `version`을 올리고 값에 `added`·`removed`를 붙임. fingerprint에는 enum 이름만 들어가므로 메시지 호환성에는 영향 없음. 받는 쪽은 모르는 번호도 보관
+- 필드 타입으로 쓰이는 메시지는 `min_version`, `added_version`, `removed_version`를 쓸 수 없음(PC407). 중첩 본문에는 version이 실리지 않기 때문. 중첩 구조를 바꿔야 하면 새 메시지를 추가. 재귀 메시지도 자기 필드의 타입이므로 같은 규칙
+- enum 값의 추가·제거는 enum의 `version`을 올리고 값에 `added_version`·`removed_version`를 붙임. fingerprint에는 enum 이름만 들어가므로 메시지 호환성에는 영향 없음. 받는 쪽은 모르는 번호도 보관
 
 ### 7.10 배포된 스키마 바꾸기
 
 배포 전에는 version을 유지한 채 자유롭게 고칩니다. 배포한 version의 계약은 동결합니다.
 
-- 필드 추가(`added`), 필드 제거(`removed`), `min_version` 상향은 각각 `version`을 올려 반영. 새 메시지 추가는 언제나 가능
+- 필드 추가(`added_version`), 필드 제거(`removed_version`), `min_version` 상향은 각각 `version`을 올려 반영. 새 메시지 추가는 언제나 가능
 - 기존 필드의 타입, `required`, `default`, 이름, 순서를 바꾸거나 제거한 키를 다시 쓰면 옛 계약과 호환되지 않음. 기존 필드를 제거하고 새 키의 필드를 추가
 - 배열 길이는 필드 타입의 일부. N이나 N이 가리키는 const·enum 값을 바꾸면 다른 타입 변경처럼 호환되지 않음
 - 메시지 이름과 `allow_extension` 변경도 기존 계약과 호환되지 않음. 새 메시지로 분리하거나 옛 version 지원을 끝냄

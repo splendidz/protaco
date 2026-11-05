@@ -2,7 +2,7 @@
 
 [한국어](README.ko.md) · [README](../README.md) · [Reference](../docs/reference.md)
 
-This folder contains YAML schemas, generated code, and C++, C#, and Python programs for protaco 0.8.0. Pizza orders and delivery routes demonstrate the API. The final section follows the revision history of `Order` to explain version management.
+This folder contains YAML schemas, generated code, and C++, C#, and Python programs for protaco 0.9.0. Pizza orders and delivery routes demonstrate the API. The final section follows the revision history of `Order` to explain version management.
 
 ## Contents
 
@@ -906,13 +906,13 @@ min_version: 1
 namespace: build3
 fields:
   - {key: id, type: string(8)}
-  - {key: weight, type: double, default: 0.5, added: 2}
-  - {key: qty, type: int, default: 1, removed: 3}
-  - {key: note, type: string, removed: 3}
+  - {key: weight, type: double, default: 0.5, added_version: 2}
+  - {key: qty, type: int, default: 1, removed_version: 3}
+  - {key: note, type: string, removed_version: 3}
   - {key: color, type: string, required: true}
-  - {key: tags, type: list<string>, added: 2}
-  - {key: label, type: string, added: 3}
-  - {key: rush, type: bool, added: 3}
+  - {key: tags, type: list<string>, added_version: 2}
+  - {key: label, type: string, added_version: 3}
+  - {key: rush, type: bool, added_version: 3}
 ```
 
 - Version 2 adds fixed `weight` and variable `tags`. Although declared between `id` and `qty`, `weight` is placed after the existing fixed block.

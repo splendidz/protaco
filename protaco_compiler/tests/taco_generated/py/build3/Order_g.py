@@ -1,4 +1,4 @@
-﻿# Order_g.py. protacoc 0.8.0, source Order.yaml (sha1 da7bfc519b96). Do not edit.
+﻿# Order_g.py. protacoc 0.9.0, source Order.yaml (sha1 49c8835ddda2). Do not edit.
 import protaco
 
 

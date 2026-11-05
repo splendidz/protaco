@@ -62,7 +62,7 @@ namespace Protacoc
         public const string BadDefault = "PC308";      // malformed default
         public const string BadLength = "PC310";       // N of string(N)
         public const string NameClash = "PC311";       // C# or Python name clash
-        public const string BadVersion = "PC312";      // min_version, added or removed out of range
+        public const string BadVersion = "PC312";      // min_version, added_version or removed_version out of range
         public const string DeadLine = "PC313";        // variable field removed at or below min_version
         public const string ReservedName = "PC314";    // message name v<N> (version namespace)
         public const string DupNumber = "PC318";       // two enum values with one number

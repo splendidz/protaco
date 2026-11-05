@@ -1,4 +1,4 @@
-﻿// Slot.g.h. protacoc 0.8.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
+﻿// Slot.g.h. protacoc 0.9.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

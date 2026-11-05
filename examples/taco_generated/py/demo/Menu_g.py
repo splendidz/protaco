@@ -1,4 +1,4 @@
-﻿# Menu_g.py. protacoc 0.8.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
+﻿# Menu_g.py. protacoc 0.9.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
 import protaco
 from .PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 from .Category_g import Category

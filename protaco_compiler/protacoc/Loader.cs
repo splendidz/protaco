@@ -25,8 +25,8 @@ namespace Protacoc
 
         private static readonly HashSet<string> MessageKeys = new HashSet<string> { "message", "version", "min_version", "namespace", "allow_extension", "auto_envelope", "fixed", "desc", "fields" };
         private static readonly HashSet<string> EnumKeys = new HashSet<string> { "enum", "version", "min_version", "namespace", "desc", "values" };
-        private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added", "removed", "desc" };
-        private static readonly HashSet<string> ValueAttrs = new HashSet<string> { "key", "value", "added", "removed", "desc" };
+        private static readonly HashSet<string> FieldAttrs = new HashSet<string> { "key", "type", "required", "default", "added_version", "removed_version", "desc" };
+        private static readonly HashSet<string> ValueAttrs = new HashSet<string> { "key", "value", "added_version", "removed_version", "desc" };
         private static readonly HashSet<string> ConstKeys = new HashSet<string> { "const", "namespace", "desc", "values" };
         private static readonly HashSet<string> ConstValueAttrs = new HashSet<string> { "key", "value", "desc" };
 
@@ -255,10 +255,10 @@ namespace Protacoc
                         case "required":
                             field.Required = ReadBool(entry.Value, pos, diag);
                             break;
-                        case "added":
+                        case "added_version":
                             field.Added = ReadInt(entry.Value, pos, 1, 65535, diag);
                             break;
-                        case "removed":
+                        case "removed_version":
                             field.Removed = ReadInt(entry.Value, pos, 2, 65535, diag);
                             break;
                         case "default":
@@ -315,10 +315,10 @@ namespace Protacoc
                         case "value":
                             value.Number = ReadInt(entry.Value, pos, int.MinValue + 1, int.MaxValue, diag);
                             break;
-                        case "added":
+                        case "added_version":
                             value.Added = ReadInt(entry.Value, pos, 1, 65535, diag);
                             break;
-                        case "removed":
+                        case "removed_version":
                             value.Removed = ReadInt(entry.Value, pos, 2, 65535, diag);
                             break;
                         case "desc":

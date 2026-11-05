@@ -1,4 +1,4 @@
-﻿// Ping.g.h. protacoc 0.8.0, source Ping.yaml (sha1 600f6283777d). Do not edit.
+﻿// Ping.g.h. protacoc 0.9.0, source Ping.yaml (sha1 600f6283777d). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

@@ -2,7 +2,7 @@
 
 [English](reference.md) · [README](../README.ko.md) · [예제](../examples/README.ko.md)
 
-protacoc 0.8.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
+protacoc 0.9.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
 1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
@@ -28,14 +28,14 @@ field = <key>:<type>[!][=<default>]
 
 - `name`: 메시지 이름. `version`: 계산할 version의 십진수
 - `ext`: `allow_extension`이 true이면 `1`, false이면 `0`. `auto_envelope`는 바이트를 바꾸지 않으므로 텍스트에 넣지 않음
-- 필드 순서: `added` 오름차순, 같으면 YAML 선언 순서
+- 필드 순서: `added_version` 오름차순, 같으면 YAML 선언 순서
 - 포함 범위: 계산할 version까지 추가된 필드
 - `!`: required 필드. `=<default>`: 명시한 기본값의 텍스트, 문자열의 바깥 따옴표 제외
 - 끝 구분자: 각 필드 뒤 `;`. BOM, 마지막 줄바꿈, 추가 공백 없음
 
 고정 필드와 가변 필드를 나누어 정렬하지 않습니다. 실제 본문의 고정 영역 layout과 달리 canonical text는 위 필드 순서를 그대로 사용합니다. 기본값을 생략하면 `=`도 생략합니다.
 
-해당 version에서 제거된 고정 필드는 `~<key>:<type>;`로 남습니다. 바이트 자리를 유지하며 required·default 표기는 붙이지 않습니다. 제거된 가변 필드는 canonical text에서 빠집니다. `added`·`removed` 숫자 자체는 포함하지 않으므로 새 version을 추가해도 옛 version의 fingerprint는 유지됩니다.
+해당 version에서 제거된 고정 필드는 `~<key>:<type>;`로 남습니다. 바이트 자리를 유지하며 required·default 표기는 붙이지 않습니다. 제거된 가변 필드는 canonical text에서 빠집니다. `added_version`·`removed_version` 숫자 자체는 포함하지 않으므로 새 version을 추가해도 옛 version의 fingerprint는 유지됩니다.
 
 | 타입 | canonical text |
 |---|---|
@@ -192,7 +192,7 @@ bin\Release\protacoc.exe -I examples\schemas --cpp_out examples\taco_generated\c
 | PC308 | 잘못된 default | 범위·문자열 제한 위반, enum에 없는 값 이름 |
 | PC310 | 고정 길이 오류 | `string(N)`의 N이 1..4096 밖, `T[N]`의 N이 1 미만이거나 fixed 영역이 0x7FFF0000바이트 초과 |
 | PC311 | 생성 속성 이름 충돌 | C# 첫 글자 대문자 변환, Python 예약어의 `_` 접미사 |
-| PC312 | version 이력 범위 오류 | `min_version`, `added`, `removed` 범위·순서 |
+| PC312 | version 이력 범위 오류 | `min_version`, `added_version`, `removed_version` 범위·순서 |
 | PC313 | 제거된 가변 필드 줄 잔존 | `removed <= min_version`, 해당 줄 삭제 필요 |
 | PC314 | version용 예약 이름 | 메시지·enum 이름이 `v<N>` |
 | PC318 | enum 번호 재사용 | 제거된 값을 포함한 번호 중복 |
@@ -1995,7 +1995,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 <summary>Python — 상수</summary>
 
 ```python
-protaco.VERSION              # "0.8.0"
+protaco.VERSION              # "0.9.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2084,7 +2084,7 @@ bin/
 
 ### 7.3 시험 범위
 
-0.8.0 검증 기록은 Windows와 Linux 모두 C++ 49개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
+0.9.0 검증 기록은 Windows와 Linux 모두 C++ 49개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 

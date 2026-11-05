@@ -4,4 +4,4 @@ version: 3
 min_version: 1
 namespace: errors
 fields:
-  - {key: a, type: int, added: 2, removed: 2}
+  - {key: a, type: int, added_version: 2, removed_version: 2}

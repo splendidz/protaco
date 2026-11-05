@@ -1,4 +1,4 @@
-﻿// Rack.g.h. protacoc 0.8.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
+﻿// Rack.g.h. protacoc 0.9.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

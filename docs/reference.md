@@ -2,7 +2,7 @@
 
 [한국어](reference.ko.md) · [README](../README.md) · [Examples](../examples/README.md)
 
-Detailed reference for protacoc 0.8.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
+Detailed reference for protacoc 0.9.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
 
 1. [Schema fingerprint](#1-schema-fingerprint)
 2. [Command line](#2-command-line)
@@ -28,14 +28,14 @@ field = <key>:<type>[!][=<default>]
 
 - `name`: message name. `version`: the version being hashed, in decimal
 - `ext`: `1` when `allow_extension` is true, otherwise `0`. `auto_envelope` changes no bytes and is not part of the text
-- Field order: ascending `added`, then YAML declaration order
+- Field order: ascending `added_version`, then YAML declaration order
 - Included fields: those added by the version being hashed
 - `!`: required field. `=<default>`: explicitly supplied default text, without outer string quotes
 - Terminator: `;` after every field. No BOM, final newline, or extra whitespace
 
 Do not regroup fixed and variable fields. Unlike the fixed region of the actual body, canonical text follows the field order above throughout. An omitted default also omits `=`.
 
-A fixed field removed by that version remains as `~<key>:<type>;`. Its byte position stays reserved, and the required and default markers are omitted. A removed variable field is left out. The numbers in `added` and `removed` are not included, so adding a version preserves older fingerprints.
+A fixed field removed by that version remains as `~<key>:<type>;`. Its byte position stays reserved, and the required and default markers are omitted. A removed variable field is left out. The numbers in `added_version` and `removed_version` are not included, so adding a version preserves older fingerprints.
 
 | Type | Canonical text |
 |---|---|
@@ -192,7 +192,7 @@ Errors with a source position are written to standard error as `file(line,column
 | PC308 | Invalid default | Range or string restriction; unknown enum value name |
 | PC310 | Invalid fixed length | N in `string(N)` outside 1..4096, `T[N]` with N below 1 or a fixed block over 0x7FFF0000 bytes |
 | PC311 | Generated property name collision | C# capitalization or Python keyword suffix `_` |
-| PC312 | Invalid version history | Range or ordering of `min_version`, `added`, `removed` |
+| PC312 | Invalid version history | Range or ordering of `min_version`, `added_version`, `removed_version` |
 | PC313 | Obsolete variable field line retained | `removed <= min_version`; delete the line |
 | PC314 | Reserved version name | Message or enum named `v<N>` |
 | PC318 | Reused enum number | Duplicate number, including removed values |
@@ -1995,7 +1995,7 @@ The decoder keeps an unknown number as a plain int. An enum member that is a Pyt
 <summary>Python constants</summary>
 
 ```python
-protaco.VERSION              # "0.8.0"
+protaco.VERSION              # "0.9.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2084,7 +2084,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 ### 7.3 Test coverage
 
-The 0.8.0 verification record: 49 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
+The 0.9.0 verification record: 49 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
 Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 

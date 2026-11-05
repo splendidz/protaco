@@ -2,7 +2,7 @@
 
 [English](README.md) · [README](../README.ko.md) · [상세 참조](../docs/reference.ko.md)
 
-이 폴더에는 protaco 0.8.0의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
+이 폴더에는 protaco 0.9.0의 YAML 스키마, 생성 코드, C++·C#·Python 예제 프로그램이 있습니다. 피자 주문과 배달 경로로 API를 설명하고, 마지막 장에서 `Order`의 개정 이력으로 버전 관리를 살펴봅니다.
 
 ## 목차
 
@@ -906,13 +906,13 @@ min_version: 1
 namespace: build3
 fields:
   - {key: id, type: string(8)}
-  - {key: weight, type: double, default: 0.5, added: 2}
-  - {key: qty, type: int, default: 1, removed: 3}
-  - {key: note, type: string, removed: 3}
+  - {key: weight, type: double, default: 0.5, added_version: 2}
+  - {key: qty, type: int, default: 1, removed_version: 3}
+  - {key: note, type: string, removed_version: 3}
   - {key: color, type: string, required: true}
-  - {key: tags, type: list<string>, added: 2}
-  - {key: label, type: string, added: 3}
-  - {key: rush, type: bool, added: 3}
+  - {key: tags, type: list<string>, added_version: 2}
+  - {key: label, type: string, added_version: 3}
+  - {key: rush, type: bool, added_version: 3}
 ```
 
 - version 2: 고정 필드 `weight`와 가변 필드 `tags` 추가. `weight`는 `id`와 `qty` 사이에 선언해도 기존 고정 영역 뒤에 layout.

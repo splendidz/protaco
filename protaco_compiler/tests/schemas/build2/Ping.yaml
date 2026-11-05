@@ -7,4 +7,4 @@ allow_extension: false
 fields:
   - {key: seq, type: int}
   - {key: who, type: string}
-  - {key: text, type: string, added: 2}
+  - {key: text, type: string, added_version: 2}

@@ -1,4 +1,4 @@
-﻿# Node_g.py. protacoc 0.8.0, source Node.yaml (sha1 215949a4f507). Do not edit.
+﻿# Node_g.py. protacoc 0.9.0, source Node.yaml (sha1 215949a4f507). Do not edit.
 import protaco
 
 
