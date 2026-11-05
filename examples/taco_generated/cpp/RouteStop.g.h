@@ -1,4 +1,4 @@
-﻿// RouteStop.g.h. protacoc 0.9.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
+﻿// RouteStop.g.h. protacoc 0.10.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

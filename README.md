@@ -7,7 +7,7 @@
 
 [한국어](README.ko.md) · [Examples](examples/README.md) · [Reference](docs/reference.md) · [Benchmark](docs/benchmark/README.md)
 
-Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.9.0 and serialization format v4.
+Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.10.0 and serialization format v4.
 
 ### When you need serialization
 
@@ -1178,7 +1178,7 @@ if the frame's version < 3
 if the sender's min_version > 3
     reject: message version too new: Order reads version 3, sender supports 4..5
 if the version 3 fingerprint in the frame != Order::MsgSchemaHash()
-    reject: schema mismatch: Order version 3 expected 0x..., got 0x...
+    reject: schema mismatch: Order version 3 expected 0x..., got 0x...; read as this schema: ... (reference.md "Decode errors")
 decode with the version 3 layout
     newer variable fields go into ext for an open message and are dropped for a closed one
 ```

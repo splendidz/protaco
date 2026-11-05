@@ -2132,6 +2132,20 @@ inline std::string ErrorText(const Error& error)
     return error.path.empty() ? error.what : error.path + ": " + error.what;
 }
 
+// Runs only after a fingerprint mismatch, so an accepted frame pays nothing.
+// Reads the body with T's schema and names the first place that does not fit (reference.md "Decode errors").
+template <class T>
+std::string SchemaMismatchDetail(const uint8_t* src, size_t size, const FrameInfo& info)
+{
+    if (size - info.headerSize != info.bodySize)
+        return std::string();
+    T probe{NoStampTag()};
+    Error probeError;
+    if (Access::ReadBody(probe, src + info.headerSize, info.bodySize, &probeError, 0, info.version > T::MsgVersion()))
+        return "; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ";
+    return "; read as this schema: " + ErrorText(probeError);
+}
+
 // Checks shared by ToObject and TryView: header, name, supported versions, own fingerprint, body length.
 // Nothing is allocated unless the frame is rejected.
 template <class T>
@@ -2160,7 +2174,7 @@ bool CheckFrame(const uint8_t* src, size_t size, FrameInfo* info, Error* error)
     const uint32_t hash = Load<uint32_t>(src + 28 + nameLength + 4 * static_cast<size_t>(mine - info->minVersion));
     if (hash != T::MsgSchemaHash())
         return Fail(error, std::string("schema mismatch: ") + name + " version " + std::to_string(mine) + " expected " + Hex32(T::MsgSchemaHash())
-            + ", got " + Hex32(hash));
+            + ", got " + Hex32(hash) + SchemaMismatchDetail<T>(src, size, *info));
     if (size - info->headerSize != info->bodySize)
         return Fail(error, size - info->headerSize < info->bodySize ? "frame truncated" : "trailing bytes after frame");
     return true;

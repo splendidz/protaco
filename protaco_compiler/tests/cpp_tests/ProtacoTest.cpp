@@ -537,6 +537,7 @@ TEST(Protaco, VersionMismatchFails)
 }
 
 // Same name, version and fixed block size, fields in another order: caught by the fingerprint.
+// The body also reads with the receiver's schema, so the error says the difference is in names, same-size types or marks.
 TEST(Protaco, SameVersionDifferentSchemaFails)
 {
     alt::Recipe sent;
@@ -549,7 +550,34 @@ TEST(Protaco, SameVersionDifferentSchemaFails)
     std::string error;
     EXPECT_FALSE(Decode(sent.Serialize(), &got, &error));
     EXPECT_EQ("schema mismatch: Recipe version 1 expected " + protaco::detail::Hex32(v1::Recipe::MsgSchemaHash()) + ", got "
-        + protaco::detail::Hex32(alt::Recipe::MsgSchemaHash()), error);
+        + protaco::detail::Hex32(alt::Recipe::MsgSchemaHash())
+        + "; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ", error);
+}
+
+// After a fingerprint mismatch the body is read with the receiver's schema and the first misfit is named.
+// The frame is a Heartbeat with another fingerprint and a fixed block 4 bytes shorter. TryView gives the same text.
+TEST(Protaco, SchemaMismatchNamesWhereTheBodyDiffers)
+{
+    std::vector<uint8_t> bytes = MakeHeartbeat().Serialize();
+    const size_t nameLength = bytes[3];
+    bytes[28 + nameLength] ^= 0xFF;
+    const size_t body = 28 + nameLength + 4;
+    uint32_t fixedLength = 0;
+    std::memcpy(&fixedLength, &bytes[body], 4);
+    const uint32_t shorter = fixedLength - 4;
+    std::memcpy(&bytes[body], &shorter, 4);
+
+    Heartbeat got;
+    std::string error;
+    EXPECT_FALSE(Decode(bytes, &got, &error));
+    const std::string prefix = "schema mismatch: Heartbeat version 1 expected " + protaco::detail::Hex32(Heartbeat::MsgSchemaHash()) + ", got ";
+    const std::string detail = "; read as this schema: fixed block size mismatch: expected " + std::to_string(fixedLength) + ", got " + std::to_string(shorter);
+    EXPECT_EQ(0u, error.find(prefix)) << error;
+    EXPECT_EQ(error.size() - detail.size(), error.find(detail)) << error;
+    Heartbeat::View view;
+    std::string viewError;
+    EXPECT_FALSE(protaco::TryView<Heartbeat>(bytes.data(), bytes.size(), &view, &viewError));
+    EXPECT_EQ(error, viewError);
 }
 
 // Adding versions leaves the fingerprints of older versions unchanged: a frame from an old build passes.

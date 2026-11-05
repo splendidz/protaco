@@ -1,4 +1,4 @@
-﻿// Topping.g.h. protacoc 0.9.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
+﻿// Topping.g.h. protacoc 0.10.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

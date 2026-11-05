@@ -1,4 +1,4 @@
-﻿# Grade_enum_g.py. protacoc 0.9.0, source Grade.enum.yaml (sha1 4a4ddba23d94). Do not edit.
+﻿# Grade_enum_g.py. protacoc 0.10.0, source Grade.enum.yaml (sha1 4a4ddba23d94). Do not edit.
 import enum
 
 import protaco

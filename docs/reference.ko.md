@@ -2,7 +2,7 @@
 
 [English](reference.md) · [README](../README.ko.md) · [예제](../examples/README.ko.md)
 
-protacoc 0.9.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
+protacoc 0.10.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
 1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
@@ -231,9 +231,14 @@ C++ `CParseError::GetError()`의 `Error{path, what}`, C# `ProtacoException.Path/
 | `message name mismatch: expected A, got B` | 수신 클래스와 메시지 이름 불일치 | 없음 |
 | `message version too old: N reads version R or newer, got S` | S < R. 지원하는 옛 타입이 있으면 `. Use the vS type` 추가 | 없음 |
 | `message version too new: N reads version R, sender supports A..S` | 송신 측 min_version > R | 없음 |
-| `schema mismatch: N version R expected 0xAAAAAAAA, got 0xBBBBBBBB` | R의 fingerprint 불일치 | 없음 |
+| `schema mismatch: N version R expected 0xAAAAAAAA, got 0xBBBBBBBB; <detail>` | R의 fingerprint 불일치. detail은 아래 | 없음 |
 | `frame truncated` | BodyLen보다 실제 본문이 짧음 | 없음 |
 | `trailing bytes after frame` | BodyLen 뒤에 추가 바이트 | 없음 |
+
+schema mismatch는 받는 클래스의 스키마로 본문을 한 번 더 읽고 찾은 것을 덧붙입니다. fingerprint 검사가 실패한 뒤에만 실행하므로 받아들인 프레임에는 비용이 없습니다. 본문 길이가 맞지 않으면 실행하지 않습니다.
+
+- `; read as this schema: <본문 오류>`: 처음 실패한 본문 검사와 그 경로. 예: `; read as this schema: fixed block size mismatch: expected 72, got 68`, `; read as this schema: items: type mismatch: expected string, got int`
+- `; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ`: 바이트는 맞으므로 차이는 바이트에 드러나지 않는 것(이름, 크기가 같은 타입, required·default 표시, enum 이름, 중첩 메시지)
 
 **본문 검사**
 
@@ -1995,7 +2000,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 <summary>Python — 상수</summary>
 
 ```python
-protaco.VERSION              # "0.9.0"
+protaco.VERSION              # "0.10.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2084,7 +2089,7 @@ bin/
 
 ### 7.3 시험 범위
 
-0.9.0 검증 기록은 Windows와 Linux 모두 C++ 49개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
+0.10.0 검증 기록은 Windows와 Linux 모두 C++ 50개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 

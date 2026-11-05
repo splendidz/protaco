@@ -2,7 +2,7 @@
 
 [한국어](reference.ko.md) · [README](../README.md) · [Examples](../examples/README.md)
 
-Detailed reference for protacoc 0.9.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
+Detailed reference for protacoc 0.10.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
 
 1. [Schema fingerprint](#1-schema-fingerprint)
 2. [Command line](#2-command-line)
@@ -231,9 +231,14 @@ C++ exposes separate fields through `CParseError::GetError()` and `Error{path, w
 | `message name mismatch: expected A, got B` | Message name differs from the receiving class | Empty |
 | `message version too old: N reads version R or newer, got S` | S < R; adds `. Use the vS type` when an old type is supported | Empty |
 | `message version too new: N reads version R, sender supports A..S` | Sender's min_version > R | Empty |
-| `schema mismatch: N version R expected 0xAAAAAAAA, got 0xBBBBBBBB` | Fingerprint for R differs | Empty |
+| `schema mismatch: N version R expected 0xAAAAAAAA, got 0xBBBBBBBB; <detail>` | Fingerprint for R differs. The detail is below | Empty |
 | `frame truncated` | Actual body shorter than BodyLen | Empty |
 | `trailing bytes after frame` | Extra bytes after BodyLen | Empty |
+
+A schema mismatch also reads the body with the receiving class's schema and appends what it found. This runs only after the fingerprint check fails, so an accepted frame pays nothing. It does not run when the body length is wrong.
+
+- `; read as this schema: <body error>`: the first body check that fails, with its path, such as `; read as this schema: fixed block size mismatch: expected 72, got 68` or `; read as this schema: items: type mismatch: expected string, got int`
+- `; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ`: the bytes fit, so the difference is something the bytes do not show
 
 **Body checks**
 
@@ -1995,7 +2000,7 @@ The decoder keeps an unknown number as a plain int. An enum member that is a Pyt
 <summary>Python constants</summary>
 
 ```python
-protaco.VERSION              # "0.9.0"
+protaco.VERSION              # "0.10.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2084,7 +2089,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 ### 7.3 Test coverage
 
-The 0.9.0 verification record: 49 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
+The 0.10.0 verification record: 50 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
 Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 

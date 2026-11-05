@@ -385,7 +385,7 @@ namespace Protaco
             T message = new T();
             ushort mine = message.Version;
             int headerSize;
-            Header header = CheckFrame(bytes, message.Name, mine, message.MinVersion, message.SchemaHashes[message.SchemaHashes.Length - 1], out headerSize);
+            Header header = CheckFrame(bytes, message.Name, mine, message.MinVersion, message.SchemaHashes[message.SchemaHashes.Length - 1], Probe<T>.New, out headerSize);
             (message as Protaco.Message)?.SetEnvelope(header.Env);
             bool newer = header.Version > mine;
             try
@@ -399,8 +399,37 @@ namespace Protaco
             return message;
         }
 
+        // One cached factory per message type, so ToObject allocates nothing for the mismatch detail on an accepted frame.
+        private static class Probe<T> where T : IMessage, new()
+        {
+            internal static readonly Func<IMessage> New = () => new T();
+        }
+
+        // Runs only after a fingerprint mismatch. Reads the body with the receiver's schema and names the first place
+        // that does not fit (reference.md "Decode errors"). probe makes an empty receiver object; null skips the detail.
+        private static string SchemaMismatchDetail(byte[] bytes, Header header, ushort mine, int nameLength, Func<IMessage> probe)
+        {
+            int headerSize = 28 + nameLength + 4 * (header.Version - header.MinVersion + 1);
+            if (probe == null || bytes.Length - headerSize != header.BodySize)
+                return "";
+            ++decoding_;
+            try
+            {
+                ReadBody(probe(), bytes, headerSize, (int)header.BodySize, 0, header.Version > mine);
+                return "; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ";
+            }
+            catch (ProtacoException e)
+            {
+                return "; read as this schema: " + e.Message;
+            }
+            finally
+            {
+                --decoding_;
+            }
+        }
+
         // Checks shared by ToObject and TryFixedBlock: header, name, supported versions, own fingerprint, body length.
-        private static Header CheckFrame(byte[] bytes, string name, ushort mine, ushort minVersion, uint expected, out int headerSize)
+        private static Header CheckFrame(byte[] bytes, string name, ushort mine, ushort minVersion, uint expected, Func<IMessage> probe, out int headerSize)
         {
             if (bytes.Length > MaxFrameBytes)
                 throw new ProtacoException("", "frame too large");
@@ -419,7 +448,8 @@ namespace Protaco
             int nameLength = bytes[3];
             uint hash = BitConverter.ToUInt32(bytes, 28 + nameLength + 4 * (mine - header.MinVersion));
             if (hash != expected)
-                throw new ProtacoException("", "schema mismatch: " + name + " version " + mine + " expected " + Hex32(expected) + ", got " + Hex32(hash));
+                throw new ProtacoException("", "schema mismatch: " + name + " version " + mine + " expected " + Hex32(expected) + ", got " + Hex32(hash)
+                    + SchemaMismatchDetail(bytes, header, mine, nameLength, probe));
             headerSize = 28 + nameLength + 4 * (header.Version - header.MinVersion + 1);
             long left = bytes.Length - headerSize;
             if (left != header.BodySize)
@@ -427,15 +457,16 @@ namespace Protaco
             return header;
         }
 
-        /// <summary>Generated TryView methods call this. Checks the frame like ToObject; fixedAt is where the fixed block starts.</summary>
+        /// <summary>Generated TryView methods call this. Checks the frame like ToObject; fixedAt is where the fixed block starts.
+        /// probe makes an empty message of the view's type; it runs only to explain a schema mismatch.</summary>
         public static bool TryFixedBlock(byte[] bytes, string name, ushort version, ushort minVersion, uint schemaHash, int fixedSize,
-            bool allowExtension, out int fixedAt, out string error)
+            bool allowExtension, Func<IMessage> probe, out int fixedAt, out string error)
         {
             fixedAt = 0;
             try
             {
                 int headerSize;
-                Header header = CheckFrame(bytes, name, version, minVersion, schemaHash, out headerSize);
+                Header header = CheckFrame(bytes, name, version, minVersion, schemaHash, probe, out headerSize);
                 bool newer = header.Version > version;
                 try
                 {

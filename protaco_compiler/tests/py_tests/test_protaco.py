@@ -248,8 +248,18 @@ class ProtacoTest(unittest.TestCase):
     def test_schema_mismatch(self):
         self.assertNotEqual(AltRecipe.MsgSchemaHash, Recipe1.MsgSchemaHash)
         data = AltRecipe(step=5, name="R1", path="/a").Serialize()
-        self.assertEqual("schema mismatch: Recipe version 1 expected 0x%08X, got 0x%08X" % (Recipe1.MsgSchemaHash, AltRecipe.MsgSchemaHash),
+        self.assertEqual("schema mismatch: Recipe version 1 expected 0x%08X, got 0x%08X" % (Recipe1.MsgSchemaHash, AltRecipe.MsgSchemaHash)
+                         + "; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ",
                          self.fails(Recipe1, data).what)
+        # A Heartbeat with another fingerprint and a fixed block 4 bytes shorter: the detail names the misfit.
+        shorter = bytearray(make_heartbeat().Serialize())
+        name_length = shorter[3]
+        shorter[28 + name_length] ^= 0xFF
+        body = 28 + name_length + 4
+        fixed_length = struct.unpack_from("<I", shorter, body)[0]
+        struct.pack_into("<I", shorter, body, fixed_length - 4)
+        self.assertTrue(self.fails(Heartbeat, bytes(shorter)).what.endswith(
+            "; read as this schema: fixed block size mismatch: expected %d, got %d" % (fixed_length, fixed_length - 4)))
 
     def test_new_version_keeps_old_fingerprints(self):
         self.assertEqual(Order1.MsgSchemaHash, Order3Old.Order.MsgSchemaHash)

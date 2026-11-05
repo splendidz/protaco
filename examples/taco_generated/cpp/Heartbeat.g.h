@@ -1,4 +1,4 @@
-﻿// Heartbeat.g.h. protacoc 0.9.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
+﻿// Heartbeat.g.h. protacoc 0.10.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

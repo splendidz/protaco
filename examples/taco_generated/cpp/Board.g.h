@@ -1,4 +1,4 @@
-﻿// Board.g.h. protacoc 0.9.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
+﻿// Board.g.h. protacoc 0.10.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

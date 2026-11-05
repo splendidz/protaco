@@ -1,4 +1,4 @@
-﻿# D0_g.py. protacoc 0.9.0, source D0.yaml (sha1 c36d92fc3a71). Do not edit.
+﻿# D0_g.py. protacoc 0.10.0, source D0.yaml (sha1 c36d92fc3a71). Do not edit.
 import protaco
 
 

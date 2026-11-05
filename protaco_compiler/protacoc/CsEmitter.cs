@@ -617,7 +617,7 @@ namespace Protacoc
             w.Open("public static bool TryView(byte[] bytes, out View view, out string error)");
             w.Line("int at;");
             w.Line("bool ok = Protaco.Codec.TryFixedBlock(bytes, MsgName, MsgVersion, MsgMinVersion, MsgSchemaHash, " + view.FixedSize + ", "
-                + (message.AllowExtension ? "true" : "false") + ", out at, out error);");
+                + (message.AllowExtension ? "true" : "false") + ", () => new " + message.Name + "(), out at, out error);");
             w.Line("view = ok ? new View(bytes, at) : default(View);");
             w.Line("return ok;");
             w.Close();

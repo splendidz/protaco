@@ -1,4 +1,4 @@
-﻿// Point.g.h. protacoc 0.9.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
+﻿// Point.g.h. protacoc 0.10.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"

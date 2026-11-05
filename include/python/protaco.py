@@ -12,7 +12,7 @@ import struct
 import threading
 import time
 
-VERSION = "0.9.0"
+VERSION = "0.10.0"
 
 FRAME_VERSION = 4
 MAX_DEPTH = 100
@@ -948,6 +948,19 @@ def _read_header(data):
     return header
 
 
+# Runs only after a fingerprint mismatch, so an accepted frame pays nothing.
+# Reads the body with cls's schema and names the first place that does not fit (reference.md "Decode errors").
+def _schema_mismatch_detail(data, cls, header, name_length):
+    header_size = 28 + name_length + 4 * (header.version - header.minVersion + 1)
+    if len(data) - header_size != header.bodySize:
+        return ""
+    try:
+        _read_body(cls(_stamp=NO_STAMP), data, header_size, header.bodySize, 0, header.version > cls.MsgVersion)
+    except ProtacoError as e:
+        return "; read as this schema: " + str(e)
+    return "; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ"
+
+
 # Checks shared by ToObject: header, name, supported versions, own fingerprint, body length.
 def _check_frame(data, cls):
     if len(data) > MAX_FRAME_BYTES:
@@ -968,7 +981,8 @@ def _check_frame(data, cls):
     name_length = data[3]
     schema_hash = _U32.unpack_from(data, 28 + name_length + 4 * (mine - header.minVersion))[0]
     if schema_hash != cls.MsgSchemaHash:
-        raise ProtacoError("", "schema mismatch: %s version %d expected 0x%08X, got 0x%08X" % (name, mine, cls.MsgSchemaHash, schema_hash))
+        raise ProtacoError("", "schema mismatch: %s version %d expected 0x%08X, got 0x%08X%s"
+                           % (name, mine, cls.MsgSchemaHash, schema_hash, _schema_mismatch_detail(data, cls, header, name_length)))
     header_size = 28 + name_length + 4 * (header.version - header.minVersion + 1)
     left = len(data) - header_size
     if left != header.bodySize:

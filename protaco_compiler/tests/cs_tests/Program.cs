@@ -851,9 +851,24 @@ namespace Protacoc.Tests
         {
             Check(alt.Recipe.MsgSchemaHash != v1.Recipe.MsgSchemaHash, "same fingerprint");
             byte[] bytes = new alt.Recipe { Step = 5, Name = "R1", Path = "/a" }.Serialize();
-            Equal("schema mismatch: Recipe version 1 expected 0x" + v1.Recipe.MsgSchemaHash.ToString("X8") + ", got 0x" + alt.Recipe.MsgSchemaHash.ToString("X8"),
+            Equal("schema mismatch: Recipe version 1 expected 0x" + v1.Recipe.MsgSchemaHash.ToString("X8") + ", got 0x" + alt.Recipe.MsgSchemaHash.ToString("X8")
+                + "; the body also reads as this schema, so names, same-size types, required or default marks, enum names or nested messages differ",
                 Fails<v1.Recipe>(bytes).What, "alt -> v1");
             Equal(partial.Topping.MsgSchemaHash, Topping.MsgSchemaHash, "namespace changes the fingerprint");
+
+            // A Heartbeat with another fingerprint and a fixed block 4 bytes shorter: the detail names the misfit. TryView gives the same text.
+            byte[] shorter = MakeHeartbeat().Serialize();
+            int nameLength = shorter[3];
+            shorter[28 + nameLength] ^= 0xFF;
+            int body = 28 + nameLength + 4;
+            uint fixedLength = BitConverter.ToUInt32(shorter, body);
+            BitConverter.GetBytes(fixedLength - 4).CopyTo(shorter, body);
+            string what = Fails<Heartbeat>(shorter).What;
+            Check(what.EndsWith("; read as this schema: fixed block size mismatch: expected " + fixedLength + ", got " + (fixedLength - 4)), what);
+            Heartbeat.View view;
+            string viewError;
+            Check(!Heartbeat.TryView(shorter, out view, out viewError), "view accepted");
+            Equal(what, viewError, "view error");
         }
 
         // Same checks as ProtacoTest.cpp (supported version tests).
