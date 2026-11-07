@@ -1,4 +1,4 @@
-﻿// Menu.g.h. protacoc 0.10.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
+﻿// Menu.g.h. protacoc 0.11.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,6 +49,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0x0EC85362u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Menu|1|1|prices:map<string,double>;stock:map<int,uint>!;specials:map<enum(Grade),Dish@e2531233>;notes:map<uint64,string>;vegan:map<string,bool>;photos:map<string,bytes>;grades:map<string,enum(Grade)>;tags:map<string,list<string>>;daily:map<int64,map<string,int>>;title:string;";
     }
 
     /// [type map<string, double>]
@@ -219,9 +225,9 @@ public:
         return title_;
     }
 
-    void set_title(const std::string& value)
+    void set_title(protaco::StringView value)
     {
-        title_ = value;
+        title_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

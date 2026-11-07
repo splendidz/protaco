@@ -2,7 +2,7 @@
 
 [한국어](reference.ko.md) · [README](../README.md) · [Examples](../examples/README.md)
 
-Detailed reference for protacoc 0.10.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
+Detailed reference for protacoc 0.11.0 and serialization format v4. See the [README](../README.md) for schema authoring and the full serialization layout, and [examples](../examples/README.md) for runnable programs.
 
 1. [Schema fingerprint](#1-schema-fingerprint)
 2. [Command line](#2-command-line)
@@ -111,6 +111,28 @@ protaco-schema-1|Order|3|1|id:string(8);~qty:int;color:string!;weight:double=0.5
 | Heartbeat version 1 | `0x2BB85C55` |
 | Order version 3 | `0x7073B2E7` |
 
+**Schema text in code and catalogs**
+
+Each generated class also carries the canonical text of its version: C++ `static const char* MsgSchemaText()`, C# and Python `MsgSchemaText`. Two builds that disagree on a message have different texts, and the C++ runtime names the first difference:
+
+```cpp
+std::string SchemaTextDifference(StringView mine, StringView theirs);   // "" if equal
+// "version 1 vs 2; field 2: step:int=3 vs temp:double=25.5", "path: string! vs string", "field 4: (none) vs note:string"
+```
+
+Header parts come first (name, version, extension), then the first field whose key, type, required mark or default differs. A nested message differs in its type text (`RouteStop@<fingerprint>`); its own text names the field inside it.
+
+`--catalog <name>` writes `<cpp_out>/<name>.catalog.g.h` with one table of every message of the run, in name order:
+
+```cpp
+struct SchemaEntry { const char* name; uint16_t version; uint32_t schemaHash; const char* schemaText; };
+const protaco::SchemaEntry* <name>Catalog(size_t* count);   // the table outlives every call
+std::vector<std::string> CatalogDifferences(const SchemaEntry* mine, size_t mineCount, const SchemaEntry* theirs, size_t theirCount);
+// one line per differing message: "<name>: v<version> <fingerprint> vs v<version> <fingerprint>: <SchemaTextDifference>"
+```
+
+`SchemaEntry` is plain data, so a module can hand its table to another (for example a plug-in to its host) and the host can report which messages and fields differ before any frame fails to decode. A name present in only one table is not a difference.
+
 ## 2. Command line
 
 Specify at least one input folder and one output language. Namespaces come from YAML; all definitions in one invocation must share a namespace.
@@ -125,6 +147,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | `--cpp_out <dir>` | C++ output folder |
 | `--cs_out <dir>` | C# output folder |
 | `--py_out <dir>` | Python output root |
+| `--catalog <name>` | Also write `<cpp_out>/<name>.catalog.g.h`, the table `<name>Catalog` (needs `--cpp_out`, a C++ identifier) |
 | `--no_runtime` | Skip runtime output |
 | `--check` | Compare expected bytes without writing |
 | `name...` | Message, enum, or const names, or YAML paths; all definitions if omitted |
@@ -135,7 +158,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 
 | Language | Output paths |
 |---|---|
-| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.g.h`, `<Const>.const.g.h`, `Protaco.hpp` |
+| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.g.h`, `<Const>.const.g.h`, `Protaco.hpp`, with `--catalog` also `<name>.catalog.g.h` |
 | C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.g.cs`, `<Const>.const.g.cs`, `Protaco.cs` |
 | Python | `<py_out>/<namespace folders>/<Name>_g.py`, `<Enum>_enum_g.py`, `<Const>_const_g.py`; runtime at `<py_out>/protaco.py` |
 
@@ -311,7 +334,7 @@ Open messages retain unknown fields in ext. Closed messages reject unknown keys 
 
 ## 4. C++ API
 
-The runtime is [Protaco.hpp](../include/cpp/Protaco.hpp), requiring only C++14 and the standard library. Generated headers are `<Name>.g.h`; classes are `<namespace>::<Name>`. Signatures below show public declarations with bodies omitted. `T` and `<k>` denote a field's type and name. Examples run inside a function and require the corresponding generated headers.
+The runtime is [Protaco.hpp](../include/cpp/Protaco.hpp), requiring only C++14 and the standard library. `protaco::StringView` is `std::string_view` from C++17; under C++14 it is a protaco class with the same names (`data()`, `size()`, `empty()`, `==`, `!=`, `std::string(view)`). Build one program (module) with one C++ version: the two are different types. Generated headers are `<Name>.g.h`; classes are `<namespace>::<Name>`. Signatures below show public declarations with bodies omitted. `T` and `<k>` denote a field's type and name. Examples run inside a function and require the corresponding generated headers.
 
 Try APIs write failure reasons to the optional `std::string* error = nullptr` argument. Check the return value for success; do not assume success clears an existing error string. Output pointers such as `out` must point to valid writable objects.
 
@@ -327,7 +350,7 @@ T get_<k>() const;
 void set_<k>(T value);
 
 std::string get_<k>() const; // string(N)
-bool set_<k>(const std::string& value, std::string* error = nullptr);
+bool set_<k>(protaco::StringView value, std::string* error = nullptr);
 ```
 
 The constructor initializes schema defaults and stamps the envelope with a new id and the current time. Objects created internally by the decoder or as generated nested fields do not consume ids.
@@ -382,7 +405,7 @@ std::array<T, N> get_<k>() const;
 bool set_<k>(size_t index, T value, std::string* error = nullptr);
 void set_<k>(const std::array<T, N>& values);
 
-bool set_<k>(size_t index, const std::string& value, std::string* error = nullptr); // string(N) elements
+bool set_<k>(size_t index, protaco::StringView value, std::string* error = nullptr); // string(N) elements
 bool set_<k>(const std::array<std::string, N>& values, std::string* error = nullptr);
 ```
 
@@ -432,9 +455,10 @@ C# fields are `M` objects and arrays get-only `M[]` arrays of N objects; `Serial
 const T& get_<k>() const;
 T& mutable_<k>(); // bytes, list, map, message
 void set_<k>(const T& value);
+void set_<k>(protaco::StringView value); // string
 ```
 
-There is no `mutable_<k>()` for `string`. Bytes use `std::vector<uint8_t>`, lists use `std::vector<T>`, maps use `std::unordered_map<K,V>`, and nested messages use their generated classes.
+There is no `mutable_<k>()` for `string`. A `string` setter takes a `protaco::StringView`, so a `const char*`, a `std::string` or a `(data, size)` piece is copied without building a temporary `std::string` first. Bytes use `std::vector<uint8_t>`, lists use `std::vector<T>`, maps use `std::unordered_map<K,V>`, and nested messages use their generated classes.
 
 - Parameters: `value` is the new value to copy
 - Returns: getters return const references, mutable accessors return writable references, setters return void
@@ -609,6 +633,38 @@ log = received.ToString()
 
 </details>
 
+**SerializeTo (C++)**
+
+```cpp
+using GrowFn = uint8_t* (*)(void* context, size_t size);
+size_t SerializeTo(uint8_t* dst, size_t capacity, protaco::GrowFn grow, void* context) const;
+```
+
+SerializeTo writes the bytes Serialize returns into memory the caller owns. Keep one buffer, reserve it once, and every later frame that fits goes in without an allocation or a second copy of the frame. A frame that does not fit is written once too: SerializeTo asks `grow` for memory and writes there, so nothing is serialized twice.
+
+- Parameters: `dst` is the caller's memory and `capacity` is its size in bytes. `grow` and `context` give more memory when the frame does not fit
+- `grow(context, size)`: called only when the frame does not fit, with the frame size. It returns memory for at least `size` bytes; how much more to keep for later frames is its own choice. `nullptr` means nothing is written
+- Returns: the frame size. With `grow` nullptr, a value larger than `capacity` means nothing was written
+- The object is not changed: Serialize keeps its own buffer and reuse conditions. An unchanged object copies its cached frame; otherwise the variable block is written straight into the memory
+- Also a virtual function of `protaco::IMessage`
+- C# and Python have no SerializeTo
+
+**C++**
+
+```cpp
+// Grows the buffer to twice the frame size.
+uint8_t* GrowVector(void* context, size_t size)
+{
+    std::vector<uint8_t>* buffer = static_cast<std::vector<uint8_t>*>(context);
+    buffer->resize(size * 2);
+    return buffer->data();
+}
+
+std::vector<uint8_t> buffer(64 * 1024);
+const size_t size = route.SerializeTo(buffer.data(), buffer.size(), &GrowVector, &buffer);
+send(buffer.data(), size);
+```
+
 **Metadata and older version classes**
 
 **C++**
@@ -674,6 +730,7 @@ public:
     virtual void SetEnvelope(const protaco::Envelope& env);
     void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = protaco::NowUs());
     virtual const std::vector<uint8_t>& Serialize() const;
+    virtual size_t SerializeTo(uint8_t* dst, size_t capacity, protaco::GrowFn grow, void* context) const;
     virtual std::string ToString(const protaco::TextStyle& style) const;
     std::string ToString() const;
     template <class T> T* As();
@@ -1168,7 +1225,7 @@ if (protaco::TryMutableView<arrays::Rack>(memory, &rack)) {
 
 ```cpp
 struct Header {
-    std::string name;
+    StringView name;           // points into the frame bytes
     uint16_t version = 0;
     uint16_t minVersion = 0;
     uint32_t schemaHash = 0;
@@ -1182,7 +1239,9 @@ bool PeekHeader(const uint8_t* src, size_t size, Header* out,
 - Parameters: bytes containing at least the header, their length, output Header, and optional error string
 - Returns: true with header values on success. schemaHash is the fingerprint for the sender's version
 - Notes: a complete header is sufficient even without the body. Message type, body length, and body validity are checked during decoding
-- Lifetime: Header owns its name and envelope and does not depend on the input bytes
+- Lifetime: `name` points into the input bytes and is valid while they are; copy it with `std::string(header.name)` to keep it. The other fields are copies
+- Comparison: `header.name == demo::DeliveryRoute::MsgName()` compares without allocating
+- Up to 0.10.0, `name` was a `std::string` copy and string setters took `const std::string&`
 - Complete frame size: 28 + UTF-8 name byte count + 4 × supported version count + bodySize
 
 **C++**
@@ -2000,7 +2059,7 @@ The decoder keeps an unknown number as a plain int. An enum member that is a Pyt
 <summary>Python constants</summary>
 
 ```python
-protaco.VERSION              # "0.10.0"
+protaco.VERSION              # "0.11.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2089,7 +2148,7 @@ The runtime sources are in include/, the generator in protaco_compiler/protacoc/
 
 ### 7.3 Test coverage
 
-The 0.10.0 verification record: 50 C++ tests, 43 C# tests, and 31 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
+The 0.11.0 verification record: 54 C++ tests, 43 C# tests, and 32 Python tests pass on both Windows and Linux. The Linux environment is WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, and Python 3.10. Regenerating the code on Linux produces byte-identical files.
 
 Test names and implementations are in the [C++ tests](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# tests](../protaco_compiler/tests/cs_tests/Program.cs), and [Python tests](../protaco_compiler/tests/py_tests/test_protaco.py).
 

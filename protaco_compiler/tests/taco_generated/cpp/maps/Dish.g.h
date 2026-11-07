@@ -1,4 +1,4 @@
-﻿// Dish.g.h. protacoc 0.10.0, source Dish.yaml (sha1 9cd1ea163ac5). Do not edit.
+﻿// Dish.g.h. protacoc 0.11.0, source Dish.yaml (sha1 9cd1ea163ac5). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,15 +49,21 @@ public:
         return 0xE2531233u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Dish|1|1|name:string;price:double;";
+    }
+
     /// [type string]
     const std::string& get_name() const
     {
         return name_;
     }
 
-    void set_name(const std::string& value)
+    void set_name(protaco::StringView value)
     {
-        name_ = value;
+        name_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

@@ -1,4 +1,4 @@
-﻿# Board_g.py. protacoc 0.10.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
+﻿# Board_g.py. protacoc 0.11.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
 import protaco
 from .PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 from .Spot_g import Spot
@@ -14,6 +14,7 @@ class Board(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xB785B631
+    MsgSchemaText = "protaco-schema-1|Board|1|0|depot:fixed(Spot@2538569a);spots:fixed(Spot@2538569a)[4];ovens:double[3]=220.5;queue:enum(PizzaSize)[3];busy:bool[8];"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Board(depot=...).

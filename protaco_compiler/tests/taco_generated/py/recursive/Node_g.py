@@ -1,4 +1,4 @@
-﻿# Node_g.py. protacoc 0.10.0, source Node.yaml (sha1 215949a4f507). Do not edit.
+﻿# Node_g.py. protacoc 0.11.0, source Node.yaml (sha1 215949a4f507). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Node(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x94A77C41
+    MsgSchemaText = "protaco-schema-1|Node|1|1|name:string;value:int;children:list<Node@self>;next:Node@self;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Node(name=...).

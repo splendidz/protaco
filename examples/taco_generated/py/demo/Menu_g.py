@@ -1,4 +1,4 @@
-﻿# Menu_g.py. protacoc 0.10.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
+﻿# Menu_g.py. protacoc 0.11.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
 import protaco
 from .PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 from .Category_g import Category
@@ -14,6 +14,7 @@ class Menu(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x1A3924BC
+    MsgSchemaText = "protaco-schema-1|Menu|1|1|store:string(16);defaultSize:enum(PizzaSize)=Large;prices:map<string,double>;sections:list<Category@6b7c6e97>;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Menu(store=...).

@@ -137,6 +137,44 @@ namespace Protacoc
             return w.ToString();
         }
 
+        // <name>.catalog.g.h: one table of the messages of one run (--catalog), in name order. The function has the run's
+        // name so two catalogs can sit in one program.
+        public static string EmitCatalog(string name, List<MessageDef> messages)
+        {
+            CodeWriter w = new CodeWriter();
+            w.Line("// " + name + ".catalog.g.h. protacoc " + Naming.Version + ", " + messages.Count + " messages. Do not edit.");
+            w.Line("#pragma once");
+            w.Line();
+            w.Line("#include <cstddef>");
+            w.Line();
+            w.Line("#include \"Protaco.hpp\"");
+            w.Line();
+            w.Line("/// Messages generated together with this file: name, version, schema fingerprint and canonical text, in name order.");
+            w.Line("/// The table outlives every call. Compare the tables of two builds with protaco::CatalogDifferences.");
+            w.Line("inline const protaco::SchemaEntry* " + name + "Catalog(size_t* count)");
+            w.Line("{");
+            w.Indent();
+            if (messages.Count == 0)
+            {
+                w.Line("*count = 0;");
+                w.Line("return nullptr;");
+            }
+            else
+            {
+                w.Line("static const protaco::SchemaEntry entries[] = {");
+                w.Indent();
+                foreach (MessageDef message in messages.OrderBy(m => m.Name, StringComparer.Ordinal))
+                    w.Line("{" + Naming.CppString(message.Name) + ", " + message.Version + ", " + SchemaFingerprint.Hex(message.SchemaHash) + "u, " + Naming.CppString(message.Latest.SchemaText) + "},");
+                w.Outdent();
+                w.Line("};");
+                w.Line("*count = sizeof(entries) / sizeof(entries[0]);");
+                w.Line("return entries;");
+            }
+            w.Outdent();
+            w.Line("}");
+            return w.ToString();
+        }
+
         private static void Class(CodeWriter w, MessageDef message, VersionView view)
         {
             Doc(w, Naming.MessageDoc(message, view));
@@ -324,6 +362,8 @@ namespace Protacoc
             Method(w, "static uint16_t MsgMinVersion()", "return " + message.MinVersion + ";");
             w.Line("/// Schema fingerprint of this version. A frame whose fingerprint for this version differs is rejected by ToObject.");
             Method(w, "static uint32_t MsgSchemaHash()", "return " + SchemaFingerprint.Hex(view.SchemaHash) + "u;");
+            w.Line("/// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.");
+            Method(w, "static const char* MsgSchemaText()", "return " + Naming.CppString(view.SchemaText) + ";");
         }
 
         private static void Accessors(CodeWriter w, FieldDef field)
@@ -344,14 +384,20 @@ namespace Protacoc
                 Method(w, "bool has_" + key + "() const", "return " + key + "_.Has();");
                 Method(w, "const " + type + "& get_" + key + "() const", "return " + key + "_.Get();");
                 Method(w, type + "& mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_.Mutable();");
-                Method(w, "void set_" + key + "(const " + type + "& value)", key + "_.Set(value);", "cache_.valid = false;");
+                if (field.Type.Kind == TypeKind.String)
+                    Method(w, "void set_" + key + "(protaco::StringView value)", key + "_.Set(std::string(value.data(), value.size()));", "cache_.valid = false;");
+                else
+                    Method(w, "void set_" + key + "(const " + type + "& value)", key + "_.Set(value);", "cache_.valid = false;");
                 Method(w, "void clear_" + key + "()", key + "_.Clear();", "cache_.valid = false;");
                 return;
             }
             Method(w, "const " + type + "& get_" + key + "() const", "return " + key + "_;");
             if (field.Type.Kind != TypeKind.String)
                 Method(w, type + "& mutable_" + key + "()", "cache_.exposed = true;", "return " + key + "_;");
-            Method(w, "void set_" + key + "(const " + type + "& value)", key + "_ = value;", "cache_.valid = false;");
+            if (field.Type.Kind == TypeKind.String)
+                Method(w, "void set_" + key + "(protaco::StringView value)", key + "_.assign(value.data(), value.size());", "cache_.valid = false;");
+            else
+                Method(w, "void set_" + key + "(const " + type + "& value)", key + "_ = value;", "cache_.valid = false;");
         }
 
         // Read of a fixed field at a pointer expression. Shared by the message and its View.
@@ -439,7 +485,7 @@ namespace Protacoc
                     return;
                 case TypeKind.FixedString:
                     w.Line("/// Returns false, keeps the old value and writes the reason to error if longer than " + type.FixedLength + " bytes.");
-                    Method(w, "bool set_" + key + "(const std::string& value, std::string* error = nullptr)",
+                    Method(w, "bool set_" + key + "(protaco::StringView value, std::string* error = nullptr)",
                         "return protaco::detail::StoreChars(" + at + ", " + type.FixedLength + ", value, \"" + key + "\", error);");
                     return;
                 case TypeKind.Array:
@@ -482,7 +528,7 @@ namespace Protacoc
             {
                 w.Line("/// Element write in place. False, the old value kept and the reason in error for an index out of range or a value longer than "
                     + element.FixedLength + " bytes.");
-                Method(w, "bool set_" + key + "(size_t index, const std::string& value, std::string* error = nullptr)",
+                Method(w, "bool set_" + key + "(size_t index, protaco::StringView value, std::string* error = nullptr)",
                     check, fail,
                     "return protaco::detail::StoreCharsAt(" + item("index") + ", " + element.FixedLength + ", value, \"" + key + "\", index, error);");
                 w.Line("/// All elements. False and nothing written if any value is longer than " + element.FixedLength + " bytes.");

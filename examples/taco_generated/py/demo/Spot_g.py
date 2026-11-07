@@ -1,4 +1,4 @@
-﻿# Spot_g.py. protacoc 0.10.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
+﻿# Spot_g.py. protacoc 0.11.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Spot(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x2538569A
+    MsgSchemaText = "protaco-schema-1|Spot|1|0|lat:double;lon:double;label:string(16);"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Spot(lat=...).

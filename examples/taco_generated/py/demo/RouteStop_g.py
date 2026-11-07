@@ -1,4 +1,4 @@
-﻿# RouteStop_g.py. protacoc 0.10.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
+﻿# RouteStop_g.py. protacoc 0.11.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
 import protaco
 
 
@@ -13,6 +13,7 @@ class RouteStop(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x9F1C87C1
+    MsgSchemaText = "protaco-schema-1|RouteStop|1|1|orderId:string(16);address:string(48);etaMin:int=15;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example RouteStop(orderId=...).

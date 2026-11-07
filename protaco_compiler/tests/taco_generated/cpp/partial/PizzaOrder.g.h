@@ -1,4 +1,4 @@
-﻿// PizzaOrder.g.h. protacoc 0.10.0, source PizzaOrder.yaml (sha1 300feed1cc93). Do not edit.
+﻿// PizzaOrder.g.h. protacoc 0.11.0, source PizzaOrder.yaml (sha1 300feed1cc93). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -52,6 +52,12 @@ public:
         return 0x1643B1CBu;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|PizzaOrder|1|1|orderId:string(32);store:string(32);size:int;slices:int;woodFired:bool;deepDishCm:int;toppings:list<Topping@eb8a11d8>;delivery:Delivery@591d673b;";
+    }
+
     /// [type string(32); fixed 32 bytes, set rejects longer values]
     std::string get_orderId() const
     {
@@ -59,7 +65,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-    bool set_orderId(const std::string& value, std::string* error = nullptr)
+    bool set_orderId(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 32, value, "orderId", error);
     }
@@ -71,7 +77,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-    bool set_store(const std::string& value, std::string* error = nullptr)
+    bool set_store(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 32, 32, value, "store", error);
     }

@@ -1,4 +1,4 @@
-﻿# Trail_g.py. protacoc 0.10.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
+﻿# Trail_g.py. protacoc 0.11.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
 import protaco
 from .Point_g import Point
 
@@ -13,6 +13,7 @@ class Trail(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x13BA591D
+    MsgSchemaText = "protaco-schema-1|Trail|1|1|start:fixed(Point@53239a70);points:list<Point@53239a70>;note:string;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Trail(start=...).

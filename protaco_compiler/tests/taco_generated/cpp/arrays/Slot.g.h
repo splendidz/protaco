@@ -1,4 +1,4 @@
-﻿// Slot.g.h. protacoc 0.10.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
+﻿// Slot.g.h. protacoc 0.11.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -56,6 +56,12 @@ public:
         return 0x9D40CDF3u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Slot|1|0|id:uint;name:string(8)=empty;pos:fixed(Point@53239a70);path:fixed(Point@53239a70)[2];level:enum(Level);temps:double[2];";
+    }
+
     /// [type uint]
     uint32_t get_id() const
     {
@@ -74,7 +80,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-    bool set_name(const std::string& value, std::string* error = nullptr)
+    bool set_name(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 4, 8, value, "name", error);
     }
@@ -288,7 +294,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-        bool set_name(const std::string& value, std::string* error = nullptr)
+        bool set_name(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 4, 8, value, "name", error);
         }
@@ -518,7 +524,7 @@ public:
 
         /// [type string(8); fixed 8 bytes, set rejects longer values; default "empty"]
         /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-        bool set_name(const std::string& value, std::string* error = nullptr)
+        bool set_name(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Data() + 4, 8, value, "name", error);
         }

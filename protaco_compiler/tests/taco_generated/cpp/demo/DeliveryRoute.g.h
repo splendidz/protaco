@@ -1,4 +1,4 @@
-﻿// DeliveryRoute.g.h. protacoc 0.10.0, source DeliveryRoute.yaml (sha1 c54af80e4be8). Do not edit.
+﻿// DeliveryRoute.g.h. protacoc 0.11.0, source DeliveryRoute.yaml (sha1 c54af80e4be8). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -50,6 +50,12 @@ public:
         return 0x7A0526C6u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|DeliveryRoute|1|1|rider:string!;stops:list<RouteStop@9f1c87c1>!;note:string=;";
+    }
+
     /// rider id
     /// [type string; required, decoding fails if missing]
     const std::string& get_rider() const
@@ -57,9 +63,9 @@ public:
         return rider_;
     }
 
-    void set_rider(const std::string& value)
+    void set_rider(protaco::StringView value)
     {
-        rider_ = value;
+        rider_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 
@@ -90,9 +96,9 @@ public:
         return note_;
     }
 
-    void set_note(const std::string& value)
+    void set_note(protaco::StringView value)
     {
-        note_ = value;
+        note_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

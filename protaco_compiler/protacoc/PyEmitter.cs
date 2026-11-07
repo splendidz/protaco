@@ -142,6 +142,7 @@ namespace Protacoc
             w.Line("MsgVersion = " + view.Version);
             w.Line("MsgMinVersion = " + message.MinVersion);
             w.Line("MsgSchemaHash = " + SchemaFingerprint.Hex(view.SchemaHash));
+            w.Line("MsgSchemaText = " + Naming.CsString(view.SchemaText));
             w.Line();
             w.Line("def __init__(self, *, _stamp=None, **fields):");
             w.Indent();

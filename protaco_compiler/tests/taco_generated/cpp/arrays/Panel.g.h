@@ -1,4 +1,4 @@
-﻿// Panel.g.h. protacoc 0.10.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
+﻿// Panel.g.h. protacoc 0.11.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -56,6 +56,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0x71A7E9E9u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Panel|1|0|temps:double[4]=20.5;counts:int[4]=-1;ids:uint64[3];masks:uint[2];ticks:int64[2];flags:bool[2];names:string(8)[2]=none;levels:enum(Level)[3];total:int;";
     }
 
     /// [type double[Sizes.Slots]; 4 elements, fixed 32 bytes; default 20.5]
@@ -309,7 +315,7 @@ public:
     }
 
     /// Element write in place. False, the old value kept and the reason in error for an index out of range or a value longer than 8 bytes.
-    bool set_names(size_t index, const std::string& value, std::string* error = nullptr)
+    bool set_names(size_t index, protaco::StringView value, std::string* error = nullptr)
     {
         if (index >= 2)
             return protaco::detail::IndexError(error, "names", index, 2);
@@ -844,7 +850,7 @@ public:
         }
 
         /// Element write in place. False, the old value kept and the reason in error for an index out of range or a value longer than 8 bytes.
-        bool set_names(size_t index, const std::string& value, std::string* error = nullptr)
+        bool set_names(size_t index, protaco::StringView value, std::string* error = nullptr)
         {
             if (index >= 2)
                 return protaco::detail::IndexError(error, "names", index, 2);

@@ -53,6 +53,19 @@ bool Cpp14Arrays()
         && panel.get_temps()[3] == 20.5 && !panel.ToString().empty() && Cpp14FixedMessages();
 }
 
+// C++14 StringView: the protaco class, the same calls as std::string_view.
+bool Cpp14StringView()
+{
+    DeliveryRoute route;
+    const std::string rider = "rider-8";
+    route.set_rider(rider);
+    route.set_note(protaco::StringView("note-9 tail", 6));
+    const std::vector<uint8_t> frame = route.Serialize();
+    protaco::Header header;
+    return protaco::PeekHeader(frame.data(), frame.size(), &header) && header.name == DeliveryRoute::MsgName() && std::string(header.name) == "DeliveryRoute"
+        && route.get_rider() == "rider-8" && route.get_note() == "note-9";
+}
+
 bool Cpp14RoundTrip()
 {
     DeliveryRoute route;
@@ -77,7 +90,7 @@ bool Cpp14RoundTrip()
     std::vector<uint8_t> nodeBytes = node.Serialize();
     const recursive::Node nodeBack = protaco::ToObject<recursive::Node>(std::move(nodeBytes));
     return protaco::TryToObject(route.Serialize().data(), route.Serialize().size(), &routeBack)
-        && protaco::TryToObject(order.Serialize().data(), order.Serialize().size(), &orderBack)
+        && Cpp14StringView() && protaco::TryToObject(order.Serialize().data(), order.Serialize().size(), &orderBack)
         && protaco::TryToObject(beat.Serialize().data(), beat.Serialize().size(), &beatBack)
         && protaco::TryView<Heartbeat>(beat.Serialize(), &view) && view.get_healthy()
         && protaco::ToObject<maps::Menu>(menu.Serialize()).get_specials().at(maps::Grade::Gold).get_name() == "x"

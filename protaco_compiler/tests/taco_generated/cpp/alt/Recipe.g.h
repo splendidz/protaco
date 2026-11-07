@@ -1,4 +1,4 @@
-﻿// Recipe.g.h. protacoc 0.10.0, source Recipe.yaml (sha1 841cd482eb1d). Do not edit.
+﻿// Recipe.g.h. protacoc 0.11.0, source Recipe.yaml (sha1 841cd482eb1d). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -51,6 +51,12 @@ public:
         return 0xD1D83D6Cu;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Recipe|1|1|step:int=3;name:string(16);path:string!;";
+    }
+
     /// [type int; default 3]
     int32_t get_step() const
     {
@@ -70,7 +76,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-    bool set_name(const std::string& value, std::string* error = nullptr)
+    bool set_name(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 4, 16, value, "name", error);
     }
@@ -81,9 +87,9 @@ public:
         return path_;
     }
 
-    void set_path(const std::string& value)
+    void set_path(protaco::StringView value)
     {
-        path_ = value;
+        path_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

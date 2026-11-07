@@ -1,4 +1,4 @@
-﻿# PizzaOrder_g.py. protacoc 0.10.0, source PizzaOrder.yaml (sha1 300feed1cc93). Do not edit.
+﻿# PizzaOrder_g.py. protacoc 0.11.0, source PizzaOrder.yaml (sha1 300feed1cc93). Do not edit.
 import protaco
 from .Delivery_g import Delivery
 from .Topping_g import Topping
@@ -15,6 +15,7 @@ class PizzaOrder(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x1643B1CB
+    MsgSchemaText = "protaco-schema-1|PizzaOrder|1|1|orderId:string(32);store:string(32);size:int;slices:int;woodFired:bool;deepDishCm:int;toppings:list<Topping@eb8a11d8>;delivery:Delivery@591d673b;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example PizzaOrder(orderId=...).

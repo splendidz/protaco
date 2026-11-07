@@ -1,4 +1,4 @@
-﻿// Move.g.h. protacoc 0.10.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
+﻿// Move.g.h. protacoc 0.11.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,6 +49,12 @@ public:
         return 0x97FD0219u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Move|1|1|from:string(8);to:string(8);pass:bool;";
+    }
+
     /// [type string(8); fixed 8 bytes, set rejects longer values]
     std::string get_from() const
     {
@@ -56,7 +62,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-    bool set_from(const std::string& value, std::string* error = nullptr)
+    bool set_from(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 8, value, "from", error);
     }
@@ -68,7 +74,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-    bool set_to(const std::string& value, std::string* error = nullptr)
+    bool set_to(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 8, 8, value, "to", error);
     }
@@ -153,7 +159,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-        bool set_from(const std::string& value, std::string* error = nullptr)
+        bool set_from(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 0, 8, value, "from", error);
         }
@@ -165,7 +171,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-        bool set_to(const std::string& value, std::string* error = nullptr)
+        bool set_to(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 8, 8, value, "to", error);
         }

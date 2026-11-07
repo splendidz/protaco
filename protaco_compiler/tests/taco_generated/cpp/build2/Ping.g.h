@@ -1,4 +1,4 @@
-﻿// Ping.g.h. protacoc 0.10.0, source Ping.yaml (sha1 72b716c1138c). Do not edit.
+﻿// Ping.g.h. protacoc 0.11.0, source Ping.yaml (sha1 72b716c1138c). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,6 +49,12 @@ public:
         return 0xBC1DCB81u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Ping|2|0|seq:int;who:string;text:string;";
+    }
+
     /// [type int]
     int32_t get_seq() const
     {
@@ -66,9 +72,9 @@ public:
         return who_;
     }
 
-    void set_who(const std::string& value)
+    void set_who(protaco::StringView value)
     {
-        who_ = value;
+        who_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 
@@ -78,9 +84,9 @@ public:
         return text_;
     }
 
-    void set_text(const std::string& value)
+    void set_text(protaco::StringView value)
     {
-        text_ = value;
+        text_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 
@@ -201,6 +207,12 @@ public:
         return 0xB81406B7u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Ping|1|0|seq:int;who:string;";
+    }
+
     /// [type int]
     int32_t get_seq() const
     {
@@ -218,9 +230,9 @@ public:
         return who_;
     }
 
-    void set_who(const std::string& value)
+    void set_who(protaco::StringView value)
     {
-        who_ = value;
+        who_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

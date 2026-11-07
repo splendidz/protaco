@@ -630,6 +630,7 @@ namespace Protacoc
                 view.FixedSlots = message.Physical.Where(f => f.Type.IsFixed && f.Added <= version).ToList();
                 view.AliveVar = message.Physical.Where(f => !f.Type.IsFixed && f.AliveAt(version)).ToList();
                 view.FixedSize = view.FixedSlots.Sum(f => f.Type.FixedSize);
+                view.SchemaText = SchemaFingerprint.CanonicalText(message, version);
                 view.SchemaHash = SchemaFingerprint.Of(message, version);
                 message.Views.Add(view);
             }

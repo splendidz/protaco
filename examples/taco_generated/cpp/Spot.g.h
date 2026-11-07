@@ -1,4 +1,4 @@
-﻿// Spot.g.h. protacoc 0.10.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
+﻿// Spot.g.h. protacoc 0.11.0, source Spot.yaml (sha1 11b8a28b10ac). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,6 +49,12 @@ public:
         return 0x2538569Au;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Spot|1|0|lat:double;lon:double;label:string(16);";
+    }
+
     /// [type double]
     double get_lat() const
     {
@@ -78,7 +84,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-    bool set_label(const std::string& value, std::string* error = nullptr)
+    bool set_label(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 16, 16, value, "label", error);
     }
@@ -163,7 +169,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-        bool set_label(const std::string& value, std::string* error = nullptr)
+        bool set_label(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 16, 16, value, "label", error);
         }
@@ -256,7 +262,7 @@ public:
 
         /// [type string(16); fixed 16 bytes, set rejects longer values]
         /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-        bool set_label(const std::string& value, std::string* error = nullptr)
+        bool set_label(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Data() + 16, 16, value, "label", error);
         }

@@ -1,4 +1,4 @@
-﻿// RouteStop.g.h. protacoc 0.10.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
+﻿// RouteStop.g.h. protacoc 0.11.0, source RouteStop.yaml (sha1 7cc7901a2cd9). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -51,6 +51,12 @@ public:
         return 0x9F1C87C1u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|RouteStop|1|1|orderId:string(16);address:string(48);etaMin:int=15;";
+    }
+
     /// Order delivered at this stop. Example: A-100
     /// order number
     /// [type string(16); fixed 16 bytes, set rejects longer values]
@@ -60,7 +66,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-    bool set_orderId(const std::string& value, std::string* error = nullptr)
+    bool set_orderId(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 16, value, "orderId", error);
     }
@@ -73,7 +79,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 48 bytes.
-    bool set_address(const std::string& value, std::string* error = nullptr)
+    bool set_address(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 16, 48, value, "address", error);
     }
@@ -165,7 +171,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-        bool set_orderId(const std::string& value, std::string* error = nullptr)
+        bool set_orderId(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 0, 16, value, "orderId", error);
         }
@@ -178,7 +184,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 48 bytes.
-        bool set_address(const std::string& value, std::string* error = nullptr)
+        bool set_address(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 16, 48, value, "address", error);
         }

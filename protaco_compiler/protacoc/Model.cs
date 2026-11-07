@@ -172,6 +172,7 @@ namespace Protacoc
         public List<FieldDef> AliveVar = new List<FieldDef>();    // variable fields of this version, serialization order
         public int FixedSize;
         public uint SchemaHash;           // FNV-1a 32 of the canonical schema text (docs/reference.md "Schema fingerprint")
+        public string SchemaText;         // the canonical schema text itself (MsgSchemaText, catalog)
     }
 
     internal sealed class MessageDef : SchemaDef

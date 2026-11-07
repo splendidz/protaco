@@ -1,4 +1,4 @@
-﻿// Board.g.h. protacoc 0.10.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
+﻿// Board.g.h. protacoc 0.11.0, source Board.yaml (sha1 9f54d74d5bc3). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -53,6 +53,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0xB785B631u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Board|1|0|depot:fixed(Spot@2538569a);spots:fixed(Spot@2538569a)[4];ovens:double[3]=220.5;queue:enum(PizzaSize)[3];busy:bool[8];";
     }
 
     /// where riders start

@@ -1,4 +1,4 @@
-﻿# Panel_g.py. protacoc 0.10.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
+﻿# Panel_g.py. protacoc 0.11.0, source Panel.yaml (sha1 236d0ca5085f). Do not edit.
 import protaco
 from .Level_enum_g import Level, LevelNames
 
@@ -13,6 +13,7 @@ class Panel(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x71A7E9E9
+    MsgSchemaText = "protaco-schema-1|Panel|1|0|temps:double[4]=20.5;counts:int[4]=-1;ids:uint64[3];masks:uint[2];ticks:int64[2];flags:bool[2];names:string(8)[2]=none;levels:enum(Level)[3];total:int;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Panel(temps=...).

@@ -1,4 +1,4 @@
-﻿# Pie_g.py. protacoc 0.10.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
+﻿# Pie_g.py. protacoc 0.11.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
 import protaco
 from .PizzaSize_enum_g import PizzaSize, PizzaSizeNames
 
@@ -13,6 +13,7 @@ class Pie(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xB67183D5
+    MsgSchemaText = "protaco-schema-1|Pie|1|1|size:enum(PizzaSize)=Large;crust:enum(PizzaSize);sizes:list<enum(PizzaSize)>;name:string=;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Pie(size=...).

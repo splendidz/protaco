@@ -23,6 +23,7 @@
 #include "PizzaOrder.g.h"
 #include "DeliveryRoute.g.h"
 #include "alt/Recipe.g.h"
+#include "Demo.catalog.g.h"
 #include "build1/Order.g.h"
 #include "build1/Ping.g.h"
 #include "build2/Order.g.h"
@@ -490,6 +491,87 @@ TEST(Protaco, SerializeReusesUntilChange)
     order.set_size(16);
     EXPECT_EQ(16, protaco::ToObject<PizzaOrder>(order.Serialize()).get_size());
     EXPECT_EQ("mario", protaco::ToObject<PizzaOrder>(order.Serialize()).get_customer());
+}
+
+namespace
+{
+// Memory the test grow function hands out: it keeps the asked size and the number of calls.
+struct GrowRecord
+{
+    std::vector<uint8_t> memory;
+    size_t asked = 0;
+    int calls = 0;
+};
+
+uint8_t* GrowInto(void* context, size_t size)
+{
+    GrowRecord* record = static_cast<GrowRecord*>(context);
+    ++record->calls;
+    record->asked = size;
+    record->memory.assign(size, 0xEE);
+    return record->memory.data();
+}
+
+uint8_t* GrowNone(void*, size_t)
+{
+    return nullptr;
+}
+}
+
+// SerializeTo writes the Serialize() bytes into the caller's memory, or into the memory grow gives when they do not
+// fit, and leaves the object as it is.
+TEST(Protaco, SerializeToWritesSerializeBytes)
+{
+    // No cache yet: the variable block is written straight into the caller's memory, and grow is not called.
+    const DeliveryRoute route = MakeDeliveryRoute();
+    const size_t size = route.SerializeTo(nullptr, 0, nullptr, nullptr);
+    GrowRecord record;
+    std::vector<uint8_t> memory(size + 4, 0xEE);
+    EXPECT_EQ(size, route.SerializeTo(memory.data(), memory.size(), &GrowInto, &record));
+    EXPECT_EQ(0, record.calls);
+    EXPECT_EQ(route.Serialize(), std::vector<uint8_t>(memory.begin(), memory.begin() + size));
+    EXPECT_EQ(0xEE, memory[size]);
+
+    // Too small: grow gets the frame size once and the frame goes into its memory. The caller's memory is untouched.
+    const DeliveryRoute fresh = MakeDeliveryRoute();
+    std::vector<uint8_t> small(size - 1, 0xEE);
+    EXPECT_EQ(size, fresh.SerializeTo(small.data(), small.size(), &GrowInto, &record));
+    EXPECT_EQ(1, record.calls);
+    EXPECT_EQ(size, record.asked);
+    EXPECT_EQ(fresh.Serialize(), record.memory);
+    EXPECT_EQ(std::vector<uint8_t>(size - 1, 0xEE), small);
+
+    // Without grow, or when grow gives no memory, nothing is written (a valid cache here).
+    EXPECT_EQ(size, route.SerializeTo(small.data(), small.size(), nullptr, nullptr));
+    EXPECT_EQ(size, route.SerializeTo(small.data(), small.size(), &GrowNone, nullptr));
+    EXPECT_EQ(std::vector<uint8_t>(size - 1, 0xEE), small);
+
+    // A valid cache (after Serialize) is copied as it is, also through IMessage and into grown memory.
+    std::fill(memory.begin(), memory.end(), 0);
+    const protaco::IMessage& message = route;
+    EXPECT_EQ(size, message.SerializeTo(memory.data(), memory.size(), nullptr, nullptr));
+    EXPECT_EQ(route.Serialize(), std::vector<uint8_t>(memory.begin(), memory.begin() + size));
+    EXPECT_EQ(size, message.SerializeTo(nullptr, 0, &GrowInto, &record));
+    EXPECT_EQ(2, record.calls);
+    EXPECT_EQ(route.Serialize(), record.memory);
+
+    // An object written through mutable_ is serialized again on every call.
+    DeliveryRoute exposed = MakeDeliveryRoute();
+    exposed.mutable_stops().push_back(MakeStop("A-102", "3 Olive Rd", 30));
+    std::vector<uint8_t> grown(exposed.SerializeTo(nullptr, 0, nullptr, nullptr));
+    EXPECT_EQ(grown.size(), exposed.SerializeTo(grown.data(), grown.size(), nullptr, nullptr));
+    EXPECT_EQ(3u, protaco::ToObject<DeliveryRoute>(grown).get_stops().size());
+    exposed.mutable_stops().pop_back();
+    const size_t shrunk = exposed.SerializeTo(grown.data(), grown.size(), nullptr, nullptr);
+    EXPECT_EQ(exposed.Serialize(), std::vector<uint8_t>(grown.begin(), grown.begin() + shrunk));
+
+    // Fixed-only message: header and fixed block only.
+    Heartbeat beat;
+    beat.set_node("oven-1");
+    beat.set_uptimeSec(10);
+    std::vector<uint8_t> fixedOnly(beat.SerializeTo(nullptr, 0, nullptr, nullptr));
+    beat.SerializeTo(fixedOnly.data(), fixedOnly.size(), nullptr, nullptr);
+    EXPECT_EQ(beat.Serialize(), fixedOnly);
 }
 
 TEST(Protaco, DefaultsApplied)
@@ -1305,12 +1387,80 @@ TEST(Protaco, TimestampConvertsToLocalTime)
         route.ToString(protaco::TextStyle::Pretty()));
 }
 
+// MsgSchemaText is the canonical text the fingerprint is made of. SchemaTextDifference names the first difference:
+// header parts (version, extension) and then the first field that differs, or "" for equal texts.
+TEST(Protaco, SchemaTextNamesFirstDifference)
+{
+    EXPECT_EQ(0u, std::string(DeliveryRoute::MsgSchemaText()).find("protaco-schema-1|DeliveryRoute|1|"));
+    EXPECT_EQ("", protaco::SchemaTextDifference(DeliveryRoute::MsgSchemaText(), DeliveryRoute::MsgSchemaText()));
+    EXPECT_EQ("version 1 vs 2; field 2: step:int=3 vs temp:double=25.5", protaco::SchemaTextDifference(v1::Recipe::MsgSchemaText(), v2::Recipe::MsgSchemaText()));
+    EXPECT_EQ("path: string! vs string", protaco::SchemaTextDifference("protaco-schema-1|X|1|1|id:int;path:string!;", "protaco-schema-1|X|1|1|id:int;path:string;"));
+    EXPECT_EQ("field 2: (none) vs note:string", protaco::SchemaTextDifference("protaco-schema-1|X|1|1|id:int;", "protaco-schema-1|X|1|1|id:int;note:string;"));
+    EXPECT_EQ("extension allowed vs not", protaco::SchemaTextDifference("protaco-schema-1|X|1|1|id:int;", "protaco-schema-1|X|1|0|id:int;"));
+    EXPECT_EQ("schema text format differs", protaco::SchemaTextDifference("protaco-schema-1|X|1|1|id:int;", "other"));
+}
+
+// --catalog: one entry per message of the run, in name order, with the class values. CatalogDifferences lists only the
+// messages whose schema differs between two tables.
+TEST(Protaco, CatalogListsMessagesAndDifferences)
+{
+    size_t count = 0;
+    const protaco::SchemaEntry* entries = DemoCatalog(&count);
+    ASSERT_GT(count, 1u);
+    size_t route = count;
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (i > 0)
+        {
+            EXPECT_LT(std::strcmp(entries[i - 1].name, entries[i].name), 0);
+        }
+        if (std::strcmp(entries[i].name, "DeliveryRoute") == 0)
+            route = i;
+    }
+    ASSERT_LT(route, count);
+    EXPECT_EQ(DeliveryRoute::MsgVersion(), entries[route].version);
+    EXPECT_EQ(DeliveryRoute::MsgSchemaHash(), entries[route].schemaHash);
+    EXPECT_STREQ(DeliveryRoute::MsgSchemaText(), entries[route].schemaText);
+    EXPECT_TRUE(protaco::CatalogDifferences(entries, count, entries, count).empty());
+
+    std::vector<protaco::SchemaEntry> changed(entries, entries + count);
+    changed[route].schemaHash ^= 1u;
+    changed[route].schemaText = "protaco-schema-1|DeliveryRoute|1|1|rider:int;";
+    const std::vector<std::string> lines = protaco::CatalogDifferences(entries, count, changed.data(), changed.size() - 1);
+    ASSERT_EQ(1u, lines.size());
+    EXPECT_EQ(0u, lines[0].find("DeliveryRoute: v1 ")) << lines[0];
+    EXPECT_NE(std::string::npos, lines[0].find(": rider: string! vs int")) << lines[0];
+}
+
+// Header::name points into the frame bytes (no copy). String setters take a StringView: const char*, std::string and a
+// (data, size) piece all set the same text, and a piece of a longer buffer copies only its characters.
+TEST(Protaco, StringViewNameAndSetters)
+{
+    DeliveryRoute route;
+    route.set_rider("rider-1");
+    EXPECT_EQ("rider-1", route.get_rider());
+    const std::string rider = "rider-2";
+    route.set_rider(rider);
+    EXPECT_EQ("rider-2", route.get_rider());
+    const char buffer[] = "rider-3 and more";
+    route.set_rider(protaco::StringView(buffer, 7));
+    EXPECT_EQ("rider-3", route.get_rider());
+
+    const std::vector<uint8_t> frame = route.Serialize();
+    protaco::Header header;
+    ASSERT_TRUE(protaco::PeekHeader(frame.data(), frame.size(), &header));
+    EXPECT_TRUE(header.name == DeliveryRoute::MsgName());
+    EXPECT_FALSE(header.name != "DeliveryRoute");
+    EXPECT_EQ(reinterpret_cast<const char*>(frame.data()) + 4, header.name.data());
+    EXPECT_EQ("DeliveryRoute", std::string(header.name));
+}
+
 TEST(Protaco, PeekHeaderReadsEnvelopeWithoutBody)
 {
     const DeliveryRoute route = MakeDeliveryRoute();
     protaco::Header header;
     ASSERT_TRUE(protaco::PeekHeader(route.Serialize().data(), route.Serialize().size(), &header));
-    EXPECT_EQ("DeliveryRoute", header.name);
+    EXPECT_EQ(protaco::StringView("DeliveryRoute"), header.name);
     EXPECT_EQ(1, header.version);
     EXPECT_EQ(1, header.minVersion);
     EXPECT_EQ(DeliveryRoute::MsgSchemaHash(), header.schemaHash);

@@ -37,6 +37,7 @@ namespace Protacoc
             w.Line("public const ushort MsgVersion = " + view.Version + ";");
             w.Line("public const ushort MsgMinVersion = " + message.MinVersion + ";");
             w.Line("public const uint MsgSchemaHash = " + SchemaFingerprint.Hex(view.SchemaHash) + "u;");
+            w.Line("public const string MsgSchemaText = " + Naming.CsString(view.SchemaText) + ";");
             w.Line();
             w.Line("private static readonly uint[] SchemaHashes = { " + string.Join(", ", message.Views.Where(v => v.Version <= view.Version).Select(v => SchemaFingerprint.Hex(v.SchemaHash) + "u")) + " };");
             w.Line();

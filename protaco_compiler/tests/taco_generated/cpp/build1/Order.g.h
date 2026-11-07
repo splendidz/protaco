@@ -1,4 +1,4 @@
-﻿// Order.g.h. protacoc 0.10.0, source Order.yaml (sha1 8e16b9d89079). Do not edit.
+﻿// Order.g.h. protacoc 0.11.0, source Order.yaml (sha1 8e16b9d89079). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -50,6 +50,12 @@ public:
         return 0xD05758A9u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Order|1|1|id:string(8);qty:int=1;note:string;color:string!;";
+    }
+
     /// [type string(8); fixed 8 bytes, set rejects longer values]
     std::string get_id() const
     {
@@ -57,7 +63,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 8 bytes.
-    bool set_id(const std::string& value, std::string* error = nullptr)
+    bool set_id(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 8, value, "id", error);
     }
@@ -79,9 +85,9 @@ public:
         return note_;
     }
 
-    void set_note(const std::string& value)
+    void set_note(protaco::StringView value)
     {
-        note_ = value;
+        note_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 
@@ -91,9 +97,9 @@ public:
         return color_;
     }
 
-    void set_color(const std::string& value)
+    void set_color(protaco::StringView value)
     {
-        color_ = value;
+        color_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

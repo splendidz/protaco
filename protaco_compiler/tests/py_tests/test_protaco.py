@@ -245,6 +245,10 @@ class ProtacoTest(unittest.TestCase):
         self.assertEqual("message version too old: Recipe reads version 2 or newer, got 1",
                          self.fails(Recipe2, Recipe1(path="/b").Serialize()).what)
 
+    def test_schema_text(self):
+        self.assertEqual("protaco-schema-1|Recipe|1|1|name:string(16);step:int=3;path:string!;", Recipe1.MsgSchemaText)
+        self.assertTrue(Recipe2.MsgSchemaText.startswith("protaco-schema-1|Recipe|2|1|"))
+
     def test_schema_mismatch(self):
         self.assertNotEqual(AltRecipe.MsgSchemaHash, Recipe1.MsgSchemaHash)
         data = AltRecipe(step=5, name="R1", path="/a").Serialize()

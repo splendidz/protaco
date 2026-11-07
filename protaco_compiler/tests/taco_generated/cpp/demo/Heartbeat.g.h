@@ -1,4 +1,4 @@
-﻿// Heartbeat.g.h. protacoc 0.10.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
+﻿// Heartbeat.g.h. protacoc 0.11.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -51,6 +51,12 @@ public:
         return 0x2BB85C55u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Heartbeat|1|0|node:string(32);seq:int64;healthy:bool=true;cpuLoad:double;uptimeSec:int;";
+    }
+
     /// device name
     /// [type string(32); fixed 32 bytes, set rejects longer values]
     std::string get_node() const
@@ -59,7 +65,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-    bool set_node(const std::string& value, std::string* error = nullptr)
+    bool set_node(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 32, value, "node", error);
     }
@@ -188,7 +194,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-        bool set_node(const std::string& value, std::string* error = nullptr)
+        bool set_node(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 0, 32, value, "node", error);
         }

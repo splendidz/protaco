@@ -1,4 +1,4 @@
-﻿// D5.g.h. protacoc 0.10.0, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
+﻿// D5.g.h. protacoc 0.11.0, source D5.yaml (sha1 ba4fb7e5a44a). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -47,6 +47,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0x66677892u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|D5|1|1|d:D4@0abd0f13;";
     }
 
     /// [type D4]

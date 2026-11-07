@@ -1,4 +1,4 @@
-﻿// DeliveryProof.g.h. protacoc 0.10.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
+﻿// DeliveryProof.g.h. protacoc 0.11.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,6 +49,12 @@ public:
         return 0xF769024Au;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|DeliveryProof|1|1|orderId:string(32);photo:bytes!;signatures:list<bytes>;";
+    }
+
     /// order number
     /// [type string(32); fixed 32 bytes, set rejects longer values]
     std::string get_orderId() const
@@ -57,7 +63,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-    bool set_orderId(const std::string& value, std::string* error = nullptr)
+    bool set_orderId(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 32, value, "orderId", error);
     }

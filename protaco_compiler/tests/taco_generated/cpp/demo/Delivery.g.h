@@ -1,4 +1,4 @@
-﻿// Delivery.g.h. protacoc 0.10.0, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
+﻿// Delivery.g.h. protacoc 0.11.0, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -50,6 +50,12 @@ public:
         return 0xA031C44Eu;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Delivery|1|1|address:string(64);floor:int=1;doorCode:list<int>;contacts:list<string>;";
+    }
+
     /// street address
     /// [type string(64); fixed 64 bytes, set rejects longer values]
     std::string get_address() const
@@ -58,7 +64,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 64 bytes.
-    bool set_address(const std::string& value, std::string* error = nullptr)
+    bool set_address(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 64, value, "address", error);
     }

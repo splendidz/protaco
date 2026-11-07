@@ -1,4 +1,4 @@
-﻿// Rack.g.h. protacoc 0.10.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
+﻿// Rack.g.h. protacoc 0.11.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -52,6 +52,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0xD3E62388u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Rack|1|0|origin:fixed(Point@53239a70);slots:fixed(Slot@9d40cdf3)[4];count:int;";
     }
 
     /// [type Point; fixed message, inline 8 bytes]

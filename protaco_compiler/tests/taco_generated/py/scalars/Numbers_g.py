@@ -1,4 +1,4 @@
-﻿# Numbers_g.py. protacoc 0.10.0, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
+﻿# Numbers_g.py. protacoc 0.11.0, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Numbers(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x8230A950
+    MsgSchemaText = "protaco-schema-1|Numbers|1|1|u32:uint=4000000000;u64:uint64=18446744073709551615;i64:int64=-9000000000;us:list<uint>;u64s:list<uint64>;name:string(16)=;text:string;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Numbers(u32=...).

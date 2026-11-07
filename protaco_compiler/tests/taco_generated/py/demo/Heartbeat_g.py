@@ -1,4 +1,4 @@
-﻿# Heartbeat_g.py. protacoc 0.10.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
+﻿# Heartbeat_g.py. protacoc 0.11.0, source Heartbeat.yaml (sha1 32f326820062). Do not edit.
 import protaco
 
 
@@ -13,6 +13,7 @@ class Heartbeat(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x2BB85C55
+    MsgSchemaText = "protaco-schema-1|Heartbeat|1|0|node:string(32);seq:int64;healthy:bool=true;cpuLoad:double;uptimeSec:int;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Heartbeat(node=...).

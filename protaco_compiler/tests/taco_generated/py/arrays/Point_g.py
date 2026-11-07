@@ -1,4 +1,4 @@
-﻿# Point_g.py. protacoc 0.10.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
+﻿# Point_g.py. protacoc 0.11.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Point(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x53239A70
+    MsgSchemaText = "protaco-schema-1|Point|1|0|x:int=-1;y:int;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Point(x=...).

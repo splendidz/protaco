@@ -1,4 +1,4 @@
-﻿// Point.g.h. protacoc 0.10.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
+﻿// Point.g.h. protacoc 0.11.0, source Point.yaml (sha1 8bf074d3ebbb). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -48,6 +48,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0x53239A70u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Point|1|0|x:int=-1;y:int;";
     }
 
     /// [type int; default -1]

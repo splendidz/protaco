@@ -1,4 +1,4 @@
-﻿# Order_g.py. protacoc 0.10.0, source Order.yaml (sha1 f98201e9832e). Do not edit.
+﻿# Order_g.py. protacoc 0.11.0, source Order.yaml (sha1 f98201e9832e). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Order(protaco.Message):
     MsgVersion = 2
     MsgMinVersion = 1
     MsgSchemaHash = 0x0E7D8E49
+    MsgSchemaText = "protaco-schema-1|Order|2|1|id:string(8);qty:int=1;note:string;color:string!;weight:double=0.5;tags:list<string>;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Order(id=...).
@@ -66,6 +67,7 @@ class v1:
         MsgVersion = 1
         MsgMinVersion = 1
         MsgSchemaHash = 0xD05758A9
+        MsgSchemaText = "protaco-schema-1|Order|1|1|id:string(8);qty:int=1;note:string;color:string!;"
 
         def __init__(self, *, _stamp=None, **fields):
             """Defaults; fields by key, for example Order(id=...).

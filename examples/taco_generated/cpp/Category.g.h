@@ -1,4 +1,4 @@
-﻿// Category.g.h. protacoc 0.10.0, source Category.yaml (sha1 9b036f2023ea). Do not edit.
+﻿// Category.g.h. protacoc 0.11.0, source Category.yaml (sha1 9b036f2023ea). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,6 +49,12 @@ public:
         return 0x6B7C6E97u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Category|1|1|name:string;dishes:list<string>;subsections:list<Category@self>;";
+    }
+
     /// section name
     /// [type string]
     const std::string& get_name() const
@@ -56,9 +62,9 @@ public:
         return name_;
     }
 
-    void set_name(const std::string& value)
+    void set_name(protaco::StringView value)
     {
-        name_ = value;
+        name_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

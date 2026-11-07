@@ -1,4 +1,4 @@
-﻿# D1_g.py. protacoc 0.10.0, source D1.yaml (sha1 3d397ff46a35). Do not edit.
+﻿# D1_g.py. protacoc 0.11.0, source D1.yaml (sha1 3d397ff46a35). Do not edit.
 import protaco
 from .D0_g import D0
 
@@ -12,6 +12,7 @@ class D1(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x45526499
+    MsgSchemaText = "protaco-schema-1|D1|1|1|d:D0@329e542f;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example D1(d=...).

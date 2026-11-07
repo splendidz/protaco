@@ -7,7 +7,7 @@
 
 [한국어](README.ko.md) · [Examples](examples/README.md) · [Reference](docs/reference.md) · [Benchmark](docs/benchmark/README.md)
 
-Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.10.0 and serialization format v4.
+Protaco is a light serialization tool that lets C++, C#, and Python programs exchange the same data. You write messages in YAML the way you would declare a struct, and the `protacoc` generator turns them into classes for all three languages. This manual covers protacoc 0.11.0 and serialization format v4.
 
 ### When you need serialization
 
@@ -850,6 +850,7 @@ Classes are generated as `<ns>::<Name>`. `<k>` is a field key from the YAML, and
 | Extension data | `GetExt()`, `GetMutableExt()` | Open messages only |
 | Envelope | `GetId()`, `SetCorr()`, `SetTimestampAsNow()`, and more | [6.5](#65-envelope) |
 | Serialization | `const std::vector<uint8_t>& Serialize() const` | Reference to the object's frame buffer |
+| Serialization into your buffer | `size_t SerializeTo(uint8_t* dst, size_t capacity, protaco::GrowFn grow, void* context) const` | Writes the frame into your memory, asks grow for more when it does not fit, returns its size, [reference](docs/reference.md#41-generated-classes) |
 | Logging | `std::string ToString(const protaco::TextStyle& = protaco::TextStyle()) const` | [9. Text output](#9-text-output) |
 | Static info | `MsgName()`, `MsgVersion()`, `MsgMinVersion()`, `MsgSchemaHash()` | Branching and diagnostics |
 | Common base | `protaco::IMessage` (`Name()`, `Serialize()`, `As<T>()`, ...) | Any message without its type; `As<T>()` back to the type, [reference](docs/reference.md#41-generated-classes) |

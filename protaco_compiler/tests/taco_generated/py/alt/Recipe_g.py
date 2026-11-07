@@ -1,4 +1,4 @@
-﻿# Recipe_g.py. protacoc 0.10.0, source Recipe.yaml (sha1 841cd482eb1d). Do not edit.
+﻿# Recipe_g.py. protacoc 0.11.0, source Recipe.yaml (sha1 841cd482eb1d). Do not edit.
 import protaco
 
 
@@ -13,6 +13,7 @@ class Recipe(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xD1D83D6C
+    MsgSchemaText = "protaco-schema-1|Recipe|1|1|step:int=3;name:string(16);path:string!;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Recipe(step=...).

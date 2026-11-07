@@ -26,8 +26,83 @@
 #include <utility>
 #include <vector>
 
+// C++17 and newer: StringView is std::string_view. C++14: a small class of the same shape (see StringView below).
+// MSVC reports the language version in _MSVC_LANG; __cplusplus stays 199711L unless /Zc:__cplusplus is set.
+#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || (!defined(_MSVC_LANG) && __cplusplus >= 201703L)
+#define PROTACO_STD_STRING_VIEW 1
+#include <string_view>
+#else
+#define PROTACO_STD_STRING_VIEW 0
+#endif
+
 namespace protaco
 {
+
+#if PROTACO_STD_STRING_VIEW
+/// Characters protaco reads but does not own (Header::name, string setters). C++17: std::string_view.
+using StringView = std::string_view;
+#else
+/// Characters protaco reads but does not own (Header::name, string setters). C++14 has no std::string_view, so this
+/// is the part of it protaco needs, with the same names: built from const char*, std::string or (data, size),
+/// data(), size(), empty(), == and != with views and strings. std::string(view) copies it in both C++ versions.
+/// One program (module) is built with one C++ version: the two StringView types are different types.
+class StringView
+{
+public:
+    StringView() = default;
+
+    StringView(const char* text) : data_(text), size_(text != nullptr ? std::strlen(text) : 0)
+    {
+    }
+
+    StringView(const char* data, size_t size) : data_(data), size_(size)
+    {
+    }
+
+    StringView(const std::string& text) : data_(text.data()), size_(text.size())
+    {
+    }
+
+    const char* data() const
+    {
+        return data_;
+    }
+
+    size_t size() const
+    {
+        return size_;
+    }
+
+    size_t length() const
+    {
+        return size_;
+    }
+
+    bool empty() const
+    {
+        return size_ == 0;
+    }
+
+    operator std::string() const
+    {
+        return std::string(data_, size_);
+    }
+
+    friend bool operator==(StringView a, StringView b)
+    {
+        return a.size_ == b.size_ && (a.size_ == 0 || std::memcmp(a.data_, b.data_, a.size_) == 0);
+    }
+
+    friend bool operator!=(StringView a, StringView b)
+    {
+        return !(a == b);
+    }
+
+private:
+    const char* data_ = nullptr;
+    size_t size_ = 0;
+};
+#endif
 
 /// Value kinds. The numbers are part of the serialized data. Never change them; add new kinds at the end.
 /// Every value carries a length, so unknown kinds are skipped.
@@ -65,10 +140,21 @@ struct Envelope
     int64_t ts = 0;
 };
 
+/// One message of a protacoc catalog (<name>.catalog.g.h, --catalog): name, version, schema fingerprint (MsgSchemaHash)
+/// and canonical schema text (MsgSchemaText). Plain data, so a table can be handed across a module boundary.
+struct SchemaEntry
+{
+    const char* name;
+    uint16_t version;
+    uint32_t schemaHash;
+    const char* schemaText;
+};
+
 /// Frame header. PeekHeader reads it without parsing the body (for dispatch).
+/// name points into the frame bytes: it is valid while the frame is. Copy it (std::string(header.name)) to keep it.
 struct Header
 {
-    std::string name;
+    StringView name;
     uint16_t version = 0;      // sender's version of the message
     uint16_t minVersion = 0;   // oldest version the sender supports; the frame has a fingerprint per version
     uint32_t schemaHash = 0;   // fingerprint of version (the sender's MsgSchemaHash)
@@ -121,6 +207,11 @@ public:
 private:
     Error error_;
 };
+
+/// Gives SerializeTo more memory when the frame does not fit. context is the value passed to SerializeTo and size is
+/// the frame size in bytes. Returns memory for at least size bytes (the frame is written there), or nullptr to write
+/// nothing. How much to allocate (exactly size, or more for later frames) is up to the function.
+using GrowFn = uint8_t* (*)(void* context, size_t size);
 
 namespace detail
 {
@@ -431,7 +522,7 @@ inline std::string LoadChars(const uint8_t* src, size_t capacity)
 }
 
 // Returns false and keeps the old value if too long (never truncates). key names the field in the error text.
-inline bool StoreChars(uint8_t* dst, size_t capacity, const std::string& value, const char* key, std::string* error)
+inline bool StoreChars(uint8_t* dst, size_t capacity, StringView value, const char* key, std::string* error)
 {
     if (value.size() > capacity)
         return SetError(error, std::string(key) + ": " + std::to_string(value.size()) + " bytes, longer than string(" + std::to_string(capacity) + ")");
@@ -455,7 +546,7 @@ inline bool IndexError(std::string* error, const char* key, size_t index, size_t
 }
 
 // string(N) element of a fixed array. The error path names the element: key[index].
-inline bool StoreCharsAt(uint8_t* dst, size_t capacity, const std::string& value, const char* key, size_t index, std::string* error)
+inline bool StoreCharsAt(uint8_t* dst, size_t capacity, StringView value, const char* key, size_t index, std::string* error)
 {
     if (value.size() > capacity)
         return SetError(error, std::string(key) + "[" + std::to_string(index) + "]: " + std::to_string(value.size()) + " bytes, longer than string("
@@ -471,9 +562,14 @@ inline size_t HeaderSize(size_t nameLength, size_t hashCount)
     return 28 + nameLength + 4 * hashCount;
 }
 
+inline void StoreBodySize(uint8_t* frame, size_t bodySize)
+{
+    Store<uint32_t>(frame + 24 + frame[3], static_cast<uint32_t>(bodySize));
+}
+
 inline void StoreBodySize(std::vector<uint8_t>& buf, size_t bodySize)
 {
-    Store<uint32_t>(buf.data() + 24 + buf[3], static_cast<uint32_t>(bodySize));
+    StoreBodySize(buf.data(), bodySize);
 }
 
 // Preallocates header + FixedLen + zeroed fixed block. Fixed field setters write straight into this buffer.
@@ -1038,6 +1134,9 @@ struct Access
 
     template <class T>
     static const std::vector<uint8_t>& Serialize(const T& message);
+
+    template <class T>
+    static size_t SerializeTo(const T& message, uint8_t* dst, size_t capacity, GrowFn grow, void* context);
 
     static void BindExt(CExt& ext, bool (*isSchemaKey)(const char*))
     {
@@ -1673,6 +1772,47 @@ const std::vector<uint8_t>& Access::Serialize(const T& message)
     return message.buf_;
 }
 
+// Where SerializeTo writes a frame of size bytes: dst when it fits, otherwise the memory grow returns (nullptr without
+// grow, or when grow gives none).
+inline uint8_t* FrameMemory(uint8_t* dst, size_t capacity, size_t size, GrowFn grow, void* context)
+{
+    if (size <= capacity)
+        return dst;
+    if (grow == nullptr)
+        return nullptr;
+    return grow(context, size);
+}
+
+// The bytes Serialize() returns, written into the caller's memory instead of the object's buffer (the object and its
+// VarCache stay as they are). A valid cache is copied as it is; otherwise the variable block is written straight there.
+template <class T>
+size_t Access::SerializeTo(const T& message, uint8_t* dst, size_t capacity, GrowFn grow, void* context)
+{
+    const VarCache& cache = message.cache_;
+    if (cache.valid && !cache.exposed && cache.extRevision == message.ext_.revision_)
+    {
+        const size_t size = message.buf_.size();
+        uint8_t* out = FrameMemory(dst, capacity, size, grow, context);
+        if (out != nullptr)
+            std::memcpy(out, message.buf_.data(), size);
+        return size;
+    }
+    const size_t fixedEnd = static_cast<size_t>(T::kFixedOffset) + static_cast<size_t>(T::kFixedSize);
+    const size_t varSize = VarSize(message);
+    const size_t size = fixedEnd + varSize;
+    uint8_t* out = FrameMemory(dst, capacity, size, grow, context);
+    if (out == nullptr)
+        return size;
+    std::memcpy(out, message.buf_.data(), fixedEnd);
+    StoreBodySize(out, 4 + static_cast<size_t>(T::kFixedSize) + varSize);
+    if (varSize != 0)
+    {
+        CWriter writer(out + fixedEnd);
+        WriteVar(message, writer);
+    }
+    return size;
+}
+
 // Text for ToString. One line by default; TextStyle::indent > 0 puts each item on its own line.
 // Strings are quoted and escaped, long values are cut (TextStyle::maxText), ext entries go under ext{...}.
 class CTextWriter
@@ -2118,7 +2258,7 @@ inline bool ReadHeader(const uint8_t* src, size_t size, Header* out, Error* erro
     FrameInfo info;
     if (!ReadFrameInfo(src, size, &info, error))
         return false;
-    out->name.assign(info.name, info.nameLength);
+    out->name = StringView(info.name, info.nameLength);
     out->version = info.version;
     out->minVersion = info.minVersion;
     out->env = LoadEnvelope(src);
@@ -2469,6 +2609,12 @@ public:
     virtual const std::vector<uint8_t>& Serialize() const = 0;
     virtual std::string ToString(const TextStyle& style) const = 0;
 
+    /// Serialize() bytes written into memory the caller owns, for reusing one buffer without an allocation or a copy
+    /// of the object's buffer. Returns the frame size. A frame that fits (size <= capacity) goes into dst. One that
+    /// does not goes into the memory grow(context, size) returns; grow is called only then. With grow nullptr, or
+    /// when grow returns nullptr, nothing is written. The object is not changed (Serialize() keeps its own buffer).
+    virtual size_t SerializeTo(uint8_t* dst, size_t capacity, GrowFn grow, void* context) const = 0;
+
     std::string ToString() const
     {
         return ToString(TextStyle());
@@ -2516,6 +2662,11 @@ public:
     uint32_t SchemaHash() const override
     {
         return T::MsgSchemaHash();
+    }
+
+    size_t SerializeTo(uint8_t* dst, size_t capacity, GrowFn grow, void* context) const override
+    {
+        return detail::Access::SerializeTo(static_cast<const T&>(*this), dst, capacity, grow, context);
     }
 
     uint32_t GetId() const
@@ -2599,6 +2750,110 @@ inline bool PeekHeader(const uint8_t* src, size_t size, Header* out, std::string
     if (detail::ReadHeader(src, size, out, &detailError))
         return true;
     return detail::SetError(error, detail::ErrorText(detailError));
+}
+
+namespace detail
+{
+// Pieces of text between separators. With limit, the last piece keeps the rest (separators included).
+inline std::vector<StringView> SplitText(StringView text, char separator, size_t limit = 0)
+{
+    std::vector<StringView> pieces;
+    size_t start = 0;
+    for (size_t i = 0; i < text.size(); ++i)
+    {
+        if (text.data()[i] != separator || (limit != 0 && pieces.size() + 1 == limit))
+            continue;
+        pieces.push_back(StringView(text.data() + start, i - start));
+        start = i + 1;
+    }
+    pieces.push_back(StringView(text.data() + start, text.size() - start));
+    return pieces;
+}
+
+// Field part of a canonical text piece "<key>:<type>[!][=<default>]": key before the first ':', spec after it.
+inline StringView FieldKey(StringView field)
+{
+    for (size_t i = 0; i < field.size(); ++i)
+    {
+        if (field.data()[i] == ':')
+            return StringView(field.data(), i);
+    }
+    return field;
+}
+
+inline StringView FieldSpec(StringView field)
+{
+    const size_t keySize = FieldKey(field).size();
+    return keySize < field.size() ? StringView(field.data() + keySize + 1, field.size() - keySize - 1) : StringView();
+}
+
+inline std::string TextOf(StringView text)
+{
+    return text.empty() ? std::string("(none)") : std::string(text.data(), text.size());
+}
+}
+
+/// First difference between two canonical schema texts (MsgSchemaText, SchemaEntry::schemaText), for a log line.
+/// Empty if they are equal. Header parts come first (name, version, extension), then the first field whose key, type,
+/// required mark (!) or default differs. Examples: "version 1 vs 2; field 2: step:int=3 vs temp:double=25.5",
+/// "path: string! vs string", "field 4: (none) vs note:string=none". A nested message differs in its type text
+/// (RouteStop@<fingerprint>); its own entry names the field inside it.
+inline std::string SchemaTextDifference(StringView mine, StringView theirs)
+{
+    if (mine == theirs)
+        return std::string();
+    const std::vector<StringView> a = detail::SplitText(mine, '|', 5);    // format, name, version, extension, fields
+    const std::vector<StringView> b = detail::SplitText(theirs, '|', 5);
+    if (a.size() != 5 || b.size() != 5 || a[0] != b[0])
+        return "schema text format differs";
+    std::string out;
+    const auto add = [&out](const std::string& part) { out += (out.empty() ? "" : "; ") + part; };
+    if (a[1] != b[1])
+        add("name " + detail::TextOf(a[1]) + " vs " + detail::TextOf(b[1]));
+    if (a[2] != b[2])
+        add("version " + detail::TextOf(a[2]) + " vs " + detail::TextOf(b[2]));
+    if (a[3] != b[3])
+        add(a[3] == "1" ? "extension allowed vs not" : "extension not allowed vs allowed");
+    std::vector<StringView> fa = detail::SplitText(a[4], ';');
+    std::vector<StringView> fb = detail::SplitText(b[4], ';');
+    for (size_t i = 0; i < fa.size() || i < fb.size(); ++i)
+    {
+        const StringView x = i < fa.size() ? fa[i] : StringView();
+        const StringView y = i < fb.size() ? fb[i] : StringView();
+        if (x == y)
+            continue;
+        if (!x.empty() && !y.empty() && detail::FieldKey(x) == detail::FieldKey(y))
+            add(detail::TextOf(detail::FieldKey(x)) + ": " + detail::TextOf(detail::FieldSpec(x)) + " vs " + detail::TextOf(detail::FieldSpec(y)));
+        else
+            add("field " + std::to_string(i + 1) + ": " + detail::TextOf(x) + " vs " + detail::TextOf(y));
+        break;
+    }
+    return out.empty() ? std::string("schema text differs") : out;
+}
+
+/// Messages whose schema differs between two catalogs (<name>Catalog of two builds), one line each in mine's order:
+/// "<name>: v<version> <fingerprint> vs v<version> <fingerprint>: <SchemaTextDifference>". A name in only one catalog
+/// is not listed (one side does not use that message).
+inline std::vector<std::string> CatalogDifferences(const SchemaEntry* mine, size_t mineCount, const SchemaEntry* theirs, size_t theirCount)
+{
+    std::vector<std::string> lines;
+    for (size_t i = 0; i < mineCount; ++i)
+    {
+        for (size_t j = 0; j < theirCount; ++j)
+        {
+            if (std::strcmp(mine[i].name, theirs[j].name) != 0)
+                continue;
+            if (mine[i].version != theirs[j].version || mine[i].schemaHash != theirs[j].schemaHash)
+            {
+                char hashes[64];
+                std::snprintf(hashes, sizeof(hashes), "v%u %08x vs v%u %08x: ", static_cast<unsigned>(mine[i].version), static_cast<unsigned>(mine[i].schemaHash),
+                    static_cast<unsigned>(theirs[j].version), static_cast<unsigned>(theirs[j].schemaHash));
+                lines.push_back(std::string(mine[i].name) + ": " + hashes + SchemaTextDifference(mine[i].schemaText, theirs[j].schemaText));
+            }
+            break;
+        }
+    }
+    return lines;
 }
 
 /// Bytes to object without exceptions. On failure returns false, out is unchanged, and error gets "path: reason"

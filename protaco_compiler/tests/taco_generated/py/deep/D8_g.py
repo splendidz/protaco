@@ -1,4 +1,4 @@
-﻿# D8_g.py. protacoc 0.10.0, source D8.yaml (sha1 547614165651). Do not edit.
+﻿# D8_g.py. protacoc 0.11.0, source D8.yaml (sha1 547614165651). Do not edit.
 import protaco
 from .D7_g import D7
 
@@ -12,6 +12,7 @@ class D8(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x8DDE6810
+    MsgSchemaText = "protaco-schema-1|D8|1|1|d:D7@2d65ea08;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example D8(d=...).

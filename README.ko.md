@@ -7,7 +7,7 @@
 
 [English](README.md) · [예제](examples/README.ko.md) · [상세 참조](docs/reference.ko.md) · [벤치마크](docs/benchmark/README.ko.md)
 
-Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 주는 가벼운 직렬화 도구입니다. 구조체를 선언하듯 YAML에 메시지를 적으면 생성기 `protacoc`가 세 언어의 클래스를 만들어 줍니다. 이 문서는 protacoc 0.10.0과 직렬화 형식 v4를 기준으로 합니다.
+Protaco는 C++, C#, Python 프로그램이 같은 데이터를 주고받게 해 주는 가벼운 직렬화 도구입니다. 구조체를 선언하듯 YAML에 메시지를 적으면 생성기 `protacoc`가 세 언어의 클래스를 만들어 줍니다. 이 문서는 protacoc 0.11.0과 직렬화 형식 v4를 기준으로 합니다.
 
 ### 직렬화가 필요한 순간
 
@@ -850,6 +850,7 @@ if not channel:
 | 확장 데이터 | `GetExt()`, `GetMutableExt()` | 열린 메시지만 |
 | Envelope | `GetId()`, `SetCorr()`, `SetTimestampAsNow()` 등 | [6.5](#65-envelope) |
 | 직렬화 | `const std::vector<uint8_t>& Serialize() const` | 객체의 프레임 버퍼 참조 |
+| 내 버퍼로 직렬화 | `size_t SerializeTo(uint8_t* dst, size_t capacity, protaco::GrowFn grow, void* context) const` | 내 메모리에 쓰고, 들어가지 않으면 grow로 메모리를 더 받음, 프레임 크기 반환, [참조](docs/reference.ko.md#41-생성-클래스) |
 | 로그 | `std::string ToString(const protaco::TextStyle& = protaco::TextStyle()) const` | [9. 텍스트 출력](#9-텍스트-출력) |
 | 정적 정보 | `MsgName()`, `MsgVersion()`, `MsgMinVersion()`, `MsgSchemaHash()` | 분기와 진단 |
 | 공통 기반 | `protaco::IMessage`(`Name()`, `Serialize()`, `As<T>()` 등) | 타입을 모르는 채 메시지 처리, `As<T>()`로 생성 타입 복귀, [참조](docs/reference.ko.md#41-생성-클래스) |

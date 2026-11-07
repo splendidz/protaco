@@ -1,4 +1,4 @@
-﻿// Trail.g.h. protacoc 0.10.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
+﻿// Trail.g.h. protacoc 0.11.0, source Trail.yaml (sha1 4eba086e08ee). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -51,6 +51,12 @@ public:
         return 0x13BA591Du;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Trail|1|1|start:fixed(Point@53239a70);points:list<Point@53239a70>;note:string;";
+    }
+
     /// [type Point; fixed message, inline 8 bytes]
     /// Read in place: a view of the Point bytes inside this message.
     Point::ConstRef get_start() const
@@ -94,9 +100,9 @@ public:
         return note_;
     }
 
-    void set_note(const std::string& value)
+    void set_note(protaco::StringView value)
     {
-        note_ = value;
+        note_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

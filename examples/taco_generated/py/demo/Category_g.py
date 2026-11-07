@@ -1,4 +1,4 @@
-﻿# Category_g.py. protacoc 0.10.0, source Category.yaml (sha1 9b036f2023ea). Do not edit.
+﻿# Category_g.py. protacoc 0.11.0, source Category.yaml (sha1 9b036f2023ea). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Category(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x6B7C6E97
+    MsgSchemaText = "protaco-schema-1|Category|1|1|name:string;dishes:list<string>;subsections:list<Category@self>;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Category(name=...).

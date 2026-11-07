@@ -273,6 +273,9 @@ namespace Protacoc.Tests
             // Serialization order (added, then declaration). Removed fixed field ~key, removed variable field left out.
             Equal(Fnv1a("protaco-schema-1|Order|3|1|id:string(8);~qty:int;color:string!;weight:double=0.5;tags:list<string>;label:string;rush:bool;"), build3.Order.MsgSchemaHash, "Order v3");
             Equal(Fnv1a("protaco-schema-1|Order|1|1|id:string(8);qty:int=1;note:string;color:string!;"), build3.v1.Order.MsgSchemaHash, "Order v1");
+            // MsgSchemaText is the text itself.
+            Equal("protaco-schema-1|Topping|1|1|name:string(24);grams:int=30;", Topping.MsgSchemaText, "Topping text");
+            Equal(Fnv1a(PizzaOrder.MsgSchemaText), PizzaOrder.MsgSchemaHash, "PizzaOrder text");
         }
 
         private static uint Fnv1a(string text)

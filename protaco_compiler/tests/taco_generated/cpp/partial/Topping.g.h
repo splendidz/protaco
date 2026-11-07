@@ -1,4 +1,4 @@
-﻿// Topping.g.h. protacoc 0.10.0, source Topping.yaml (sha1 73a1aea489ba). Do not edit.
+﻿// Topping.g.h. protacoc 0.11.0, source Topping.yaml (sha1 73a1aea489ba). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -50,6 +50,12 @@ public:
         return 0xEB8A11D8u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Topping|1|1|name:string(24);grams:int=30;";
+    }
+
     /// topping name
     /// [type string(24); fixed 24 bytes, set rejects longer values]
     std::string get_name() const
@@ -58,7 +64,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 24 bytes.
-    bool set_name(const std::string& value, std::string* error = nullptr)
+    bool set_name(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 24, value, "name", error);
     }
@@ -141,7 +147,7 @@ public:
         }
 
         /// Returns false, keeps the old value and writes the reason to error if longer than 24 bytes.
-        bool set_name(const std::string& value, std::string* error = nullptr)
+        bool set_name(protaco::StringView value, std::string* error = nullptr)
         {
             return protaco::detail::StoreChars(Fixed() + 0, 24, value, "name", error);
         }

@@ -1,4 +1,4 @@
-﻿# Topping_g.py. protacoc 0.10.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
+﻿# Topping_g.py. protacoc 0.11.0, source Topping.yaml (sha1 f343ff787f9f). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Topping(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xEB8A11D8
+    MsgSchemaText = "protaco-schema-1|Topping|1|1|name:string(24);grams:int=30;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Topping(name=...).

@@ -1,4 +1,4 @@
-﻿# Delivery_g.py. protacoc 0.10.0, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
+﻿# Delivery_g.py. protacoc 0.11.0, source Delivery.yaml (sha1 7aef43bfce7c). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Delivery(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xA031C44E
+    MsgSchemaText = "protaco-schema-1|Delivery|1|1|address:string(64);floor:int=1;doorCode:list<int>;contacts:list<string>;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Delivery(address=...).

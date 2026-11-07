@@ -1,4 +1,4 @@
-﻿# Tick_g.py. protacoc 0.10.0, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
+﻿# Tick_g.py. protacoc 0.11.0, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Tick(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x6D9855B0
+    MsgSchemaText = "protaco-schema-1|Tick|1|1|n:int;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Tick(n=...).

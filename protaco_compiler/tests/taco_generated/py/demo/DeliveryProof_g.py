@@ -1,4 +1,4 @@
-﻿# DeliveryProof_g.py. protacoc 0.10.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
+﻿# DeliveryProof_g.py. protacoc 0.11.0, source DeliveryProof.yaml (sha1 c97411e287f7). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class DeliveryProof(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xF769024A
+    MsgSchemaText = "protaco-schema-1|DeliveryProof|1|1|orderId:string(32);photo:bytes!;signatures:list<bytes>;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example DeliveryProof(orderId=...).

@@ -1,4 +1,4 @@
-﻿# Slot_g.py. protacoc 0.10.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
+﻿# Slot_g.py. protacoc 0.11.0, source Slot.yaml (sha1 c2aa1108a1e1). Do not edit.
 import protaco
 from .Level_enum_g import Level, LevelNames
 from .Point_g import Point
@@ -14,6 +14,7 @@ class Slot(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x9D40CDF3
+    MsgSchemaText = "protaco-schema-1|Slot|1|0|id:uint;name:string(8)=empty;pos:fixed(Point@53239a70);path:fixed(Point@53239a70)[2];level:enum(Level);temps:double[2];"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Slot(id=...).

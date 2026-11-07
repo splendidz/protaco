@@ -1,4 +1,4 @@
-﻿// PizzaOrder.g.h. protacoc 0.10.0, source PizzaOrder.yaml (sha1 a1af26cb1afe). Do not edit.
+﻿// PizzaOrder.g.h. protacoc 0.11.0, source PizzaOrder.yaml (sha1 a1af26cb1afe). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -55,6 +55,12 @@ public:
         return 0x9D0CF242u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|PizzaOrder|1|1|orderId:string(32);store:string(32);customer:string=anonymous;size:int=12;slices:int=8;woodFired:bool=true;deepDishCm:int=0;toppings:list<Topping@eb8a11d8>!;notes:list<string>;delivery:Delivery@a031c44e;";
+    }
+
     /// Order number. Fixed length to fit the receipt column.
     /// order number
     /// [type string(32); fixed 32 bytes, set rejects longer values]
@@ -64,7 +70,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-    bool set_orderId(const std::string& value, std::string* error = nullptr)
+    bool set_orderId(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 32, value, "orderId", error);
     }
@@ -77,7 +83,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 32 bytes.
-    bool set_store(const std::string& value, std::string* error = nullptr)
+    bool set_store(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 32, 32, value, "store", error);
     }
@@ -89,9 +95,9 @@ public:
         return customer_;
     }
 
-    void set_customer(const std::string& value)
+    void set_customer(protaco::StringView value)
     {
-        customer_ = value;
+        customer_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

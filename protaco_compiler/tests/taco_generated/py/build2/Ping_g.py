@@ -1,4 +1,4 @@
-﻿# Ping_g.py. protacoc 0.10.0, source Ping.yaml (sha1 72b716c1138c). Do not edit.
+﻿# Ping_g.py. protacoc 0.11.0, source Ping.yaml (sha1 72b716c1138c). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Ping(protaco.Message):
     MsgVersion = 2
     MsgMinVersion = 1
     MsgSchemaHash = 0xBC1DCB81
+    MsgSchemaText = "protaco-schema-1|Ping|2|0|seq:int;who:string;text:string;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Ping(seq=...).
@@ -56,6 +57,7 @@ class v1:
         MsgVersion = 1
         MsgMinVersion = 1
         MsgSchemaHash = 0xB81406B7
+        MsgSchemaText = "protaco-schema-1|Ping|1|0|seq:int;who:string;"
 
         def __init__(self, *, _stamp=None, **fields):
             """Defaults; fields by key, for example Ping(seq=...).

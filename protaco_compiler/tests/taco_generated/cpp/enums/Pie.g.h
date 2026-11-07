@@ -1,4 +1,4 @@
-﻿// Pie.g.h. protacoc 0.10.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
+﻿// Pie.g.h. protacoc 0.11.0, source Pie.yaml (sha1 b9d29a89197b). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -52,6 +52,12 @@ public:
         return 0xB67183D5u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Pie|1|1|size:enum(PizzaSize)=Large;crust:enum(PizzaSize);sizes:list<enum(PizzaSize)>;name:string=;";
+    }
+
     /// [type PizzaSize; default Large]
     /// Numbers this build does not know are kept as they are (ToString shows ?(n)).
     PizzaSize get_size() const
@@ -101,9 +107,9 @@ public:
         return name_;
     }
 
-    void set_name(const std::string& value)
+    void set_name(protaco::StringView value)
     {
-        name_ = value;
+        name_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

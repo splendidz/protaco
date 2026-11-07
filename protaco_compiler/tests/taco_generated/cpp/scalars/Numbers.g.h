@@ -1,4 +1,4 @@
-﻿// Numbers.g.h. protacoc 0.10.0, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
+﻿// Numbers.g.h. protacoc 0.11.0, source Numbers.yaml (sha1 c3af6c4b45e4). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -50,6 +50,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0x8230A950u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Numbers|1|1|u32:uint=4000000000;u64:uint64=18446744073709551615;i64:int64=-9000000000;us:list<uint>;u64s:list<uint64>;name:string(16)=;text:string;";
     }
 
     /// [type uint; default 4000000000]
@@ -128,7 +134,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-    bool set_name(const std::string& value, std::string* error = nullptr)
+    bool set_name(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 20, 16, value, "name", error);
     }
@@ -139,9 +145,9 @@ public:
         return text_;
     }
 
-    void set_text(const std::string& value)
+    void set_text(protaco::StringView value)
     {
-        text_ = value;
+        text_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

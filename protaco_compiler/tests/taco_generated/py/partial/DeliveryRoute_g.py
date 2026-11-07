@@ -1,4 +1,4 @@
-﻿# DeliveryRoute_g.py. protacoc 0.10.0, source DeliveryRoute.yaml (sha1 974fbf1766a4). Do not edit.
+﻿# DeliveryRoute_g.py. protacoc 0.11.0, source DeliveryRoute.yaml (sha1 974fbf1766a4). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class DeliveryRoute(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xD6D1FAE0
+    MsgSchemaText = "protaco-schema-1|DeliveryRoute|1|1|rider:string;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example DeliveryRoute(rider=...).

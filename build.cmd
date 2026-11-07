@@ -19,6 +19,7 @@ echo === [2/6] generate test and example code
 for %%N in (demo scalars enums maps recursive arrays ver_v1 ver_v2 alt partial deep build1 build2 build3 build4) do (
     %PROTACOC% -I %TESTS%\schemas\%%N --cpp_out %TESTS%\taco_generated\cpp\%%N --cs_out %TESTS%\taco_generated\cs\%%N --py_out %TESTS%\taco_generated\py --no_runtime || goto :fail
 )
+%PROTACOC% -I %TESTS%\schemas\demo --cpp_out %TESTS%\taco_generated\cpp\demo --catalog Demo --no_runtime || goto :fail
 %PROTACOC% -I examples\schemas --cpp_out examples\taco_generated\cpp --cs_out examples\taco_generated\cs --py_out examples\taco_generated\py || goto :fail
 
 echo === [3/6] build and run C++ tests (v141 x64)

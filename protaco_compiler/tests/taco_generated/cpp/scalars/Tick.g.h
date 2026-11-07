@@ -1,4 +1,4 @@
-﻿// Tick.g.h. protacoc 0.10.0, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
+﻿// Tick.g.h. protacoc 0.11.0, source Tick.yaml (sha1 d48b7805e10f). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -46,6 +46,12 @@ public:
     static uint32_t MsgSchemaHash()
     {
         return 0x6D9855B0u;
+    }
+
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Tick|1|1|n:int;";
     }
 
     /// [type int]

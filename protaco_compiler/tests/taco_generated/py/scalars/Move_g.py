@@ -1,4 +1,4 @@
-﻿# Move_g.py. protacoc 0.10.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
+﻿# Move_g.py. protacoc 0.11.0, source Move.yaml (sha1 a06bba8225f5). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Move(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x97FD0219
+    MsgSchemaText = "protaco-schema-1|Move|1|1|from:string(8);to:string(8);pass:bool;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Move(from_=...).

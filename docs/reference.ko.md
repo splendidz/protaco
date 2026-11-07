@@ -2,7 +2,7 @@
 
 [English](reference.md) · [README](../README.ko.md) · [예제](../examples/README.ko.md)
 
-protacoc 0.10.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
+protacoc 0.11.0과 직렬화 형식 v4의 상세 참조입니다. 스키마 작성과 직렬화 형식의 전체 구조는 [README](../README.ko.md), 실행 가능한 프로그램은 [예제](../examples/README.ko.md)에 있습니다.
 
 1. [스키마 fingerprint](#1-스키마-fingerprint)
 2. [명령행](#2-명령행)
@@ -111,6 +111,28 @@ protaco-schema-1|Order|3|1|id:string(8);~qty:int;color:string!;weight:double=0.5
 | Heartbeat version 1 | `0x2BB85C55` |
 | Order version 3 | `0x7073B2E7` |
 
+**코드와 표의 정규 문자열**
+
+생성 클래스는 그 version의 정규 문자열도 가집니다: C++ `static const char* MsgSchemaText()`, C#·Python `MsgSchemaText`. 한 메시지를 다르게 아는 두 빌드는 문자열이 다르고, C++ 런타임이 첫 차이를 말합니다:
+
+```cpp
+std::string SchemaTextDifference(StringView mine, StringView theirs);   // 같으면 ""
+// "version 1 vs 2; field 2: step:int=3 vs temp:double=25.5", "path: string! vs string", "field 4: (none) vs note:string"
+```
+
+머리 부분(이름, version, 확장)이 먼저이고, 그다음 키·타입·필수 표시·기본값이 다른 첫 필드입니다. 중첩 메시지는 타입 글자(`RouteStop@<지문>`)로 달라지고, 그 메시지의 문자열이 안쪽 필드를 말합니다.
+
+`--catalog <이름>`은 한 번에 생성한 모든 메시지의 표를 `<cpp_out>/<이름>.catalog.g.h`에 이름 순으로 씁니다:
+
+```cpp
+struct SchemaEntry { const char* name; uint16_t version; uint32_t schemaHash; const char* schemaText; };
+const protaco::SchemaEntry* <이름>Catalog(size_t* count);   // 표는 호출이 끝나도 유효
+std::vector<std::string> CatalogDifferences(const SchemaEntry* mine, size_t mineCount, const SchemaEntry* theirs, size_t theirCount);
+// 다른 메시지마다 한 줄: "<이름>: v<version> <지문> vs v<version> <지문>: <SchemaTextDifference>"
+```
+
+`SchemaEntry`는 단순 데이터라 한 모듈이 자기 표를 다른 모듈에 넘길 수 있고(예: 플러그인이 호스트에), 호스트는 프레임 해석이 실패하기 전에 어느 메시지·필드가 다른지 알릴 수 있습니다. 한쪽 표에만 있는 이름은 차이가 아닙니다.
+
 ## 2. 명령행
 
 입력 폴더와 출력 언어를 하나 이상 지정합니다. namespace는 YAML에서 정하며 한 실행의 모든 정의가 같은 namespace를 사용해야 합니다.
@@ -125,6 +147,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | `--cpp_out <dir>` | C++ 출력 폴더 |
 | `--cs_out <dir>` | C# 출력 폴더 |
 | `--py_out <dir>` | Python 출력 루트 |
+| `--catalog <이름>` | `<cpp_out>/<이름>.catalog.g.h`(표 `<이름>Catalog`)도 씀. `--cpp_out`이 있어야 하고 이름은 C++ 식별자 |
 | `--no_runtime` | 런타임 파일 출력 생략 |
 | `--check` | 파일을 쓰지 않고 예상 바이트와 비교 |
 | `name...` | 생성할 메시지·enum·const 이름 또는 YAML 경로, 생략하면 전체 |
@@ -135,7 +158,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 
 | 언어 | 출력 경로 |
 |---|---|
-| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.g.h`, `<Const>.const.g.h`, `Protaco.hpp` |
+| C++ | `<cpp_out>/<Name>.g.h`, `<Enum>.enum.g.h`, `<Const>.const.g.h`, `Protaco.hpp`, `--catalog`이면 `<이름>.catalog.g.h`도 |
 | C# | `<cs_out>/<Name>.g.cs`, `<Enum>.enum.g.cs`, `<Const>.const.g.cs`, `Protaco.cs` |
 | Python | `<py_out>/<namespace 폴더>/<Name>_g.py`, `<Enum>_enum_g.py`, `<Const>_const_g.py`; 런타임은 `<py_out>/protaco.py` |
 
@@ -311,7 +334,7 @@ schema mismatch는 받는 클래스의 스키마로 본문을 한 번 더 읽고
 
 ## 4. C++ API
 
-런타임은 [Protaco.hpp](../include/cpp/Protaco.hpp)이며 C++14와 표준 라이브러리만 필요합니다. 생성 헤더는 `<Name>.g.h`, 클래스는 `<namespace>::<Name>`입니다. 아래 시그니처는 공개 멤버 선언이며 본문을 생략했습니다. `T`·`<k>`는 필드 타입·이름을 나타내는 표기입니다. 코드 예제는 함수 본문에서 실행하며 해당 생성 헤더를 include합니다.
+런타임은 [Protaco.hpp](../include/cpp/Protaco.hpp)이며 C++14와 표준 라이브러리만 필요합니다. `protaco::StringView`는 C++17부터 `std::string_view`이고, C++14에서는 같은 이름(`data()`, `size()`, `empty()`, `==`, `!=`, `std::string(view)`)을 가진 protaco 클래스입니다. 한 프로그램(모듈)은 한 C++ 판으로 빌드합니다(두 타입은 다른 타입). 생성 헤더는 `<Name>.g.h`, 클래스는 `<namespace>::<Name>`입니다. 아래 시그니처는 공개 멤버 선언이며 본문을 생략했습니다. `T`·`<k>`는 필드 타입·이름을 나타내는 표기입니다. 코드 예제는 함수 본문에서 실행하며 해당 생성 헤더를 include합니다.
 
 Try API의 실패 이유는 선택 인자 `std::string* error = nullptr`에 기록합니다. 성공 여부는 반환값으로 확인합니다. 성공 시 기존 오류 문자열이 지워진다고 가정하지 않습니다. `out` 등 결과 포인터는 유효한 쓰기 가능한 객체를 가리켜야 합니다.
 
@@ -327,7 +350,7 @@ T get_<k>() const;
 void set_<k>(T value);
 
 std::string get_<k>() const; // string(N)
-bool set_<k>(const std::string& value, std::string* error = nullptr);
+bool set_<k>(protaco::StringView value, std::string* error = nullptr);
 ```
 
 생성자는 스키마 기본값으로 필드를 초기화하고 Envelope에 새 id와 현재 시각을 넣습니다. 디코더와 생성 코드가 내부적으로 만드는 중첩 필드는 id를 소비하지 않습니다.
@@ -382,7 +405,7 @@ std::array<T, N> get_<k>() const;
 bool set_<k>(size_t index, T value, std::string* error = nullptr);
 void set_<k>(const std::array<T, N>& values);
 
-bool set_<k>(size_t index, const std::string& value, std::string* error = nullptr); // string(N) 원소
+bool set_<k>(size_t index, protaco::StringView value, std::string* error = nullptr); // string(N) 원소
 bool set_<k>(const std::array<std::string, N>& values, std::string* error = nullptr);
 ```
 
@@ -432,9 +455,10 @@ C# 필드는 `M` 객체, 배열은 객체 N개를 가진 get-only `M[]`입니다
 const T& get_<k>() const;
 T& mutable_<k>(); // bytes, list, map, message
 void set_<k>(const T& value);
+void set_<k>(protaco::StringView value); // string
 ```
 
-`string`에는 `mutable_<k>()`가 없습니다. bytes는 `std::vector<uint8_t>`, list는 `std::vector<T>`, map은 `std::unordered_map<K,V>`, 중첩 메시지는 생성 클래스입니다.
+`string`에는 `mutable_<k>()`가 없습니다. `string` setter는 `protaco::StringView`를 받으므로 `const char*`, `std::string`, `(data, size)` 조각을 임시 `std::string` 없이 바로 복사합니다. bytes는 `std::vector<uint8_t>`, list는 `std::vector<T>`, map은 `std::unordered_map<K,V>`, 중첩 메시지는 생성 클래스입니다.
 
 - 매개변수: `value`는 복사할 새 값
 - 반환값: getter는 읽기 전용 참조, mutable은 수정 가능한 참조, setter는 void
@@ -609,6 +633,38 @@ log = received.ToString()
 
 </details>
 
+**SerializeTo (C++)**
+
+```cpp
+using GrowFn = uint8_t* (*)(void* context, size_t size);
+size_t SerializeTo(uint8_t* dst, size_t capacity, protaco::GrowFn grow, void* context) const;
+```
+
+SerializeTo는 Serialize가 반환하는 바이트를 부르는 쪽이 가진 메모리에 씁니다. 버퍼 하나를 한 번 넉넉하게 잡아 두면, 그 안에 들어가는 프레임은 할당 없이 프레임을 한 번 더 복사하지 않고 씁니다. 들어가지 않는 프레임도 한 번에 씁니다. SerializeTo가 `grow`에 메모리를 받아 거기에 쓰므로 두 번 직렬화하지 않습니다.
+
+- 매개변수: `dst`는 부르는 쪽 메모리, `capacity`는 그 크기(바이트). `grow`와 `context`는 프레임이 들어가지 않을 때 메모리를 더 줌
+- `grow(context, size)`: 프레임이 들어가지 않을 때만 프레임 크기로 불림. `size`바이트 이상의 메모리를 반환하고, 다음 프레임을 위해 얼마나 더 잡을지는 함수가 정함. `nullptr`이면 아무것도 쓰지 않음
+- 반환값: 프레임 크기. `grow`가 nullptr이면 `capacity`보다 큰 값은 아무것도 쓰지 않았다는 뜻
+- 객체는 바꾸지 않음: Serialize의 내부 버퍼와 재사용 조건은 그대로. 바뀌지 않은 객체는 캐시된 프레임을 복사하고, 아니면 가변 블록을 그 메모리에 바로 씀
+- `protaco::IMessage`의 가상 함수이기도 함
+- C#과 Python에는 SerializeTo가 없음
+
+**C++**
+
+```cpp
+// 버퍼를 프레임 크기의 두 배로 늘린다.
+uint8_t* GrowVector(void* context, size_t size)
+{
+    std::vector<uint8_t>* buffer = static_cast<std::vector<uint8_t>*>(context);
+    buffer->resize(size * 2);
+    return buffer->data();
+}
+
+std::vector<uint8_t> buffer(64 * 1024);
+const size_t size = route.SerializeTo(buffer.data(), buffer.size(), &GrowVector, &buffer);
+send(buffer.data(), size);
+```
+
 **메타데이터와 옛 version 클래스**
 
 **C++**
@@ -674,6 +730,7 @@ public:
     virtual void SetEnvelope(const protaco::Envelope& env);
     void SetEnvelope(uint32_t id, uint32_t corr = 0, int64_t ts = protaco::NowUs());
     virtual const std::vector<uint8_t>& Serialize() const;
+    virtual size_t SerializeTo(uint8_t* dst, size_t capacity, protaco::GrowFn grow, void* context) const;
     virtual std::string ToString(const protaco::TextStyle& style) const;
     std::string ToString() const;
     template <class T> T* As();
@@ -1168,7 +1225,7 @@ if (protaco::TryMutableView<arrays::Rack>(memory, &rack)) {
 
 ```cpp
 struct Header {
-    std::string name;
+    StringView name;           // 프레임 바이트 안을 가리킴
     uint16_t version = 0;
     uint16_t minVersion = 0;
     uint32_t schemaHash = 0;
@@ -1182,7 +1239,9 @@ bool PeekHeader(const uint8_t* src, size_t size, Header* out,
 - 매개변수: 헤더까지 포함된 바이트, 길이, 결과 Header, 선택 오류 문자열
 - 반환값: 성공이면 true와 헤더 값. schemaHash는 송신 측 version의 fingerprint
 - 주의: 본문이 없어도 헤더가 완전하면 성공. 메시지 타입·본문 길이·본문 유효성 검사는 별도 디코딩에서 진행
-- 수명: Header는 이름과 Envelope를 소유하므로 입력 바이트 수명에 종속되지 않음
+- 수명: `name`은 입력 바이트 안을 가리켜 입력이 살아 있는 동안만 유효합니다. 남기려면 `std::string(header.name)`으로 복사합니다. 나머지 필드는 사본
+- 비교: `header.name == demo::DeliveryRoute::MsgName()`은 할당 없이 비교
+- 0.10.0까지 `name`은 `std::string` 사본이었고 string setter는 `const std::string&`를 받았음
 - 전체 프레임 길이: 28 + 이름의 UTF-8 바이트 수 + 4 × 지원 version 수 + bodySize
 
 **C++**
@@ -2000,7 +2059,7 @@ Name은 제거된 값도 조회하며 모르는 번호에는 None을 반환합�
 <summary>Python — 상수</summary>
 
 ```python
-protaco.VERSION              # "0.10.0"
+protaco.VERSION              # "0.11.0"
 protaco.FRAME_VERSION        # 4
 protaco.MAX_DEPTH            # 100
 protaco.MAX_SCHEMA_VERSIONS  # 255
@@ -2089,7 +2148,7 @@ bin/
 
 ### 7.3 시험 범위
 
-0.10.0 검증 기록은 Windows와 Linux 모두 C++ 50개, C# 43개, Python 31개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
+0.11.0 검증 기록은 Windows와 Linux 모두 C++ 54개, C# 43개, Python 32개 통과입니다. Linux 환경은 WSL Ubuntu 22.04, g++ 11.4, .NET 8.0.426, Python 3.10입니다. Linux에서 코드를 다시 생성해도 생성 파일 바이트가 같습니다.
 
 시험 이름과 구현은 [C++ 시험](../protaco_compiler/tests/cpp_tests/ProtacoTest.cpp), [C# 시험](../protaco_compiler/tests/cs_tests/Program.cs), [Python 시험](../protaco_compiler/tests/py_tests/test_protaco.py)에 있습니다.
 

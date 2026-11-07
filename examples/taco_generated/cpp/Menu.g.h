@@ -1,4 +1,4 @@
-﻿// Menu.g.h. protacoc 0.10.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
+﻿// Menu.g.h. protacoc 0.11.0, source Menu.yaml (sha1 886d288a340b). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -52,6 +52,12 @@ public:
         return 0x1A3924BCu;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Menu|1|1|store:string(16);defaultSize:enum(PizzaSize)=Large;prices:map<string,double>;sections:list<Category@6b7c6e97>;";
+    }
+
     /// store code
     /// [type string(16); fixed 16 bytes, set rejects longer values]
     std::string get_store() const
@@ -60,7 +66,7 @@ public:
     }
 
     /// Returns false, keeps the old value and writes the reason to error if longer than 16 bytes.
-    bool set_store(const std::string& value, std::string* error = nullptr)
+    bool set_store(protaco::StringView value, std::string* error = nullptr)
     {
         return protaco::detail::StoreChars(buf_.data() + kFixedOffset + 0, 16, value, "store", error);
     }

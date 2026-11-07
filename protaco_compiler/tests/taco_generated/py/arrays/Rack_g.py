@@ -1,4 +1,4 @@
-﻿# Rack_g.py. protacoc 0.10.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
+﻿# Rack_g.py. protacoc 0.11.0, source Rack.yaml (sha1 fd710f61bd22). Do not edit.
 import protaco
 from .Point_g import Point
 from .Slot_g import Slot
@@ -14,6 +14,7 @@ class Rack(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xD3E62388
+    MsgSchemaText = "protaco-schema-1|Rack|1|0|origin:fixed(Point@53239a70);slots:fixed(Slot@9d40cdf3)[4];count:int;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Rack(origin=...).

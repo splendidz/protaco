@@ -1,4 +1,4 @@
-﻿// Node.g.h. protacoc 0.10.0, source Node.yaml (sha1 215949a4f507). Do not edit.
+﻿// Node.g.h. protacoc 0.11.0, source Node.yaml (sha1 215949a4f507). Do not edit.
 #pragma once
 
 #include "Protaco.hpp"
@@ -49,15 +49,21 @@ public:
         return 0x94A77C41u;
     }
 
+    /// Canonical schema text of this version (MsgSchemaHash is its FNV-1a 32). protaco::SchemaTextDifference names the first difference of two.
+    static const char* MsgSchemaText()
+    {
+        return "protaco-schema-1|Node|1|1|name:string;value:int;children:list<Node@self>;next:Node@self;";
+    }
+
     /// [type string]
     const std::string& get_name() const
     {
         return name_;
     }
 
-    void set_name(const std::string& value)
+    void set_name(protaco::StringView value)
     {
-        name_ = value;
+        name_.assign(value.data(), value.size());
         cache_.valid = false;
     }
 

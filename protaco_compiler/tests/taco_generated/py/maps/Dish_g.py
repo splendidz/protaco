@@ -1,4 +1,4 @@
-﻿# Dish_g.py. protacoc 0.10.0, source Dish.yaml (sha1 9cd1ea163ac5). Do not edit.
+﻿# Dish_g.py. protacoc 0.11.0, source Dish.yaml (sha1 9cd1ea163ac5). Do not edit.
 import protaco
 
 
@@ -12,6 +12,7 @@ class Dish(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0xE2531233
+    MsgSchemaText = "protaco-schema-1|Dish|1|1|name:string;price:double;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Dish(name=...).

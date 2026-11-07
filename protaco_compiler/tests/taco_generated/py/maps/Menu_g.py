@@ -1,4 +1,4 @@
-﻿# Menu_g.py. protacoc 0.10.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
+﻿# Menu_g.py. protacoc 0.11.0, source Menu.yaml (sha1 95302b23b98e). Do not edit.
 import protaco
 from .Grade_enum_g import Grade, GradeNames
 from .Dish_g import Dish
@@ -14,6 +14,7 @@ class Menu(protaco.Message):
     MsgVersion = 1
     MsgMinVersion = 1
     MsgSchemaHash = 0x0EC85362
+    MsgSchemaText = "protaco-schema-1|Menu|1|1|prices:map<string,double>;stock:map<int,uint>!;specials:map<enum(Grade),Dish@e2531233>;notes:map<uint64,string>;vegan:map<string,bool>;photos:map<string,bytes>;grades:map<string,enum(Grade)>;tags:map<string,list<string>>;daily:map<int64,map<string,int>>;title:string;"
 
     def __init__(self, *, _stamp=None, **fields):
         """Defaults; fields by key, for example Menu(prices=...).
