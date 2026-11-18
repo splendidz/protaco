@@ -1,5 +1,5 @@
 ﻿// Program.cs. protacoc.exe command line (protoc style).
-//   protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [--catalog <name>] [--no_runtime] [--check] [name or yaml path...]
+//   protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <dir>] [--catalog <name>] [--natvis <file>] [--no_runtime] [--check] [name or yaml path...]
 // Inputs: <Name>.yaml (one message), <Name>.enum.yaml (one enum), <Name>.const.yaml (one const set).
 // A file name containing .bak is skipped.
 // The namespace comes from each yaml header (namespace:).
@@ -21,6 +21,7 @@ namespace Protacoc
             public string CsOut;
             public string PyOut;
             public string Catalog;
+            public string Natvis;
             public bool Runtime = true;
             public bool Check;
             public List<string> Targets = new List<string>();
@@ -106,6 +107,11 @@ namespace Protacoc
                         if (options.Catalog == null || !System.Text.RegularExpressions.Regex.IsMatch(options.Catalog, "^[A-Za-z_][A-Za-z0-9_]*$"))
                             return "--catalog needs a C++ identifier (the table function is <name>Catalog)";
                         break;
+                    case "--natvis":
+                        options.Natvis = next();
+                        if (options.Natvis == null)
+                            return "--natvis needs a file path";
+                        break;
                     case "--no_runtime":
                         options.Runtime = false;
                         break;
@@ -125,6 +131,8 @@ namespace Protacoc
                 return "--cpp_out, --cs_out or --py_out required";
             if (options.Catalog != null && options.CppOut == null)
                 return "--catalog needs --cpp_out";
+            if (options.Natvis != null && options.CppOut == null)
+                return "--natvis needs --cpp_out";
             return null;
         }
 
@@ -137,6 +145,7 @@ namespace Protacoc
             Console.WriteLine("  --cs_out <dir>           writes <message>.g.cs, <enum>.enum.g.cs, <const>.const.g.cs and the runtime Protaco.cs");
             Console.WriteLine("  --py_out <dir>           writes <namespace folders>/<message>_g.py, <enum>_enum_g.py, <const>_const_g.py and the runtime protaco.py");
             Console.WriteLine("  --catalog <name>         also writes <cpp_out>/<name>.catalog.g.h: name, version, fingerprint and schema text of every message");
+            Console.WriteLine("  --natvis <file>          also writes a Visual Studio debugger view of every message (fixed fields by name; add the file to the C++ project)");
             Console.WriteLine("  --no_runtime             skips the runtime files");
             Console.WriteLine("  --check                  checks without writing. Exit code 3 if anything differs");
             Console.WriteLine("  name...                  generates only these messages, enums or consts (name or yaml path). Default: all");
@@ -215,6 +224,8 @@ namespace Protacoc
             }
             if (options.Catalog != null)
                 output.Write(Path.Combine(options.CppOut, options.Catalog + ".catalog.g.h"), CppEmitter.EmitCatalog(options.Catalog, order.Where(targets.Contains).ToList()));
+            if (options.Natvis != null)
+                output.Write(options.Natvis, NatvisEmitter.Emit(order.Where(targets.Contains).ToList()));
             if (!options.Runtime)
                 return;
             if (options.CppOut != null)

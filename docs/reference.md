@@ -148,6 +148,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | `--cs_out <dir>` | C# output folder |
 | `--py_out <dir>` | Python output root |
 | `--catalog <name>` | Also write `<cpp_out>/<name>.catalog.g.h`, the table `<name>Catalog` (needs `--cpp_out`, a C++ identifier) |
+| `--natvis <file>` | Also write a Visual Studio debugger view (.natvis) of every message: fixed fields by name (they live in the frame buffer, not in members), variable fields as their members. Add the file to the C++ project; the linker embeds it in the PDB. No run-time cost (needs `--cpp_out`) |
 | `--no_runtime` | Skip runtime output |
 | `--check` | Compare expected bytes without writing |
 | `name...` | Message, enum, or const names, or YAML paths; all definitions if omitted |

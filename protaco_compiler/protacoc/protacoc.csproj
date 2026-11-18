@@ -45,6 +45,7 @@
     <Compile Include="Linker.cs" />
     <Compile Include="Loader.cs" />
     <Compile Include="Model.cs" />
+    <Compile Include="NatvisEmitter.cs" />
     <Compile Include="Naming.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="PyEmitter.cs" />

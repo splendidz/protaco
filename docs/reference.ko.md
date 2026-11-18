@@ -148,6 +148,7 @@ protacoc -I <yaml dir> [-I ...] [--cpp_out <dir>] [--cs_out <dir>] [--py_out <di
 | `--cs_out <dir>` | C# 출력 폴더 |
 | `--py_out <dir>` | Python 출력 루트 |
 | `--catalog <이름>` | `<cpp_out>/<이름>.catalog.g.h`(표 `<이름>Catalog`)도 씀. `--cpp_out`이 있어야 하고 이름은 C++ 식별자 |
+| `--natvis <파일>` | 모든 메시지의 Visual Studio 디버거 표시(.natvis)도 씀. 고정 필드는 이름으로 보임(멤버가 아니라 프레임 버퍼에 있음), 가변 필드는 멤버 그대로. 파일을 C++ 프로젝트에 넣으면 링커가 PDB에 담음. 실행 비용 없음(`--cpp_out`이 있어야 함) |
 | `--no_runtime` | 런타임 파일 출력 생략 |
 | `--check` | 파일을 쓰지 않고 예상 바이트와 비교 |
 | `name...` | 생성할 메시지·enum·const 이름 또는 YAML 경로, 생략하면 전체 |
